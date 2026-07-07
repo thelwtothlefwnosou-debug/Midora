@@ -1,0 +1,16 @@
+cd /path/to/spitia_scrape
+./.venv/bin/python scrape_spiti24.py --bootstrap
+
+
+
+
+./.venv/bin/python scrape_spiti24.py --headed --chrome-channel --mode search \
+  --search-url "https://www.spiti24.gr/pwliseis/katoikies/thessaloniki-kentro" \
+  --out ./spiti24_export
+
+
+  ./.venv/bin/python scrape_spiti24.py  --headed  --chrome-channel --mode search \
+  --search-url "https://www.spiti24.gr/pwliseis/katoikies/thessaloniki-kentro" \
+  --search-page-from 1 \
+  --search-page-to 20 \
+  --out ./spiti24_export

@@ -1,0 +1,2 @@
+export const PROFILE_CONTACT_SELECT =
+  "full_name, phone, created_at, primary_phone_verified_at, avatar_path, avatar_status, show_profile_photo_public, allow_phone_contact, allow_whatsapp, allow_viber, allow_message, whatsapp_phone, viber_phone, whatsapp_use_primary_phone, viber_use_primary_phone, whatsapp_phone_verified_at, viber_phone_verified_at" as const;

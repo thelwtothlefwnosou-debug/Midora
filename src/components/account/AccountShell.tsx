@@ -1,0 +1,21 @@
+import { DashboardShell } from "@/components/dashboard/DashboardShell";
+import type { AccountNavId } from "@/components/account/account-nav";
+import type { Profile } from "@/lib/types";
+
+type Props = {
+  profile: Profile;
+  email: string;
+  active: AccountNavId;
+  title: string;
+  subtitle?: string;
+  children: React.ReactNode;
+};
+
+/** @deprecated props profile/email kept for call-site compatibility; layout provides context */
+export function AccountShell({ active, title, subtitle, children }: Props) {
+  return (
+    <DashboardShell active={active} title={title} subtitle={subtitle}>
+      {children}
+    </DashboardShell>
+  );
+}

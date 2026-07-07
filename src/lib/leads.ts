@@ -1,0 +1,132 @@
+import { createClient } from "@/lib/supabase/server";
+import type { PropertyLeadWithListing } from "@/lib/types";
+
+export function isLeadsTableMissingError(error: {
+  message?: string;
+  code?: string;
+}): boolean {
+  const msg = (error.message ?? "").toLowerCase();
+  return (
+    error.code === "42P01" ||
+    error.code === "PGRST205" ||
+    msg.includes("could not find the table") ||
+    msg.includes('relation "property_leads" does not exist') ||
+    msg.includes("schema cache")
+  );
+}
+
+export function mapLeadError(error: { message?: string; code?: string }): string {
+  if (isLeadsTableMissingError(error)) {
+    return "Η λειτουργία ενδιαφέροντος δεν είναι ενεργή ακόμα. Επικοινώνησε με τον ιδιοκτήτη μέσω τηλεφώνου ή WhatsApp.";
+  }
+  return error.message ?? "Δεν ήταν δυνατή η αποστολή. Δοκίμασε ξανά.";
+}
+
+export async function getOwnerLeads(
+  ownerId: string
+): Promise<PropertyLeadWithListing[]> {
+  const supabase = await createClient();
+  if (!supabase) return [];
+
+  const { data, error } = await supabase
+    .from("property_leads")
+    .select(
+      "*, listings(id, title, city, area, slug, listing_images(url, media_type, is_cover, sort_order))"
+    )
+    .eq("owner_id", ownerId)
+    .order("created_at", { ascending: false })
+    .limit(200);
+
+  if (error) {
+    if (isLeadsTableMissingError(error)) return [];
+    console.error("[leads] getOwnerLeads:", error.message);
+    return [];
+  }
+
+  return (data ?? []) as PropertyLeadWithListing[];
+}
+
+export async function countNewOwnerLeads(ownerId: string): Promise<number> {
+  const supabase = await createClient();
+  if (!supabase) return 0;
+
+  const { count, error } = await supabase
+    .from("property_leads")
+    .select("id", { count: "exact", head: true })
+    .eq("owner_id", ownerId)
+    .eq("status", "new");
+
+  if (error) {
+    if (isLeadsTableMissingError(error)) return 0;
+    return 0;
+  }
+
+  return count ?? 0;
+}
+
+export async function getOwnerLeadStatsByListingIds(
+  ownerId: string,
+  listingIds: string[]
+): Promise<Map<string, { total: number; last30Days: number; unread: number }>> {
+  const stats = new Map<string, { total: number; last30Days: number; unread: number }>();
+  if (!listingIds.length) return stats;
+
+  const supabase = await createClient();
+  if (!supabase) return stats;
+
+  const since30 = new Date();
+  since30.setDate(since30.getDate() - 30);
+
+  const { data, error } = await supabase
+    .from("property_leads")
+    .select("listing_id, status, created_at")
+    .eq("owner_id", ownerId)
+    .in("listing_id", listingIds);
+
+  if (error) {
+    if (isLeadsTableMissingError(error)) return stats;
+    return stats;
+  }
+
+  for (const row of data ?? []) {
+    const id = row.listing_id as string;
+    const current = stats.get(id) ?? { total: 0, last30Days: 0, unread: 0 };
+    current.total += 1;
+    if (row.status === "new") current.unread += 1;
+    if (row.created_at && new Date(row.created_at as string) >= since30) {
+      current.last30Days += 1;
+    }
+    stats.set(id, current);
+  }
+
+  return stats;
+}
+
+export async function countLeadsByListingIds(
+  ownerId: string,
+  listingIds: string[]
+): Promise<Map<string, number>> {
+  const counts = new Map<string, number>();
+  if (!listingIds.length) return counts;
+
+  const supabase = await createClient();
+  if (!supabase) return counts;
+
+  const { data, error } = await supabase
+    .from("property_leads")
+    .select("listing_id")
+    .eq("owner_id", ownerId)
+    .in("listing_id", listingIds);
+
+  if (error) {
+    if (isLeadsTableMissingError(error)) return counts;
+    return counts;
+  }
+
+  for (const row of data ?? []) {
+    const id = row.listing_id as string;
+    counts.set(id, (counts.get(id) ?? 0) + 1);
+  }
+
+  return counts;
+}

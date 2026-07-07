@@ -1,0 +1,217 @@
+"use client";
+
+import Link from "next/link";
+import Image from "next/image";
+import { useTransition } from "react";
+import {
+  Calendar,
+  Mail,
+  Phone,
+  Archive,
+  CheckCircle2,
+  ExternalLink,
+  Users,
+  Home,
+} from "lucide-react";
+import type { PropertyLeadWithListing } from "@/lib/types";
+import { updatePropertyLeadStatus } from "@/lib/actions";
+import { leadStatusLabel } from "@/lib/lead-labels";
+import { cn } from "@/lib/utils";
+
+const STATUS_STYLE: Record<string, string> = {
+  new: "bg-gold/15 text-gold-dark",
+  read: "bg-teal/10 text-teal",
+  replied: "bg-charcoal/10 text-charcoal",
+  archived: "bg-sand text-muted",
+};
+
+function listingCoverUrl(listing: NonNullable<PropertyLeadWithListing["listings"]>): string | null {
+  const images = listing.listing_images ?? [];
+  const cover =
+    images.find((i) => i.is_cover && i.media_type !== "video") ??
+    images.find((i) => i.media_type !== "video");
+  return cover?.url ?? null;
+}
+
+function formatInterestDates(lead: PropertyLeadWithListing): string | null {
+  if (lead.interest_start_date && lead.interest_end_date) {
+    const fmt = new Intl.DateTimeFormat("el-GR", { dateStyle: "medium" });
+    return `${fmt.format(new Date(lead.interest_start_date))} – ${fmt.format(new Date(lead.interest_end_date))}`;
+  }
+  if (lead.interest_start_month) {
+    const [year, month] = lead.interest_start_month.split("-");
+    if (year && month) {
+      const label = new Intl.DateTimeFormat("el-GR", {
+        month: "long",
+        year: "numeric",
+      }).format(new Date(Number(year), Number(month) - 1, 1));
+      if (lead.interest_duration_months) {
+        return `${label} · ${lead.interest_duration_months} μήνες`;
+      }
+      return label;
+    }
+  }
+  if (lead.start_date) {
+    return new Intl.DateTimeFormat("el-GR", { dateStyle: "medium" }).format(
+      new Date(lead.start_date)
+    );
+  }
+  return null;
+}
+
+export function PropertyLeadRow({ lead }: { lead: PropertyLeadWithListing }) {
+  const [pending, startTransition] = useTransition();
+  const listing = lead.listings;
+  const listingHref = listing ? `/listings/${listing.slug ?? listing.id}` : null;
+  const cover = listing ? listingCoverUrl(listing) : null;
+  const interestDates = formatInterestDates(lead);
+
+  function setStatus(status: "read" | "replied" | "archived") {
+    startTransition(async () => {
+      await updatePropertyLeadStatus(lead.id, status);
+    });
+  }
+
+  const created = new Intl.DateTimeFormat("el-GR", {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(new Date(lead.created_at));
+
+  return (
+    <article className="overflow-hidden rounded-2xl border border-border bg-white shadow-soft">
+      <div className="flex flex-col sm:flex-row">
+        <div className="relative h-36 shrink-0 bg-sand sm:h-auto sm:w-40">
+          {cover ? (
+            <Image
+              src={cover}
+              alt={listing?.title ?? "Αγγελία"}
+              fill
+              className="object-cover"
+              sizes="160px"
+            />
+          ) : (
+            <div className="flex h-full min-h-[9rem] items-center justify-center">
+              <Home className="h-8 w-8 text-muted/40" />
+            </div>
+          )}
+        </div>
+
+        <div className="min-w-0 flex-1 p-5">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div className="min-w-0">
+              <p className="font-display text-base font-semibold text-charcoal">{lead.name}</p>
+              {listing && (
+                <p className="mt-1 text-sm text-muted">
+                  {listing.title} · {listing.area}, {listing.city}
+                </p>
+              )}
+            </div>
+            <span
+              className={cn(
+                "rounded-full px-2.5 py-1 text-xs font-medium",
+                STATUS_STYLE[lead.status] ?? STATUS_STYLE.new
+              )}
+            >
+              {leadStatusLabel(lead.status)}
+            </span>
+          </div>
+
+          <div className="mt-4 grid gap-2 text-sm text-charcoal/75 sm:grid-cols-2">
+            {lead.email && (
+              <p className="flex items-center gap-2">
+                <Mail className="h-4 w-4 shrink-0 text-gold/80" />
+                <a href={`mailto:${lead.email}`} className="hover:text-gold-dark">
+                  {lead.email}
+                </a>
+              </p>
+            )}
+            {lead.phone && (
+              <p className="flex items-center gap-2">
+                <Phone className="h-4 w-4 shrink-0 text-gold/80" />
+                <a href={`tel:${lead.phone}`} className="hover:text-gold-dark">
+                  {lead.phone}
+                </a>
+              </p>
+            )}
+            {interestDates && (
+              <p className="flex items-center gap-2">
+                <Calendar className="h-4 w-4 shrink-0 text-gold/80" />
+                {interestDates}
+              </p>
+            )}
+            {lead.guests != null && lead.guests > 0 && (
+              <p className="flex items-center gap-2">
+                <Users className="h-4 w-4 shrink-0 text-gold/80" />
+                {lead.guests} {lead.guests === 1 ? "άτομο" : "άτομα"}
+              </p>
+            )}
+            {lead.timing_note && (
+              <p className="flex items-center gap-2 sm:col-span-2">
+                <Calendar className="h-4 w-4 shrink-0 text-gold/80" />
+                Πότε: {lead.timing_note}
+              </p>
+            )}
+            {lead.duration && (
+              <p className="flex items-center gap-2">
+                <Calendar className="h-4 w-4 shrink-0 text-gold/80" />
+                Εκτιμώμενη διάρκεια: {lead.duration}
+              </p>
+            )}
+          </div>
+
+          {lead.message && (
+            <p className="mt-4 rounded-xl bg-sand/50 px-4 py-3 text-sm leading-relaxed text-charcoal/75">
+              {lead.message}
+            </p>
+          )}
+
+          <p className="mt-3 text-xs text-muted">Λήφθηκε: {created}</p>
+
+          <div className="mt-4 flex flex-wrap gap-2">
+            {listingHref && (
+              <Link
+                href={listingHref}
+                className="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-border px-3 text-xs font-medium text-charcoal hover:border-gold/30"
+              >
+                <ExternalLink className="h-3.5 w-3.5" />
+                Προβολή ακινήτου
+              </Link>
+            )}
+            {lead.status === "new" && (
+              <button
+                type="button"
+                disabled={pending}
+                onClick={() => setStatus("read")}
+                className="inline-flex min-h-9 items-center gap-1.5 rounded-lg bg-teal/10 px-3 text-xs font-medium text-teal hover:bg-teal/15 disabled:opacity-50"
+              >
+                <CheckCircle2 className="h-3.5 w-3.5" />
+                Σημείωση ως αναγνωσμένο
+              </button>
+            )}
+            {(lead.status === "new" || lead.status === "read") && (
+              <button
+                type="button"
+                disabled={pending}
+                onClick={() => setStatus("replied")}
+                className="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-border px-3 text-xs font-medium text-charcoal hover:border-gold/30 disabled:opacity-50"
+              >
+                Απαντήθηκε
+              </button>
+            )}
+            {lead.status !== "archived" && (
+              <button
+                type="button"
+                disabled={pending}
+                onClick={() => setStatus("archived")}
+                className="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-border px-3 text-xs font-medium text-muted hover:text-charcoal disabled:opacity-50"
+              >
+                <Archive className="h-3.5 w-3.5" />
+                Αρχειοθέτηση
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+    </article>
+  );
+}
