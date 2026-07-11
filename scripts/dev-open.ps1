@@ -2,7 +2,7 @@ $ErrorActionPreference = "Stop"
 
 $Root = Split-Path -Parent $PSScriptRoot
 $Port = 3000
-$Url = "http://127.0.0.1:$Port"
+$Url = "http://127.0.0.1:$Port/dashboard/listings"
 $ChromePaths = @(
   "${env:ProgramFiles}\Google\Chrome\Application\chrome.exe",
   "${env:ProgramFiles(x86)}\Google\Chrome\Application\chrome.exe",

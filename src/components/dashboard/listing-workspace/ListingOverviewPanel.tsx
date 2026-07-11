@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Eye, CalendarDays, Pencil, ExternalLink } from "lucide-react";
+import { Eye, CalendarDays, Pencil, ExternalLink, Camera } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { ListingCompletenessCard } from "@/components/dashboard/ListingCompletenessCard";
 import type { ListingWorkspaceContext } from "@/lib/listing-workspace-types";
@@ -110,6 +110,10 @@ export function ListingOverviewPanel({ ctx }: Props) {
           <Button href={`/dashboard/listings/${listing.id}/edit`} size="sm" variant="outline">
             <Pencil className="h-3.5 w-3.5" />
             Επεξεργασία αγγελίας
+          </Button>
+          <Button href={`/dashboard/listings/${listing.id}/photos`} size="sm" variant="outline">
+            <Camera className="h-3.5 w-3.5" />
+            Περιήγηση σπιτιού
           </Button>
           <Button
             href={`/dashboard/listings/${listing.id}/availability`}

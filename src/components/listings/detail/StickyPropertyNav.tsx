@@ -3,25 +3,14 @@
 import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 
-const ANCHORS = [
-  { id: "about", label: "Περιγραφή" },
-  { id: "amenities", label: "Παροχές" },
-  { id: "availability", label: "Διαθεσιμότητα" },
-  { id: "area", label: "Περιοχή" },
-] as const;
+type NavItem = { id: string; label: string };
 
-export function StickyPropertyNav({
-  showAvailability,
-}: {
-  showAvailability: boolean;
-}) {
-  const items = ANCHORS.filter(
-    (a) => a.id !== "availability" || showAvailability
-  );
+export function StickyPropertyNav({ items }: { items: NavItem[] }) {
   const [active, setActive] = useState(items[0]?.id ?? "about");
 
   useEffect(() => {
     if (!items.length) return;
+
     const observers: IntersectionObserver[] = [];
     for (const item of items) {
       const el = document.getElementById(item.id);
@@ -51,7 +40,7 @@ export function StickyPropertyNav({
             <a
               href={`#${item.id}`}
               className={cn(
-                "inline-flex min-h-11 items-center border-b-2 px-3 py-2.5 text-sm font-medium transition-colors whitespace-nowrap",
+                "inline-flex min-h-11 items-center border-b-2 px-3 py-2.5 text-sm font-medium whitespace-nowrap transition-colors",
                 active === item.id
                   ? "border-gold text-charcoal"
                   : "border-transparent text-charcoal/55 hover:text-charcoal"

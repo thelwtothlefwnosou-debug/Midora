@@ -29,6 +29,13 @@ import {
   setListingCoverPhoto,
   uploadWizardListingPhoto,
 } from "@/lib/actions";
+import {
+  assignListingImageRoom,
+  bulkAssignListingImagesRoom,
+  updateListingImageCaption,
+} from "@/lib/listing-photo-rooms";
+import { isCoverPhoto, roomBadgeLabel } from "@/lib/listing-photo-display";
+import { type PhotoRoomDef } from "@/lib/photo-rooms-catalog";
 import { MIN_LISTING_PHOTOS_FOR_REVIEW, MIN_LISTING_PHOTOS_REQUIRED, PHOTO_UPLOAD_CONCURRENCY } from "@/lib/constants";
 import {
   logListingImageValidationDebug,
@@ -47,6 +54,9 @@ type Props = {
   onPhotoCountChange?: () => void;
   onUploadBusyChange?: (busy: boolean) => void;
   stepHeadingRef?: RefObject<HTMLHeadingElement | null>;
+  variant?: "wizard" | "manager";
+  rooms?: PhotoRoomDef[];
+  hideHeading?: boolean;
 };
 
 type QueueStatus = "waiting" | "uploading" | "uploaded" | "failed";
@@ -64,11 +74,6 @@ function sortPhotos(items: ListingImage[]) {
   return [...items]
     .filter((i) => i.media_type !== "video")
     .sort((a, b) => a.sort_order - b.sort_order);
-}
-
-function isCoverPhoto(img: ListingImage, index: number) {
-  if (typeof img.is_cover === "boolean") return img.is_cover;
-  return index === 0;
 }
 
 const UPLOAD_TIMEOUT_MS = 90_000;
@@ -94,7 +99,11 @@ export function ListingWizardPhotosStep({
   onPhotoCountChange,
   onUploadBusyChange,
   stepHeadingRef,
+  variant = "wizard",
+  rooms = [],
+  hideHeading = false,
 }: Props) {
+  const isManager = variant === "manager";
   const [images, setImages] = useState(sortPhotos(initialImages));
   const [savedImageCount, setSavedImageCount] = useState(0);
   const [uploadQueue, setUploadQueue] = useState<UploadQueueItem[]>([]);
@@ -427,6 +436,10 @@ export function ListingWizardPhotosStep({
   }
 
   function handleDelete(imageId: string) {
+    if (isManager) {
+      const confirmed = window.confirm("Θέλεις να διαγράψεις αυτή τη φωτογραφία;");
+      if (!confirmed) return;
+    }
     startTransition(async () => {
       const result = await deleteListingPhoto(listingId, imageId);
       if (result?.error) {
@@ -479,6 +492,54 @@ export function ListingWizardPhotosStep({
     });
   }
 
+  function handleBulkAssignRoom(roomKey: string) {
+    if (selectedIds.size === 0) return;
+    const key = roomKey || null;
+    startTransition(async () => {
+      const result = await bulkAssignListingImagesRoom(listingId, [...selectedIds], key);
+      if (result && "error" in result && result.error) {
+        setError(result.error);
+        return;
+      }
+      setSelectedIds(new Set());
+      await refreshImages();
+    });
+  }
+
+  function handleAssignRoom(imageId: string, roomKey: string) {
+    const key = roomKey || null;
+    startTransition(async () => {
+      const result = await assignListingImageRoom(listingId, imageId, key);
+      if (result && "error" in result && result.error) {
+        setError(result.error);
+        return;
+      }
+      await refreshImages();
+    });
+  }
+
+  function handleCaption(imageId: string, current?: string | null) {
+    const next = window.prompt("Λεζάντα φωτογραφίας (προαιρετικά):", current ?? "");
+    if (next === null) return;
+    startTransition(async () => {
+      const result = await updateListingImageCaption(listingId, imageId, next);
+      if (result && "error" in result && result.error) {
+        setError(result.error);
+        return;
+      }
+      await refreshImages();
+    });
+  }
+
+  function handleMoveToStart(imageId: string) {
+    const idx = images.findIndex((i) => i.id === imageId);
+    if (idx <= 0) return;
+    const next = [...images];
+    const [item] = next.splice(idx, 1);
+    next.unshift(item);
+    persistOrder(next);
+  }
+
   function persistOrder(next: ListingImage[]) {
     setImages(next);
     void reorderListingPhotos(
@@ -513,24 +574,31 @@ export function ListingWizardPhotosStep({
 
   return (
     <div className="space-y-4">
-      <div>
-        <h2
-          ref={stepHeadingRef}
-          tabIndex={-1}
-          className="font-display text-xl font-semibold text-charcoal outline-none"
-        >
-          Φωτογραφίες ακινήτου
-        </h2>
-        <p className="mt-2 text-sm leading-relaxed text-muted">
-          Ως ιδιοκτήτης, πρόσθεσε τουλάχιστον μία καθαρή φωτογραφία του ακινήτου.
-          Η πρώτη επιτυχημένη φωτογραφία γίνεται κύρια· μπορείς να αλλάξεις κύρια
-          ή σειρά ανά πάσα στιγμή.
+      {!hideHeading && (
+        <div>
+          <h2
+            ref={stepHeadingRef}
+            tabIndex={-1}
+            className="font-display text-xl font-semibold text-charcoal outline-none"
+          >
+            {isManager ? "Φωτογραφίες" : "Φωτογραφίες ακινήτου"}
+          </h2>
+          <p className="mt-2 text-sm leading-relaxed text-muted">
+            {isManager
+              ? "Ανέβασε, ταξινόμησε και όρισε εξώφυλλο. Η σειρά εδώ καθορίζει πώς θα εμφανίζονται οι φωτογραφίες στη δημόσια αγγελία."
+              : "Ως ιδιοκτήτης, πρόσθεσε τουλάχιστον μία καθαρή φωτογραφία του ακινήτου. Η πρώτη επιτυχημένη φωτογραφία γίνεται κύρια· μπορείς να αλλάξεις κύρια ή σειρά ανά πάσα στιγμή."}
+          </p>
+          <p className="mt-2 text-xs text-muted">
+            Επίλεξε από τη βιβλιοθήκη ή σύρε έως 30 αρχεία (JPG, PNG, WebP — έως 10 MB).
+          </p>
+        </div>
+      )}
+
+      {isManager && showGrid && (
+        <p className="rounded-xl border border-border bg-sand/30 px-3 py-2 text-xs text-muted">
+          Η σειρά εδώ καθορίζει πώς θα εμφανίζονται οι φωτογραφίες στη δημόσια αγγελία.
         </p>
-        <p className="mt-2 text-xs text-muted">
-          Επίλεξε από τη βιβλιοθήκη του κινητού ή τράβηξε νέα φωτογραφία. Μπορείς
-          να σύρεις έως 30 αρχεία μαζί (JPG, PNG, WEBP, HEIC — έως 10 MB το καθένα).
-        </p>
-      </div>
+      )}
 
       <div
         className={cn(
@@ -641,21 +709,54 @@ export function ListingWizardPhotosStep({
       )}
 
       {selectedIds.size > 0 && (
-        <button
-          type="button"
-          onClick={handleBulkDelete}
-          disabled={pending || isProcessingQueue}
-          className="inline-flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 hover:bg-red-100 disabled:opacity-50"
-        >
-          <Trash2 className="h-4 w-4" />
-          Αφαίρεση επιλεγμένων ({selectedIds.size})
-        </button>
+        <div className="flex flex-wrap items-center gap-2 rounded-xl border border-gold/25 bg-gold/5 px-3 py-2">
+          <span className="text-sm font-medium text-charcoal">
+            {selectedIds.size} επιλεγμένες
+          </span>
+          {isManager && rooms.length > 0 && (
+            <select
+              defaultValue=""
+              onChange={(e) => {
+                handleBulkAssignRoom(e.target.value);
+                e.target.value = "";
+              }}
+              className="rounded-lg border border-border bg-white px-2 py-1.5 text-sm"
+            >
+              <option value="" disabled>
+                Ανάθεση σε χώρο
+              </option>
+              <option value="">Χωρίς χώρο</option>
+              {rooms.map((r) => (
+                <option key={r.key} value={r.key}>
+                  {r.label}
+                </option>
+              ))}
+            </select>
+          )}
+          <button
+            type="button"
+            onClick={handleBulkDelete}
+            disabled={pending || isProcessingQueue}
+            className="inline-flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 hover:bg-red-100 disabled:opacity-50"
+          >
+            <Trash2 className="h-4 w-4" />
+            Διαγραφή
+          </button>
+          <button
+            type="button"
+            onClick={() => setSelectedIds(new Set())}
+            className="text-sm text-muted hover:text-charcoal"
+          >
+            Ακύρωση επιλογής
+          </button>
+        </div>
       )}
 
       {showGrid && (
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <div className={cn("grid gap-3", isManager ? "sm:grid-cols-2 lg:grid-cols-3" : "sm:grid-cols-2 lg:grid-cols-3")}>
           {images.map((img, index) => {
             const cover = isCoverPhoto(img, index);
+            const roomLabel = roomBadgeLabel(img.room_key);
             return (
               <div
                 key={img.id}
@@ -671,21 +772,30 @@ export function ListingWizardPhotosStep({
                   handleReorderDrop(index);
                 }}
                 className={cn(
-                  "group relative overflow-hidden rounded-xl border border-border bg-white",
+                  "group relative overflow-hidden rounded-2xl border border-border bg-white shadow-soft",
                   dragReorderIndex === index && "ring-2 ring-gold/50"
                 )}
               >
-                <div className="relative aspect-[4/3]">
+                <div className="relative aspect-[5/4]">
                   <Image
                     src={img.url}
-                    alt={img.file_name ?? "Φωτογραφία αγγελίας"}
+                    alt={img.caption ?? img.file_name ?? "Φωτογραφία αγγελίας"}
                     fill
-                    className="object-cover"
+                    className="object-cover transition-transform duration-300 group-hover:scale-[1.02]"
                     sizes="(max-width: 768px) 50vw, 240px"
                   />
+                  <div className="pointer-events-none absolute inset-0 bg-charcoal/0 transition-colors group-hover:bg-charcoal/10" />
+                  <span className="absolute left-2 top-2 rounded-full bg-white/90 px-2 py-0.5 text-[10px] font-bold text-charcoal">
+                    #{index + 1}
+                  </span>
                   {cover && (
-                    <span className="absolute left-2 top-2 rounded-full bg-charcoal/80 px-2 py-0.5 text-[10px] font-semibold text-white">
-                      Κύρια
+                    <span className="absolute left-2 top-9 rounded-full bg-gold px-2 py-0.5 text-[10px] font-semibold text-white">
+                      {isManager ? "Εξώφυλλο" : "Κύρια"}
+                    </span>
+                  )}
+                  {roomLabel && (
+                    <span className="absolute bottom-2 left-2 max-w-[85%] truncate rounded-full bg-charcoal/80 px-2 py-0.5 text-[10px] font-medium text-white">
+                      {roomLabel}
                     </span>
                   )}
                   <label className="absolute right-2 top-2 flex h-6 w-6 cursor-pointer items-center justify-center rounded bg-white/90 shadow">
@@ -697,10 +807,15 @@ export function ListingWizardPhotosStep({
                     />
                   </label>
                 </div>
-                <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border px-2 py-1.5">
+                {img.caption && (
+                  <p className="truncate border-t border-border px-3 py-1.5 text-xs text-muted">
+                    {img.caption}
+                  </p>
+                )}
+                <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border px-2 py-1.5 opacity-100 lg:opacity-0 lg:group-hover:opacity-100">
                   <div className="flex items-center gap-1 text-muted">
                     <GripVertical className="h-4 w-4" aria-hidden />
-                    <span className="text-[11px]">Σύρε για σειρά</span>
+                    <span className="text-[11px]">Σύρε</span>
                   </div>
                   <div className="flex flex-wrap gap-1">
                     {!cover && (
@@ -711,8 +826,44 @@ export function ListingWizardPhotosStep({
                         className="inline-flex items-center gap-1 rounded px-2 py-1 text-[11px] text-charcoal hover:bg-sand disabled:opacity-40"
                       >
                         <Star className="h-3.5 w-3.5" />
-                        Κύρια φωτογραφία
+                        {isManager ? "Εξώφυλλο" : "Κύρια"}
                       </button>
+                    )}
+                    {isManager && index > 0 && (
+                      <button
+                        type="button"
+                        disabled={pending || isProcessingQueue}
+                        onClick={() => handleMoveToStart(img.id)}
+                        className="rounded px-2 py-1 text-[11px] text-charcoal hover:bg-sand disabled:opacity-40"
+                      >
+                        Αρχή
+                      </button>
+                    )}
+                    {isManager && (
+                      <>
+                        <button
+                          type="button"
+                          disabled={pending || isProcessingQueue}
+                          onClick={() => handleCaption(img.id, img.caption)}
+                          className="rounded px-2 py-1 text-[11px] text-charcoal hover:bg-sand disabled:opacity-40"
+                        >
+                          Λεζάντα
+                        </button>
+                        {rooms.length > 0 && (
+                          <select
+                            value={img.room_key ?? ""}
+                            onChange={(e) => handleAssignRoom(img.id, e.target.value)}
+                            className="max-w-[7rem] rounded border border-border px-1 py-0.5 text-[10px]"
+                          >
+                            <option value="">Χωρίς χώρο</option>
+                            {rooms.map((r) => (
+                              <option key={r.key} value={r.key}>
+                                {r.label}
+                              </option>
+                            ))}
+                          </select>
+                        )}
+                      </>
                     )}
                     <button
                       type="button"
@@ -721,7 +872,7 @@ export function ListingWizardPhotosStep({
                       className="inline-flex items-center gap-1 rounded px-2 py-1 text-[11px] text-red-600 hover:bg-red-50 disabled:opacity-40"
                     >
                       <Trash2 className="h-3.5 w-3.5" />
-                      Αφαίρεση
+                      Διαγραφή
                     </button>
                   </div>
                 </div>

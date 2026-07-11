@@ -278,6 +278,8 @@ export type ListingImage = {
   owner_id?: string | null;
   storage_path?: string | null;
   is_cover?: boolean;
+  room_key?: string | null;
+  caption?: string | null;
   file_name?: string | null;
   mime_type?: string | null;
   size_bytes?: number | null;

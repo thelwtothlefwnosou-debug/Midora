@@ -1,6 +1,10 @@
 "use client";
 
 import { createContext, useCallback, useContext, useRef } from "react";
+import {
+  guardPreviewAction,
+  useListingPreviewMode,
+} from "@/components/listings/ListingPreviewModeContext";
 
 export type InterestPrefill = {
   message?: string;
@@ -22,6 +26,7 @@ const ListingInterestContext = createContext<Ctx | null>(null);
 
 export function ListingInterestProvider({ children }: { children: React.ReactNode }) {
   const openerRef = useRef<((prefill?: InterestPrefill) => void) | null>(null);
+  const previewMode = useListingPreviewMode();
 
   const registerOpener = useCallback(
     (fn: ((prefill?: InterestPrefill) => void) | null) => {
@@ -30,9 +35,12 @@ export function ListingInterestProvider({ children }: { children: React.ReactNod
     []
   );
 
-  const openInterest = useCallback((prefill?: InterestPrefill) => {
-    openerRef.current?.(prefill);
-  }, []);
+  const openInterest = useCallback(
+    (prefill?: InterestPrefill) => {
+      guardPreviewAction(previewMode, () => openerRef.current?.(prefill));
+    },
+    [previewMode]
+  );
 
   return (
     <ListingInterestContext.Provider value={{ openInterest, registerOpener }}>

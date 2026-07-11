@@ -100,6 +100,18 @@ const CHECKS: Check[] = [
     table: "listings",
     column: "minimum_stay_nights",
   },
+  {
+    id: "listing_image_room_key",
+    label: "listing_images.room_key (photo tour)",
+    table: "listing_images",
+    column: "room_key",
+  },
+  {
+    id: "listing_image_caption",
+    label: "listing_images.caption (photo captions)",
+    table: "listing_images",
+    column: "caption",
+  },
 ];
 
 async function loadPgState(): Promise<{

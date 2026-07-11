@@ -1,5 +1,4 @@
 import {
-  LayoutDashboard,
   Home,
   Plus,
   Inbox,
@@ -43,7 +42,6 @@ export const ACCOUNT_NAV_GROUPS: AccountNavGroup[] = [
   {
     title: "Διαχείριση αγγελιών",
     items: [
-      { id: "overview", label: "Επισκόπηση", href: "/dashboard", icon: LayoutDashboard },
       { id: "listings", label: "Οι αγγελίες μου", href: "/dashboard/listings", icon: Home },
       { id: "new-listing", label: "Νέα αγγελία", href: "/dashboard/listings/new", icon: Plus },
     ],
@@ -58,7 +56,7 @@ export const ACCOUNT_NAV_GROUPS: AccountNavGroup[] = [
   {
     title: "Λογαριασμός",
     items: [
-      { id: "profile", label: "Το προφίλ μου", href: "/dashboard/profile", icon: User },
+      { id: "profile", label: "Προφίλ", href: "/dashboard/profile", icon: User },
       { id: "verification", label: "Επαλήθευση", href: "/dashboard/verification", icon: BadgeCheck },
       { id: "settings", label: "Ρυθμίσεις", href: "/dashboard/settings?tab=security", icon: Shield },
       { id: "subscription", label: "Συνδρομή προβολής", href: "/dashboard/subscription", icon: CreditCard },
@@ -112,7 +110,11 @@ export function dashboardBreadcrumb(pathname: string, active: AccountNavId): str
     : ACCOUNT_NAV;
   const item = nav.find((i) => i.id === active);
   if (item) return item.label;
-  if (pathname.startsWith("/dashboard/profile")) return "Το προφίλ μου";
+  if (pathname === "/dashboard" || pathname === "/dashboard/") {
+    return "Επισκόπηση";
+  }
+  if (pathname.startsWith("/dashboard/stats")) return "Στατιστικά";
+  if (pathname.startsWith("/dashboard/profile")) return "Προφίλ";
   if (pathname.startsWith("/dashboard/settings")) return "Ρυθμίσεις";
   return isPreviewV80 ? "Πίνακας ελέγχου" : "Dashboard";
 }

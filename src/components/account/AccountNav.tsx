@@ -10,6 +10,8 @@ import {
   type AccountNavItem,
 } from "@/components/account/account-nav";
 import { useDashboardLayout } from "@/components/dashboard/DashboardLayoutProvider";
+import { OwnerListingsNavLink } from "@/components/dashboard/OwnerListingsNavLink";
+import { OWNER_LISTINGS_LIST_PATH } from "@/lib/owner-listings-nav";
 import { cn } from "@/lib/utils";
 import { ChevronLeft, ChevronRight, HelpCircle } from "lucide-react";
 
@@ -55,20 +57,17 @@ export function AccountNav({
     const isActive = active === item.id || (matchFn?.(pathname) ?? false);
     const badge = badgeForItem(item);
 
-    return (
-      <Link
-        key={item.id}
-        href={item.href}
-        title={collapsed ? item.label : undefined}
-        className={cn(
-          "relative flex items-center gap-2.5 rounded-xl text-sm font-medium transition-colors",
-          compact ? "shrink-0 whitespace-nowrap px-3 py-2.5" : "px-2.5 py-2 text-[13px]",
-          collapsed && !compact && "justify-center px-2",
-          isActive
-            ? "bg-charcoal text-white shadow-soft"
-            : "text-charcoal/70 hover:bg-sand hover:text-charcoal"
-        )}
-      >
+    const linkClass = cn(
+      "relative flex items-center gap-2.5 rounded-xl text-sm font-medium transition-colors",
+      compact ? "shrink-0 whitespace-nowrap px-3 py-2.5" : "px-2.5 py-2 text-[13px]",
+      collapsed && !compact && "justify-center px-2",
+      isActive
+        ? "bg-charcoal text-white shadow-soft"
+        : "text-charcoal/70 hover:bg-sand hover:text-charcoal"
+    );
+
+    const linkBody = (
+      <>
         {isActive && !collapsed && (
           <span className="absolute top-1/2 left-0 h-5 w-0.5 -translate-y-1/2 rounded-full bg-gold" />
         )}
@@ -84,6 +83,30 @@ export function AccountNav({
             {badge > 99 ? "99+" : badge}
           </span>
         )}
+      </>
+    );
+
+    if (item.id === "listings") {
+      return (
+        <OwnerListingsNavLink
+          key={item.id}
+          href={OWNER_LISTINGS_LIST_PATH}
+          title={collapsed ? item.label : undefined}
+          className={linkClass}
+        >
+          {linkBody}
+        </OwnerListingsNavLink>
+      );
+    }
+
+    return (
+      <Link
+        key={item.id}
+        href={item.href}
+        title={collapsed ? item.label : undefined}
+        className={linkClass}
+      >
+        {linkBody}
       </Link>
     );
   }

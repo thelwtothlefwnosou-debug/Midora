@@ -16,6 +16,7 @@ type Props = {
   contact: ListingPublicContact;
   hostName?: string | null;
   similar?: ListingWithImages[];
+  previewMode?: boolean;
 };
 
 export function MonthlyListingPageShell({

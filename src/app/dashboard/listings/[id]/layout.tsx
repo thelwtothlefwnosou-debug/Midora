@@ -1,8 +1,9 @@
-import { AccountShell } from "@/components/account/AccountShell";
-import { ListingWorkspaceHeader } from "@/components/dashboard/listing-workspace/ListingWorkspaceHeader";
-import { ListingWorkspaceTabs } from "@/components/dashboard/listing-workspace/ListingWorkspaceTabs";
+import { ListingWorkspaceLayoutGate } from "@/components/dashboard/listing-workspace/ListingWorkspaceLayoutGate";
 import { requireDashboardContext } from "@/lib/dashboard-context";
-import { loadListingWorkspace } from "@/lib/listing-workspace-server";
+import {
+  loadListingWorkspace,
+  loadOwnerListingSwitcherItems,
+} from "@/lib/listing-workspace-server";
 
 export default async function ListingWorkspaceLayout({
   children,
@@ -14,18 +15,22 @@ export default async function ListingWorkspaceLayout({
   const { id } = await params;
   const { profile, email } = await requireDashboardContext("/dashboard/listings");
   const ctx = await loadListingWorkspace(id, profile.id);
+  let switcherItems: Awaited<ReturnType<typeof loadOwnerListingSwitcherItems>> = [];
+  try {
+    switcherItems = await loadOwnerListingSwitcherItems(profile.id);
+  } catch {
+    switcherItems = [];
+  }
 
   return (
-    <AccountShell
+    <ListingWorkspaceLayoutGate
+      listingId={id}
       profile={profile}
       email={email}
-      active="listings"
-      title={ctx.listing.title}
-      subtitle="Διαχείριση ακινήτου — διαθεσιμότητα, τιμές και αιτήματα."
+      ctx={ctx}
+      switcherItems={switcherItems}
     >
-      <ListingWorkspaceHeader ctx={ctx} />
-      <ListingWorkspaceTabs listingId={id} />
       {children}
-    </AccountShell>
+    </ListingWorkspaceLayoutGate>
   );
 }

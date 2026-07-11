@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect, useRef } from "react";
+import { usePathname } from "next/navigation";
 import { LayoutGrid, List, Plus } from "lucide-react";
 import { DashboardListingRow } from "@/components/dashboard/DashboardListingRow";
 import { DashboardListingGridCard } from "@/components/dashboard/DashboardListingGridCard";
@@ -24,6 +25,10 @@ import {
   searchOwnerListings,
   sortOwnerListings,
 } from "@/lib/owner-listings-page";
+import {
+  isOwnerListingWorkspacePath,
+  isOwnerListingsListPath,
+} from "@/lib/owner-listings-nav";
 import { cn } from "@/lib/utils";
 
 type ViewMode = "cards" | "list";
@@ -45,7 +50,19 @@ export function DashboardListingsView({
   const [search, setSearch] = useState("");
   const [rentalFilter, setRentalFilter] = useState<"all" | "short_term" | "monthly">("all");
   const [sort, setSort] = useState<ListingSortOption>("recent");
-  const [view, setView] = useState<ViewMode>("cards");
+  const [view, setView] = useState<ViewMode>("list");
+  const pathname = usePathname() ?? "";
+  const prevPathRef = useRef(pathname);
+
+  useEffect(() => {
+    const prev = prevPathRef.current;
+    if (isOwnerListingWorkspacePath(prev) && isOwnerListingsListPath(pathname)) {
+      setTab("all");
+      setSearch("");
+      setRentalFilter("all");
+    }
+    prevPathRef.current = pathname;
+  }, [pathname]);
 
   const tabCounts = useMemo(() => countListingsByTab(rows), [rows]);
   const alerts = useMemo(
@@ -94,17 +111,6 @@ export function DashboardListingsView({
         <div className="flex shrink-0 rounded-lg border border-border bg-white p-0.5 shadow-soft">
           <button
             type="button"
-            onClick={() => setView("cards")}
-            className={cn(
-              "inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors",
-              view === "cards" ? "bg-charcoal text-white" : "text-charcoal/70 hover:bg-sand"
-            )}
-          >
-            <LayoutGrid className="h-3.5 w-3.5" />
-            Cards
-          </button>
-          <button
-            type="button"
             onClick={() => setView("list")}
             className={cn(
               "inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors",
@@ -113,6 +119,17 @@ export function DashboardListingsView({
           >
             <List className="h-3.5 w-3.5" />
             List
+          </button>
+          <button
+            type="button"
+            onClick={() => setView("cards")}
+            className={cn(
+              "inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors",
+              view === "cards" ? "bg-charcoal text-white" : "text-charcoal/70 hover:bg-sand"
+            )}
+          >
+            <LayoutGrid className="h-3.5 w-3.5" />
+            Cards
           </button>
         </div>
       </div>

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import {
   Eye,
   Inbox,
@@ -14,6 +15,7 @@ import {
   ImageIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
+import { ListingViewButton } from "@/components/dashboard/ListingViewButton";
 import { DeleteListingButton } from "@/components/dashboard/DeleteListingButton";
 import { DashboardListingStatusBadge } from "@/components/dashboard/DashboardListingStatusBadge";
 import { DashboardListingAnalyticsDrawer } from "@/components/dashboard/DashboardListingAnalyticsDrawer";
@@ -36,6 +38,7 @@ import {
   rentalTypeBadgeLabel,
 } from "@/lib/rental-types";
 import { formatListingAvailabilityText } from "@/lib/listing-availability-status";
+import { listingManageHref } from "@/lib/listing-workspace-nav";
 import { getListingPublicId, cn } from "@/lib/utils";
 
 type Props = {
@@ -117,6 +120,7 @@ function lifecycleLabel(row: OwnerListingRowModel): {
 }
 
 export function DashboardListingRow({ row, isFree }: Props) {
+  const router = useRouter();
   const [menuOpen, setMenuOpen] = useState(false);
   const [analyticsOpen, setAnalyticsOpen] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -142,6 +146,7 @@ export function DashboardListingRow({ row, isFree }: Props) {
   const price = formatListingPrice(listing);
   const propertyMeta = formatPropertyMeta(row);
   const publicId = getListingPublicId(listing);
+  const manageHref = listingManageHref(listing.id);
   const editHref = `/dashboard/listings/${listing.id}/edit`;
   const availabilityHref = `${editHref}#availability-calendar`;
   const previewHref = `/listings/${publicId}`;
@@ -167,9 +172,30 @@ export function DashboardListingRow({ row, isFree }: Props) {
   const showPerformance =
     ownerStatusKey === "published" || ownerStatusKey === "paused";
 
+  function openListing(target: EventTarget | null) {
+    if (
+      target instanceof Element &&
+      target.closest('a, button, input, textarea, select, [role="button"]')
+    ) {
+      return;
+    }
+    router.push(manageHref);
+  }
+
   return (
     <>
-      <article className="overflow-hidden rounded-2xl border border-border bg-white shadow-soft">
+      <article
+        role="link"
+        tabIndex={0}
+        onClick={(e) => openListing(e.target)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            router.push(manageHref);
+          }
+        }}
+        className="group cursor-pointer overflow-hidden rounded-2xl border border-border bg-white shadow-soft transition-shadow hover:border-gold/25 hover:shadow-card"
+      >
         <div className="flex flex-col xl:grid xl:grid-cols-[160px_minmax(0,1.4fr)_140px_150px_150px_auto] xl:items-stretch">
           {/* Thumbnail */}
           <div className="relative shrink-0 p-3 pb-0 xl:p-4 xl:pb-4">
@@ -192,7 +218,10 @@ export function DashboardListingRow({ row, isFree }: Props) {
           <div className="min-w-0 space-y-2 border-border px-3 py-3 xl:border-r xl:px-4 xl:py-4">
             <div className="flex items-start justify-between gap-2">
               <div className="min-w-0">
-                <h3 className="line-clamp-2 font-semibold text-charcoal" title={listing.title}>
+                <h3
+                  className="line-clamp-2 font-semibold text-charcoal group-hover:text-gold-dark"
+                  title={listing.title}
+                >
                   {listing.title}
                 </h3>
                 <p className="mt-0.5 text-sm text-muted">
@@ -343,6 +372,7 @@ export function DashboardListingRow({ row, isFree }: Props) {
               <Button href={primaryCta.href} size="sm" className="w-full justify-center">
                 {primaryCta.label}
               </Button>
+              <ListingViewButton listingId={listing.id} className="w-full" />
               {primaryCta.secondary ? (
                 <Link
                   href={primaryCta.secondary.href}
@@ -469,9 +499,12 @@ function OverflowMenu({
             <MenuLink href={editHref} onClick={onClose}>
               Επεξεργασία
             </MenuLink>
+            <MenuLink href={`/dashboard/listings/${listingId}/view`} onClick={onClose}>
+              Προβολή
+            </MenuLink>
             {canViewPublic && (
               <MenuLink href={previewHref} onClick={onClose}>
-                Προεπισκόπηση
+                Δημόσια σελίδα
               </MenuLink>
             )}
             {canViewPublic && (

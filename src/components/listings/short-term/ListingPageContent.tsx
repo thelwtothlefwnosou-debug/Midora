@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense } from "react";
+import { Suspense, useMemo } from "react";
 import { ListingRentalModeSwitcher } from "@/components/listings/ListingRentalModeSwitcher";
 import { ListingMediaGallery } from "@/components/listings/ListingMediaGallery";
 import { MonthlyListingLayout } from "@/components/listings/MonthlyListingLayout";
@@ -15,8 +15,11 @@ import { ShortTermInquiryCard } from "@/components/listings/detail/ShortTermInqu
 import { AvailabilityCalendarSection } from "@/components/listings/detail/AvailabilityCalendarSection";
 import { ListingLegalSection } from "@/components/listings/detail/ListingLegalSection";
 import { ListingCoreContent } from "@/components/listings/detail/ListingCoreContent";
+import { ListingPhotoTourSection } from "@/components/listings/detail/ListingPhotoTourSection";
+import { ListingArrivalSection } from "@/components/listings/detail/ListingArrivalSection";
 import { ListingHeaderIconActions } from "@/components/listings/detail/ListingHeaderActions";
 import { ListingInquiryDatesProvider } from "@/components/listings/detail/ListingInquiryDatesContext";
+import { hasArrivalInfo } from "@/lib/listing-arrival";
 import type { ListingPublicDetail, ListingWithImages } from "@/lib/types";
 import type { ListingUnavailablePeriod } from "@/lib/unavailable-periods";
 import type { ListingPublicContact } from "@/lib/listing-contact";
@@ -28,6 +31,7 @@ type Props = {
   isFavorited: boolean;
   mapPrice: number;
   contact: ListingPublicContact;
+  previewMode?: boolean;
 };
 
 function ListingPageContentInner({
@@ -36,8 +40,22 @@ function ListingPageContentInner({
   unavailablePeriods,
   isFavorited,
   contact,
+  previewMode = false,
 }: Props) {
   const { mode, showBoth } = useListingRentalMode();
+
+  const stickyNavItems = useMemo(() => {
+    const items = [
+      { id: "about", label: "Περιγραφή" },
+      { id: "amenities", label: "Παροχές" },
+    ];
+    const hasTour = (listing.listing_images ?? []).some((img) => img.media_type !== "video");
+    if (hasTour) items.push({ id: "photo-tour", label: "Περιήγηση" });
+    if (hasArrivalInfo(listing)) items.push({ id: "arrival", label: "Άφιξη" });
+    items.push({ id: "availability", label: "Διαθεσιμότητα" });
+    items.push({ id: "area", label: "Περιοχή" });
+    return items;
+  }, [listing]);
 
   async function handleShare() {
     const url = window.location.href;
@@ -107,7 +125,10 @@ function ListingPageContentInner({
 
       <ListingCoreContent listing={listing} rentalMode="short_term" />
 
-      <StickyPropertyNav showAvailability />
+      <ListingPhotoTourSection listing={listing} images={listing.listing_images ?? []} />
+      <ListingArrivalSection listing={listing} />
+
+      <StickyPropertyNav items={stickyNavItems} />
 
       <div className="mt-6 grid gap-12 lg:grid-cols-3 lg:gap-10">
         <div className="min-w-0 space-y-0 lg:col-span-2">

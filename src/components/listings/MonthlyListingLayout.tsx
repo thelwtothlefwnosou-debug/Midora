@@ -33,7 +33,13 @@ export function MonthlyListingLayout({
     <>
       <ListingCoreContent listing={listing} rentalMode="monthly" />
 
-      <StickyPropertyNav showAvailability={false} />
+      <StickyPropertyNav
+        items={[
+          { id: "about", label: "Περιγραφή" },
+          { id: "amenities", label: "Παροχές" },
+          { id: "area", label: "Περιοχή" },
+        ]}
+      />
 
       <div className="mt-6 grid gap-12 lg:grid-cols-3 lg:gap-10">
         <div className="min-w-0 space-y-0 lg:col-span-2">

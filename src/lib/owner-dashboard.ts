@@ -384,6 +384,7 @@ export function listingPrimaryCta(
 ): { label: string; href: string; secondary?: { label: string; href: string } } {
   const ownerStatus = getOwnerListingStatus(listing, effectiveStatus);
   const previewHref = `/listings/${listing.slug ?? listing.id}`;
+  const ownerViewHref = `/dashboard/listings/${listing.id}/view`;
   const editHref = `/dashboard/listings/${listing.id}/edit`;
   const reactivateHref = `/dashboard/listings/${listing.id}/pay?reactivate=1`;
 
@@ -392,13 +393,13 @@ export function listingPrimaryCta(
       return {
         label: "Συνέχισε τη συμπλήρωση",
         href: `/dashboard/listings/new?draft=${listing.id}`,
-        secondary: { label: "Προεπισκόπηση", href: previewHref },
+        secondary: { label: "Προβολή", href: ownerViewHref },
       };
     case "review":
       return {
         label: "Δες την κατάσταση ελέγχου",
         href: "/dashboard/listings",
-        secondary: { label: "Προεπισκόπηση", href: previewHref },
+        secondary: { label: "Προβολή", href: ownerViewHref },
       };
     case "needs_fixes":
       return {

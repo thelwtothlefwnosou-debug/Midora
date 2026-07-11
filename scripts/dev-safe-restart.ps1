@@ -1,7 +1,7 @@
 # Safe dev restart: always stop the server BEFORE touching .next cache.
 param(
   [switch]$CleanCache,
-  [string]$OpenUrl = "http://127.0.0.1:3000/listings?rentalType=short_term"
+  [string]$OpenUrl = "http://127.0.0.1:3000/dashboard/listings"
 )
 
 $ErrorActionPreference = "Stop"

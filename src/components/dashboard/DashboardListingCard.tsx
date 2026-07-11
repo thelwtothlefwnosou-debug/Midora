@@ -229,9 +229,12 @@ export function DashboardListingCard({
                         Φωτογραφίες
                       </MenuLink>
                     )}
+                    <MenuLink href={`/dashboard/listings/${listing.id}/view`} onClick={() => setMenuOpen(false)}>
+                      Προβολή
+                    </MenuLink>
                     {canViewPublic && (
                       <MenuLink href={previewHref} onClick={() => setMenuOpen(false)}>
-                        Προεπισκόπηση
+                        Δημόσια σελίδα
                       </MenuLink>
                     )}
                     {canViewPublic && (
@@ -287,13 +290,19 @@ export function DashboardListingCard({
             <Button href={primaryCta.href} size="sm">
               {primaryCta.label}
             </Button>
+            <Link
+              href={`/dashboard/listings/${listing.id}/view`}
+              className="flex items-center gap-1 text-xs text-charcoal/60 hover:text-gold"
+            >
+              <Eye className="h-3 w-3" />
+              Προβολή
+            </Link>
             {canViewPublic && (
               <Link
                 href={previewHref}
                 className="flex items-center gap-1 text-xs text-charcoal/60 hover:text-gold"
               >
-                <Eye className="h-3 w-3" />
-                Προεπισκόπηση
+                Δημόσια
               </Link>
             )}
           </div>
