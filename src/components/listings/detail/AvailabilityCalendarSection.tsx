@@ -1,7 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { AvailabilityCalendarPanel } from "@/components/availability/AvailabilityCalendarGrid";
+import { OwnerPricePreview } from "@/components/dashboard/OwnerPricePreview";
 import { useListingInquiryDates } from "@/components/listings/detail/ListingInquiryDatesContext";
 import { useListingInterest } from "@/components/listings/ListingInterestContext";
 import { useDateRangeSelection } from "@/hooks/useDateRangeSelection";
@@ -12,6 +13,7 @@ import {
   normalizeDateRange,
   stayNightsBetween,
 } from "@/lib/availability-calendar";
+import { computeIndicativeStayPrice, makeWeekendDayChecker, resolveNightlyPrice } from "@/lib/listing-short-term-price";
 import type { ListingPublicDetail } from "@/lib/types";
 
 type Props = {
@@ -32,6 +34,30 @@ export function AvailabilityCalendarSection({ listing, periods }: Props) {
   } = useListingInquiryDates();
 
   const hasCalendarData = listingHasPublicCalendarData(listing, periods);
+  const priceRules = listing.price_rules ?? [];
+
+  const priceForDate = useCallback(
+    (dateKey: string) =>
+      resolveNightlyPrice(listing, priceRules, periods, dateKey),
+    [listing, priceRules, periods]
+  );
+
+  const indicativePrice = useMemo(() => {
+    if (!range?.start || !range?.end || range.start === range.end) return null;
+    return computeIndicativeStayPrice(
+      listing,
+      priceRules,
+      range.start,
+      range.end,
+      guests,
+      periods
+    );
+  }, [range, listing, priceRules, guests, periods]);
+
+  const isWeekendDay = useMemo(
+    () => makeWeekendDayChecker(listing.weekend_days),
+    [listing.weekend_days]
+  );
 
   const [month, setMonth] = useState(() => {
     const d = new Date();
@@ -88,7 +114,7 @@ export function AvailabilityCalendarSection({ listing, periods }: Props) {
       <h2 className="listing-section-title">Ενδεικτική διαθεσιμότητα</h2>
       <p className="mt-2 max-w-2xl text-sm text-charcoal/65">
         {hasCalendarData
-          ? "Επίλεξε ημερομηνίες και στείλε αίτημα στον ιδιοκτήτη για επιβεβαίωση. Υπόκειται σε επιβεβαίωση από τον ιδιοκτήτη."
+          ? "Επίλεξε ημερομηνίες και στείλε αίτημα στον ιδιοκτήτη. Η τελική διαθεσιμότητα και τιμή επιβεβαιώνονται από τον ιδιοκτήτη."
           : "Επικοινώνησε με τον ιδιοκτήτη για διαθεσιμότητα και τελική τιμή."}
       </p>
 
@@ -143,6 +169,12 @@ export function AvailabilityCalendarSection({ listing, periods }: Props) {
             </p>
           )}
 
+          {indicativePrice && rangeMeetsMinStay && (
+            <div className="mt-4">
+              <OwnerPricePreview price={indicativePrice} variant="public" />
+            </div>
+          )}
+
           <div className="mt-5 rounded-2xl border border-charcoal/8 bg-white p-4 sm:p-5">
             <AvailabilityCalendarPanel
               month={month}
@@ -158,6 +190,9 @@ export function AvailabilityCalendarSection({ listing, periods }: Props) {
               selectionEnd={selectionEnd}
               onDateClick={handleDateClick}
               minimumStayNights={minimumStayNights}
+              showPrices
+              priceForDate={priceForDate}
+              isWeekendDay={isWeekendDay}
               showLegend
               layout="responsive"
               compact

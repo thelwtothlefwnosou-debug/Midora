@@ -8,7 +8,7 @@ export const COPY = {
   utilitiesNotIncluded: "Οι λογαριασμοί δεν περιλαμβάνονται",
   expressInterest: "Στείλε ενδιαφέρον",
   sendMessage: "Στείλε μήνυμα",
-  submitInterest: "Αποστολή αιτήματος",
+  submitInterest: "Αποστολή ενδιαφέροντος",
   viewListing: "Δες αγγελία",
   contactAdvertiser: "Επικοινωνία με αγγελιοδότη",
   contactPhone: "Κινητό",
@@ -19,9 +19,9 @@ export const COPY = {
   noPhoto: "Δεν υπάρχει φωτογραφία",
   whatsApp: "WhatsApp",
   contactHost: "Επικοινωνία με αγγελιοδότη",
-  interestSuccessTitle: "Το αίτημά σου στάλθηκε",
+  interestSuccessTitle: "Το μήνυμά σου στάλθηκε",
   interestSuccessText:
-    "Το αίτημά σου στάλθηκε στον ιδιοκτήτη. Θα επικοινωνήσει μαζί σου για διαθεσιμότητα και όρους.",
+    "Το μήνυμά σου στάλθηκε στον ιδιοκτήτη. Θα επικοινωνήσει μαζί σου για διαθεσιμότητα και όρους.",
   reportSuccessText:
     "Η αναφορά σου καταχωρήθηκε. Η ομάδα του Midora θα την εξετάσει.",
   leadPrivacyNotice:

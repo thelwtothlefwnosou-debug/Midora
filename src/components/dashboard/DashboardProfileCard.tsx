@@ -6,6 +6,7 @@ import type { Profile } from "@/lib/types";
 import {
   profileCompletionItems,
   profileCompletionPercent,
+  profileRequiredComplete,
 } from "@/lib/owner-dashboard";
 import { ProfileAvatar } from "@/components/profile/ProfileAvatar";
 import { Check, Circle, ChevronDown, X } from "lucide-react";
@@ -25,7 +26,11 @@ export function DashboardProfileCard({
   collapsed?: boolean;
 }) {
   const percent = profileCompletionPercent(profile, email);
-  const pendingItems = profileCompletionItems(profile, email).filter((item) => !item.done);
+  const items = profileCompletionItems(profile, email);
+  const requiredPending = items.filter((item) => item.required && !item.done);
+  const recommendedPending = items.filter((item) => !item.required && !item.done);
+  const pendingItems = [...requiredPending, ...recommendedPending];
+  const requiredDone = profileRequiredComplete(profile, email);
   const [expanded, setExpanded] = useState(false);
   const [dismissed, setDismissed] = useState(true);
 
@@ -37,7 +42,7 @@ export function DashboardProfileCard({
     }
   }, []);
 
-  if (percent >= 100 || pendingItems.length === 0) {
+  if (requiredDone && recommendedPending.length === 0) {
     if (collapsed) {
       return (
         <div className="flex justify-center rounded-2xl border border-border bg-white p-3 shadow-soft">
@@ -61,7 +66,7 @@ export function DashboardProfileCard({
     );
   }
 
-  if (dismissed && !expanded) {
+  if (requiredDone && recommendedPending.length > 0 && (dismissed && !expanded)) {
     return (
       <div className="rounded-2xl border border-border bg-white p-3 shadow-soft">
         <div className="flex items-center gap-3">
@@ -155,13 +160,13 @@ export function DashboardProfileCard({
       </ul>
 
       <Link
-        href="/dashboard/verification"
+        href="/dashboard/profile"
         className={cn(
           "mt-4 inline-flex min-h-9 w-full items-center justify-center rounded-xl",
           "bg-charcoal text-xs font-semibold text-white hover:bg-charcoal/90"
         )}
       >
-        Ολοκλήρωσε το προφίλ
+        {requiredPending.length > 0 ? "Ολοκλήρωσε το προφίλ" : "Βελτίωσε το προφίλ"}
       </Link>
     </div>
   );

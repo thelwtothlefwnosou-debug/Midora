@@ -2,20 +2,21 @@
 
 import { useActionState } from "react";
 import Link from "next/link";
-import { AccountShell } from "@/components/account/AccountShell";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { ListingForm } from "@/components/listings/ListingForm";
-import { ListingAvailabilityEditor } from "@/components/dashboard/ListingAvailabilityEditor";
 import { ListingBedroomsEditor } from "@/components/dashboard/ListingBedroomsEditor";
 import { ListingLocationEditor } from "@/components/dashboard/ListingLocationEditor";
-import { ListingUnavailablePeriodsEditor } from "@/components/dashboard/ListingUnavailablePeriodsEditor";
-import { ShortTermCalendarHub } from "@/components/dashboard/ShortTermCalendarHub";
 import { DeleteListingButton } from "@/components/dashboard/DeleteListingButton";
 import { ListingCompletenessCard } from "@/components/dashboard/ListingCompletenessCard";
 import { listingRentalType } from "@/lib/rental-types";
 import type { ListingUnavailablePeriod } from "@/lib/unavailable-periods";
 import { updateListing } from "@/lib/actions";
-import type { ListingPriceRule, ListingSleepingArrangement, ListingWithImages, Profile } from "@/lib/types";
+import type {
+  ListingPriceRule,
+  ListingSleepingArrangement,
+  ListingWithImages,
+  Profile,
+} from "@/lib/types";
 
 type Props = {
   listing: ListingWithImages;
@@ -28,56 +29,50 @@ type Props = {
 
 export function EditListingForm({
   listing,
-  profile,
-  email,
-  unavailablePeriods,
-  priceRules,
   sleepingArrangements,
 }: Props) {
   const [state, formAction, pending] = useActionState(
-    async (_prev: { error?: string } | null, formData: FormData) => {
-      return (await updateListing(listing.id, formData)) ?? null;
+    async (_prev: { error?: string; saved?: boolean } | null, formData: FormData) => {
+      const result = await updateListing(listing.id, formData);
+      if (result && "error" in result && result.error) {
+        return { error: result.error };
+      }
+      return { saved: true };
     },
     null
   );
 
   const rentalType = listingRentalType(listing);
   const isShortTerm = rentalType === "short_term";
-  const isMonthly = rentalType === "monthly";
   const photoCount = listing.listing_images?.length ?? 0;
 
   return (
-    <AccountShell
-      profile={profile}
-      email={email}
-      active="listings"
-      title="Επεξεργασία αγγελίας"
-      subtitle="Μετά την αποθήκευση η αγγελία περνά ξανά έγκριση"
-    >
-      <div className="mb-4 flex items-start justify-end">
+    <div>
+      <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h2 className="font-display text-lg font-semibold text-charcoal">Επεξεργασία αγγελίας</h2>
+          <p className="mt-1 text-sm text-muted">
+            Οι αλλαγές σε βασικά στοιχεία, περιγραφή και τοποθεσία μπορεί να χρειάζονται επανέλεγχο.
+          </p>
+        </div>
         <DeleteListingButton listingId={listing.id} />
       </div>
+
+      {state?.saved && (
+        <p className="mb-4 rounded-xl border border-teal/30 bg-teal/10 px-4 py-3 text-sm text-teal">
+          Οι αλλαγές αποθηκεύτηκαν.
+        </p>
+      )}
+      {state?.error && (
+        <p className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          {state.error}
+        </p>
+      )}
 
       {isShortTerm && (
         <div className="mb-6">
           <ListingCompletenessCard listing={listing} photoCount={photoCount} />
         </div>
-      )}
-
-      {isShortTerm && (
-        <ShortTermCalendarHub
-          listing={listing}
-          periods={unavailablePeriods}
-          priceRules={priceRules}
-        />
-      )}
-
-      {isMonthly && (
-        <ListingUnavailablePeriodsEditor
-          listingId={listing.id}
-          periods={unavailablePeriods}
-          rentalType={rentalType}
-        />
       )}
 
       {isShortTerm && (
@@ -89,37 +84,30 @@ export function EditListingForm({
 
       <ListingLocationEditor listing={listing} />
 
-      {isMonthly && (
-        <GlassCard className="mb-6 p-6">
-          <p className="mb-4 text-sm text-muted">
-            Ενημέρωσε γρήγορα τη διαθεσιμότητα — δεν χρειάζεται επαν-έγκριση.
-          </p>
-          <ListingAvailabilityEditor
-            listingId={listing.id}
-            availabilityStatus={listing.availability_status}
-            availabilityNote={listing.availability_note}
-          />
-        </GlassCard>
-      )}
-
-      <GlassCard className="p-6 sm:p-8">
+      <GlassCard className="mt-6 p-6 sm:p-8">
         <ListingForm
           listing={listing}
           action={formAction}
           pending={pending}
           error={state?.error}
-          submitLabel={pending ? "Αποθήκευση..." : "Αποθήκευση αλλαγών"}
+          submitLabel={pending ? "Αποθήκευση…" : "Αποθήκευση αλλαγών"}
         />
       </GlassCard>
 
-      <p className="mt-4 text-center text-sm text-muted">
+      <p className="mt-4 flex flex-wrap gap-4 text-sm text-muted">
         <Link
           href={`/dashboard/listings/${listing.id}/photos`}
-          className="text-gold hover:underline"
+          className="font-medium text-gold-dark hover:underline"
         >
           Διαχείριση φωτογραφιών →
         </Link>
+        <Link
+          href={`/dashboard/listings/${listing.id}/availability`}
+          className="font-medium text-gold-dark hover:underline"
+        >
+          Διαθεσιμότητα →
+        </Link>
       </p>
-    </AccountShell>
+    </div>
   );
 }

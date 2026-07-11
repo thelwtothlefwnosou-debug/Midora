@@ -320,15 +320,7 @@ function PropertyContactModalContent({
           {error && <p className="mt-4 text-sm text-red-500">{error}</p>}
 
           <p className="mt-4 text-xs leading-relaxed text-muted">
-            Με την αποστολή αιτήματος αποδέχεσαι τους{" "}
-            <Link href="/terms" className="text-gold hover:underline">
-              Όρους χρήσης
-            </Link>{" "}
-            και την{" "}
-            <Link href="/privacy" className="text-gold hover:underline">
-              Πολιτική απορρήτου
-            </Link>
-            . Το Midora διαβιβάζει το μήνυμά σου στον ιδιοκτήτη για σκοπούς αρχικής επικοινωνίας.
+            {COPY.leadPrivacyNotice}
           </p>
 
           <div className="mt-6 flex gap-2 border-t border-border pt-4">

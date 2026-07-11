@@ -78,8 +78,13 @@ export async function uploadProfileAvatar(formData: FormData) {
     await deleteAvatarAtPath(supabase, profile.avatar_path);
   }
 
+  revalidatePath("/dashboard");
+  revalidatePath("/dashboard/profile");
   revalidatePath("/dashboard/settings");
   revalidatePath("/dashboard/settings/profile");
+  revalidatePath("/dashboard/requests");
+  revalidatePath("/dashboard/messages");
+  revalidatePath("/listings", "layout");
   return { success: true as const };
 }
 
@@ -113,8 +118,13 @@ export async function removeProfileAvatar() {
 
   if (error) return { error: error.message };
 
+  revalidatePath("/dashboard");
+  revalidatePath("/dashboard/profile");
   revalidatePath("/dashboard/settings");
   revalidatePath("/dashboard/settings/profile");
+  revalidatePath("/dashboard/requests");
+  revalidatePath("/dashboard/messages");
+  revalidatePath("/listings", "layout");
   return { success: true as const };
 }
 
@@ -134,7 +144,10 @@ export async function updateShowProfilePhotoPublic(show: boolean) {
 
   if (error) return { error: error.message };
 
+  revalidatePath("/dashboard");
+  revalidatePath("/dashboard/profile");
   revalidatePath("/dashboard/settings/profile");
+  revalidatePath("/listings", "layout");
   return { success: true as const };
 }
 

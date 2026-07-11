@@ -5,7 +5,6 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { cn } from "@/lib/utils";
 
 export const SETTINGS_TABS = [
-  { id: "profile", label: "Προφίλ" },
   { id: "contact", label: "Επικοινωνία" },
   { id: "privacy", label: "Απόρρητο" },
   { id: "security", label: "Ασφάλεια" },
@@ -18,7 +17,7 @@ export function parseSettingsTab(value: string | null | undefined): SettingsTabI
   if (value && SETTINGS_TABS.some((t) => t.id === value)) {
     return value as SettingsTabId;
   }
-  return "profile";
+  return "security";
 }
 
 type Props = {

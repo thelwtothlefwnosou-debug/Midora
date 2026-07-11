@@ -22,8 +22,8 @@ export default async function DashboardRequestsPage() {
       profile={profile}
       email={email}
       active="requests"
-      title="Ενδιαφέροντα"
-      subtitle="Αρχικά αιτήματα επικοινωνίας από επισκέπτες για τις αγγελίες σου"
+      title="Αιτήματα"
+      subtitle="Ενδιαφέροντα από επισκέπτες για τις αγγελίες σου."
     >
       {activeLeads.length === 0 ? (
         <GlassCard className="overflow-hidden">

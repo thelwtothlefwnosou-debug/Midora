@@ -78,9 +78,12 @@ export function useUnavailablePeriodsManager({ listingId, initialPeriods }: Opti
         showToast("Δεν ήταν δυνατή η αποθήκευση. Δοκίμασε ξανά.");
         return;
       }
-      if (result?.periods) {
-        applyPeriods(result.periods as ListingUnavailablePeriod[]);
+      if (!result?.periods) {
+        setError("Η αποθήκευση δεν ολοκληρώθηκε. Δοκίμασε ξανά.");
+        showToast("Δεν ήταν δυνατή η αποθήκευση. Δοκίμασε ξανά.");
+        return;
       }
+      applyPeriods(result.periods as ListingUnavailablePeriod[]);
       clearSelection();
       onSuccess?.();
       showToast("Οι ημερομηνίες σημειώθηκαν ως μη διαθέσιμες.");

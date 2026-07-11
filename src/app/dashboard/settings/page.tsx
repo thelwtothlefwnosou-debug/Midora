@@ -19,7 +19,7 @@ export default async function SettingsPage({
       email={email}
       active="settings"
       title="Ρυθμίσεις"
-      subtitle="Διαχείριση προφίλ, επικοινωνίας και ασφάλειας"
+      subtitle="Διαχείριση επικοινωνίας, ασφάλειας και ειδοποιήσεων"
     >
       <Suspense fallback={null}>
         <SettingsForm

@@ -1,4 +1,3 @@
-import { AccountShell } from "@/components/account/AccountShell";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { activateListingFree } from "@/lib/actions";
 import { createClient } from "@/lib/supabase/server";
@@ -8,11 +7,14 @@ import Link from "next/link";
 
 export default async function PayListingPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ error?: string }>;
 }) {
   const { id } = await params;
-  const { profile, email } = await requireDashboardContext("/dashboard/listings");
+  const { error: errorParam } = await searchParams;
+  const { profile } = await requireDashboardContext("/dashboard/listings");
   const supabase = await createClient();
   if (!supabase) redirect("/login");
 
@@ -31,18 +33,19 @@ export default async function PayListingPage({
     new Date(listing.expires_at) <= new Date();
 
   return (
-    <AccountShell
-      profile={profile}
-      email={email}
-      active="listings"
-      title={isFree ? "Συνδρομή προβολής" : "Χρέωση δημοσίευσης αγγελίας"}
-      subtitle={listing.title}
-    >
+    <>
       <p className="mb-6 text-sm text-muted">
         Η χρέωση αφορά μόνο την προβολή της αγγελίας — όχι μισθώσεις ή συμφωνίες.
       </p>
 
       <GlassCard glow className="mx-auto max-w-lg p-8 text-center">
+        {errorParam && (
+          <p className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+            {errorParam === "config"
+              ? "Η υπηρεσία δεν είναι διαθέσιμη αυτή τη στιγμή. Δοκίμασε ξανά αργότερα."
+              : errorParam}
+          </p>
+        )}
         {isFree ? (
           <>
             <p className="font-display text-5xl font-bold text-gold">Δωρεάν</p>
@@ -69,6 +72,6 @@ export default async function PayListingPage({
           </>
         )}
       </GlassCard>
-    </AccountShell>
+    </>
   );
 }

@@ -94,11 +94,11 @@ export function ListingBedroomsEditor({ listing, initialArrangements }: Props) {
       }));
 
       const result = await saveOwnerSleepingArrangements(listing.id, payload);
-      if (result?.error) {
+      if (result && "error" in result && result.error) {
         setError(result.error);
         return;
       }
-      if (result?.arrangements) {
+      if (result && "arrangements" in result && result.arrangements) {
         setRows(result.arrangements.map(toDraft));
       } else {
         setRows([]);

@@ -61,6 +61,13 @@ export type Profile = {
   account_status?: "active" | "suspended" | null;
   last_verification_sent_at?: string | null;
   verification_attempt_count?: number | null;
+  display_name?: string | null;
+  bio?: string | null;
+  advertiser_type?: "individual" | "professional" | null;
+  communication_languages?: string[] | null;
+  preferred_contact_method?: "message" | "phone" | "email" | null;
+  business_name?: string | null;
+  business_title?: string | null;
   created_at: string;
 };
 
@@ -140,6 +147,13 @@ export type Listing = {
   supports_monthly?: boolean | null;
   minimum_stay_nights?: number | null;
   minimum_stay_months?: number | null;
+  weekend_price_per_night?: number | null;
+  weekend_days?: number[] | null;
+  cleaning_fee_note?: string | null;
+  weekly_discount_percent?: number | null;
+  monthly_discount_percent?: number | null;
+  last_minute_discount_percent?: number | null;
+  early_bird_discount_percent?: number | null;
   monthly_includes_bills?: boolean | null;
   monthly_terms?: string | null;
   advertiser_verification_status?: VerificationStatus | null;
@@ -275,6 +289,10 @@ export type ListingWithImages = Listing & {
   profiles?: Pick<
     Profile,
     | "full_name"
+    | "display_name"
+    | "bio"
+    | "advertiser_type"
+    | "communication_languages"
     | "phone"
     | "allow_phone_contact"
     | "allow_whatsapp"

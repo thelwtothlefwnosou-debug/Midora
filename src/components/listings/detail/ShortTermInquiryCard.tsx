@@ -1,13 +1,20 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { ChevronDown } from "lucide-react";
 import { InterestDateRangePicker } from "@/components/availability/InterestDateRangePicker";
+import { OwnerPricePreview } from "@/components/dashboard/OwnerPricePreview";
 import { ListingContactCard } from "@/components/listings/ListingContactCard";
 import { ListingPortalDisclaimer } from "@/components/listings/detail/ListingPortalDisclaimer";
 import { useListingInquiryDates } from "@/components/listings/detail/ListingInquiryDatesContext";
 import { useListingInterest } from "@/components/listings/ListingInterestContext";
 import type { ListingPublicContact } from "@/lib/listing-contact";
+import {
+  computeIndicativeStayPrice,
+  formatIndicativePriceBreakdown,
+  makeWeekendDayChecker,
+  resolveNightlyPrice,
+} from "@/lib/listing-short-term-price";
 import type { ListingPublicDetail } from "@/lib/types";
 import type { ListingUnavailablePeriod } from "@/lib/unavailable-periods";
 import {
@@ -45,6 +52,49 @@ export function ShortTermInquiryCard({
   const [pickerOpen, setPickerOpen] = useState(false);
   const [contactOpen, setContactOpen] = useState(false);
 
+  const priceRules = listing.price_rules ?? [];
+
+  const indicativePrice = useMemo(() => {
+    if (!range?.start || !range?.end || range.start === range.end) return null;
+    return computeIndicativeStayPrice(
+      listing,
+      priceRules,
+      range.start,
+      range.end,
+      guests,
+      periods
+    );
+  }, [range, listing, priceRules, guests, periods]);
+
+  const isWeekendDay = useMemo(
+    () => makeWeekendDayChecker(listing.weekend_days),
+    [listing.weekend_days]
+  );
+
+  const nightPrice = listing.price_per_night ?? 0;
+  const guestLabel = `${guests} ${guests === 1 ? "άτομο" : "άτομα"}`;
+
+  function buildInquiryMessage(): string {
+    const nights =
+      range && rangeMeetsMinStay ? stayNightsBetween(range.start, range.end) : null;
+    const parts = [
+      `Καλησπέρα, ενδιαφέρομαι για το ακίνητο${range ? ` από ${formatInterestRangeLabel(range.start, range.end)}` : ""} για ${guestLabel}.`,
+    ];
+    if (nights) {
+      parts.push(`Διάρκεια: ${nights} ${nights === 1 ? "νύχτα" : "νύχτες"}.`);
+    }
+    if (indicativePrice) {
+      parts.push(
+        `Ενδεικτική τιμή βάσει ημερολογίου: €${indicativePrice.total.toLocaleString("el-GR")}.`
+      );
+      if (indicativePrice.discountLabel) {
+        parts.push(`${indicativePrice.discountLabel}.`);
+      }
+    }
+    parts.push("Θα ήθελα να επιβεβαιώσω τη διαθεσιμότητα και την τελική τιμή.");
+    return parts.join(" ");
+  }
+
   const hasDirectContact =
     (contact.allowPhone && contact.phone) ||
     Boolean(contact.email) ||
@@ -68,9 +118,6 @@ export function ShortTermInquiryCard({
     });
   }
 
-  const nightPrice = listing.price_per_night ?? 0;
-  const guestLabel = `${guests} ${guests === 1 ? "άτομο" : "άτομα"}`;
-
   function openAvailabilityRequest() {
     if (range && !rangeMeetsMinStay) return;
     if (range) {
@@ -79,25 +126,34 @@ export function ShortTermInquiryCard({
         interestStartDate: range.start,
         interestEndDate: range.end,
         timingNote: formatInterestRangeLabel(range.start, range.end),
-        message: `Καλησπέρα, ενδιαφέρομαι για το ακίνητο από ${formatInterestRangeLabel(range.start, range.end)} για ${guestLabel}. Θα ήθελα να επιβεβαιώσω τη διαθεσιμότητα και την τελική τιμή.`,
+        message: buildInquiryMessage(),
       });
     } else {
       openInterest({
         guests,
-        message: `Καλησπέρα, ενδιαφέρομαι για το ακίνητο για ${guestLabel}. Θα ήθελα να επιβεβαιώσω τη διαθεσιμότητα και την τελική τιμή.`,
+        message: buildInquiryMessage(),
       });
     }
   }
+
+  const priceForDate = (dateKey: string) =>
+    resolveNightlyPrice(listing, priceRules, periods, dateKey);
 
   const cardBody = (
     <>
       <h3 className="font-display text-lg font-semibold text-charcoal">
         Ενδιαφέρεστε για αυτό το κατάλυμα;
       </h3>
-      <p className="listing-price-display mt-3 text-2xl text-charcoal">
-        Από €{nightPrice.toLocaleString("el-GR")}{" "}
-        <span className="text-base font-medium text-muted">/ βράδυ</span>
-      </p>
+      {range && rangeMeetsMinStay && indicativePrice ? (
+        <div className="mt-4">
+          <OwnerPricePreview price={indicativePrice} variant="public" />
+        </div>
+      ) : (
+        <p className="listing-price-display mt-3 text-2xl text-charcoal">
+          Από €{nightPrice.toLocaleString("el-GR")}{" "}
+          <span className="text-base font-medium text-muted">/ βράδυ</span>
+        </p>
+      )}
       <p className="mt-2 text-sm text-charcoal/65">
         Η τελική διαθεσιμότητα και τιμή επιβεβαιώνονται από τον ιδιοκτήτη.
       </p>
@@ -155,8 +211,10 @@ export function ShortTermInquiryCard({
       {range && rangeMeetsMinStay && (
         <p className="mt-2 text-xs text-muted">
           {stayNightsBetween(range.start, range.end)}{" "}
-          {stayNightsBetween(range.start, range.end) === 1 ? "νύχτα" : "νύχτες"} ·
-          ενδεικτική επιλογή
+          {stayNightsBetween(range.start, range.end) === 1 ? "νύχτα" : "νύχτες"} ·{" "}
+          {indicativePrice
+            ? formatIndicativePriceBreakdown(indicativePrice).join(" · ")
+            : "ενδεικτική επιλογή"}
         </p>
       )}
 
@@ -205,7 +263,9 @@ export function ShortTermInquiryCard({
             className="min-w-0 flex-1 text-left"
           >
             <p className="listing-price-display text-lg">
-              Από €{nightPrice.toLocaleString("el-GR")} / βράδυ
+              {indicativePrice && rangeMeetsMinStay
+                ? `Ενδεικτική τιμή €${indicativePrice.total.toLocaleString("el-GR")}`
+                : `Από €${nightPrice.toLocaleString("el-GR")} / βράδυ`}
             </p>
             <p className="text-[11px] text-muted">
               {range
@@ -234,6 +294,9 @@ export function ShortTermInquiryCard({
         minimumStayNights={minimumStayNights}
         listingId={listing.id}
         showLegend
+        showPrices
+        priceForDate={priceForDate}
+        isWeekendDay={isWeekendDay}
         autoApplyOnComplete
         closeOnAutoApply
       />

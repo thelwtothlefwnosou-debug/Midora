@@ -30,6 +30,7 @@ type Props = {
   minimumStayNights?: number;
   priceForDate?: (dateKey: string) => number | null;
   isCustomPrice?: (dateKey: string) => boolean;
+  isWeekendDay?: (dateKey: string) => boolean;
   showPrices?: boolean;
   priceCellSize?: "default" | "large";
   className?: string;
@@ -50,6 +51,7 @@ function DayCell({
   minimumStayNights,
   priceForDate,
   isCustomPrice,
+  isWeekendDay,
   showPrices,
   priceCellSize = "default",
   compact,
@@ -64,12 +66,15 @@ function DayCell({
   minimumStayNights?: number;
   priceForDate?: (dateKey: string) => number | null;
   isCustomPrice?: (dateKey: string) => boolean;
+  isWeekendDay?: (dateKey: string) => boolean;
   showPrices?: boolean;
   priceCellSize?: "default" | "large";
   compact?: boolean;
 }) {
   const unavailable = isDateUnavailable(day.dateKey, periods);
   const past = isPastDate(day.dateKey);
+  const weekend =
+    day.inMonth && !past && isWeekendDay ? isWeekendDay(day.dateKey) : false;
   const selectionRole = day.inMonth
     ? getSelectionRole(day.dateKey, selectionStart, selectionEnd)
     : false;
@@ -91,6 +96,8 @@ function DayCell({
     showPrices && day.inMonth && priceForDate ? priceForDate(day.dateKey) : null;
   const customPrice =
     showPrices && day.inMonth && isCustomPrice ? isCustomPrice(day.dateKey) : false;
+  const ownerSelected =
+    mode === "owner" && (selectionRole === "start" || selectionRole === "end");
 
   const content = (
     <span
@@ -99,7 +106,7 @@ function DayCell({
         sizeClass,
         !day.inMonth && "text-transparent",
         day.inMonth && past && "text-muted/35",
-        day.inMonth && unavailable && !past && !selectionRole && "text-charcoal/70",
+        day.inMonth && unavailable && !past && !selectionRole && "text-muted",
         day.inMonth &&
           !unavailable &&
           !past &&
@@ -112,28 +119,42 @@ function DayCell({
           !selectionRole &&
           !tooEarlyForMinStay &&
           "text-charcoal",
-        selectionRole === "start" || selectionRole === "end"
-          ? "rounded-full bg-gold font-semibold text-white shadow-sm"
-          : selectionRole === "middle"
-            ? "rounded-none font-semibold text-charcoal"
-            : today && day.inMonth && !selectionRole
-              ? "rounded-full font-semibold text-charcoal ring-2 ring-gold/45 ring-offset-1"
-              : "rounded-full",
-        customPrice && !selectionRole && !unavailable && day.inMonth && !past && "text-teal"
+        ownerSelected
+          ? "rounded-full bg-charcoal font-semibold text-white shadow-sm"
+          : selectionRole === "start" || selectionRole === "end"
+            ? "rounded-full bg-gold font-semibold text-white shadow-sm"
+            : selectionRole === "middle"
+              ? "rounded-none font-semibold text-charcoal"
+              : today && day.inMonth && !selectionRole
+                ? "rounded-full font-semibold text-charcoal ring-2 ring-gold/45 ring-offset-1"
+                : "rounded-full"
       )}
     >
+      {customPrice && !selectionRole && !unavailable && day.inMonth && !past && (
+        <span className="absolute top-1 right-1.5 h-1.5 w-1.5 rounded-full bg-gold" aria-hidden />
+      )}
       <span>{day.inMonth ? day.date.getDate() : ""}</span>
-      {nightPrice != null && day.inMonth && !past && (
+      {unavailable && day.inMonth && !past && !selectionRole && priceCellSize === "large" ? (
+        <span className="mt-0.5 text-[9px] font-normal leading-none text-muted">
+          Μη διαθέσιμο
+        </span>
+      ) : nightPrice != null && day.inMonth && !past ? (
         <span
           className={cn(
             "mt-0.5 font-medium leading-none",
             priceCellSize === "large" ? "text-[11px]" : "text-[9px] font-normal",
-            selectionRole ? "text-white/90" : customPrice ? "text-teal" : unavailable ? "text-charcoal/80" : "text-muted"
+            ownerSelected || selectionRole
+              ? "text-white/90"
+              : unavailable
+                ? "text-muted/70"
+                : customPrice
+                  ? "text-gold-dark"
+                  : "text-muted"
           )}
         >
           €{nightPrice.toLocaleString("el-GR")}
         </span>
-      )}
+      ) : null}
     </span>
   );
 
@@ -142,12 +163,19 @@ function DayCell({
     priceCellSize === "large" && "min-h-[3.5rem] border-b border-r border-border/40",
     !day.inMonth && "pointer-events-none",
     selectionRole === "middle" &&
-      "bg-gold/18 before:absolute before:inset-y-1.5 before:left-0 before:right-0 before:-z-0 before:bg-gold/18",
+      (mode === "owner"
+        ? "bg-charcoal/12 before:absolute before:inset-y-1.5 before:left-0 before:right-0 before:-z-0 before:bg-charcoal/12"
+        : "bg-gold/18 before:absolute before:inset-y-1.5 before:left-0 before:right-0 before:-z-0 before:bg-gold/18"),
     selectionRole === "start" &&
-      "bg-gold/18 before:absolute before:inset-y-1.5 before:left-1/2 before:right-0 before:-z-0 before:rounded-l-full before:bg-gold/18",
+      (mode === "owner"
+        ? "bg-charcoal/12 before:absolute before:inset-y-1.5 before:left-1/2 before:right-0 before:-z-0 before:rounded-l-full before:bg-charcoal/12"
+        : "bg-gold/18 before:absolute before:inset-y-1.5 before:left-1/2 before:right-0 before:-z-0 before:rounded-l-full before:bg-gold/18"),
     selectionRole === "end" &&
-      "bg-gold/18 before:absolute before:inset-y-1.5 before:left-0 before:right-1/2 before:-z-0 before:rounded-r-full before:bg-gold/18",
-    unavailable && day.inMonth && !past && !selectionRole && "bg-gold/30",
+      (mode === "owner"
+        ? "bg-charcoal/12 before:absolute before:inset-y-1.5 before:left-0 before:right-1/2 before:-z-0 before:rounded-r-full before:bg-charcoal/12"
+        : "bg-gold/18 before:absolute before:inset-y-1.5 before:left-0 before:right-1/2 before:-z-0 before:rounded-r-full before:bg-gold/18"),
+    unavailable && day.inMonth && !past && !selectionRole && "bg-charcoal/8",
+    weekend && day.inMonth && !past && !unavailable && !selectionRole && "bg-gold/6",
     tooEarlyForMinStay && day.inMonth && !past && !unavailable && "bg-sand/50",
     past && day.inMonth && "opacity-45",
     interactive && "cursor-pointer hover:bg-gold/8"
@@ -186,6 +214,7 @@ function MonthGrid({
   minimumStayNights,
   priceForDate,
   isCustomPrice,
+  isWeekendDay,
   showPrices,
   priceCellSize,
   compact,
@@ -214,6 +243,7 @@ function MonthGrid({
           minimumStayNights={minimumStayNights}
           priceForDate={priceForDate}
           isCustomPrice={isCustomPrice}
+          isWeekendDay={isWeekendDay}
           showPrices={showPrices}
           priceCellSize={priceCellSize}
           compact={compact}
@@ -267,6 +297,7 @@ export function AvailabilityCalendarGrid({
   minimumStayNights,
   priceForDate,
   isCustomPrice,
+  isWeekendDay,
   showPrices,
   priceCellSize,
   className,
@@ -311,6 +342,7 @@ export function AvailabilityCalendarGrid({
         minimumStayNights={minimumStayNights}
         priceForDate={priceForDate}
         isCustomPrice={isCustomPrice}
+        isWeekendDay={isWeekendDay}
         showPrices={showPrices}
         priceCellSize={priceCellSize}
         compact={compact}
@@ -335,6 +367,7 @@ export function AvailabilityCalendarPanel({
   minimumStayNights,
   priceForDate,
   isCustomPrice,
+  isWeekendDay,
   showPrices,
   priceCellSize,
   className,
@@ -408,6 +441,7 @@ export function AvailabilityCalendarPanel({
               minimumStayNights={minimumStayNights}
               priceForDate={priceForDate}
               isCustomPrice={isCustomPrice}
+              isWeekendDay={isWeekendDay}
               showPrices={showPrices}
               priceCellSize={priceCellSize}
               compact={compact}
@@ -428,6 +462,7 @@ export function AvailabilityCalendarPanel({
               minimumStayNights={minimumStayNights}
               priceForDate={priceForDate}
               isCustomPrice={isCustomPrice}
+              isWeekendDay={isWeekendDay}
               showPrices={showPrices}
               priceCellSize={priceCellSize}
               compact={compact}
@@ -451,6 +486,7 @@ export function AvailabilityCalendarPanel({
           minimumStayNights={minimumStayNights}
           priceForDate={priceForDate}
           isCustomPrice={isCustomPrice}
+          isWeekendDay={isWeekendDay}
           showPrices={showPrices}
           priceCellSize={priceCellSize}
           compact={showSingleOnly}

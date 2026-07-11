@@ -960,9 +960,11 @@ export async function updateListing(listingId: string, formData: FormData) {
   });
 
   revalidatePath("/dashboard");
+  revalidatePath(`/dashboard/listings/${listingId}`);
+  revalidatePath(`/dashboard/listings/${listingId}/edit`);
   revalidatePath("/listings");
   revalidateListingsCatalog();
-  redirect("/dashboard?updated=true");
+  return { success: true };
 }
 
 /** Ενημέρωση διαθεσιμότητας χωρίς επαν-έγκριση */
@@ -1761,26 +1763,38 @@ export async function updateListingLocation(
 }
 
 export async function activateListingFree(listingId: string) {
-  const supabase = await createClient();
-  if (!supabase) {
-    redirect(`/dashboard/listings/${listingId}/pay?error=config`);
+  const auth = await requireListingOwner(listingId);
+  if ("error" in auth) {
+    redirect(
+      `/dashboard/listings/${listingId}/pay?error=${encodeURIComponent(auth.error ?? "Σφάλμα πρόσβασης")}`
+    );
   }
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
 
   const expiresAt = new Date();
   expiresAt.setMonth(expiresAt.getMonth() + 1);
 
-  await supabase
+  const { data, error } = await auth.supabase
     .from("listings")
     .update({ status: "pending", expires_at: expiresAt.toISOString() })
     .eq("id", listingId)
-    .eq("user_id", user.id);
+    .eq("user_id", auth.user.id)
+    .select("id")
+    .maybeSingle();
+
+  if (error) {
+    redirect(
+      `/dashboard/listings/${listingId}/pay?error=${encodeURIComponent(error.message)}`
+    );
+  }
+  if (!data?.id) {
+    redirect(
+      `/dashboard/listings/${listingId}/pay?error=${encodeURIComponent("Η αγγελία δεν βρέθηκε ή δεν έχεις δικαίωμα επεξεργασίας.")}`
+    );
+  }
 
   revalidatePath("/dashboard");
+  revalidatePath("/dashboard/listings");
+  revalidatePath(`/dashboard/listings/${listingId}/pay`);
   redirect("/dashboard?submitted=true");
 }
 

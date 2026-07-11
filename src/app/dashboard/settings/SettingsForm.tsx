@@ -1,9 +1,7 @@
 "use client";
 
-import { useActionState } from "react";
 import Link from "next/link";
-import { Bell, Camera, KeyRound, ShieldCheck, UserRound, Phone } from "lucide-react";
-import { updateProfile } from "@/lib/actions";
+import { Bell, KeyRound, ShieldCheck, Phone } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { GlassCard } from "@/components/ui/GlassCard";
 import {
@@ -19,87 +17,8 @@ type SettingsFormProps = {
 };
 
 export function SettingsForm({ fullName, phone, email, activeTab }: SettingsFormProps) {
-  const [state, formAction, pending] = useActionState(
-    async (_prev: { error?: string; success?: boolean } | null, formData: FormData) => {
-      return (await updateProfile(formData)) ?? null;
-    },
-    null
-  );
-
   return (
     <DashboardSettingsTabs active={activeTab}>
-      {activeTab === "profile" && (
-        <div className="space-y-6">
-          <GlassCard className="p-6 sm:p-8">
-            <div className="mb-6 flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-sand">
-                <UserRound className="h-5 w-5 text-charcoal/70" />
-              </div>
-              <div>
-                <h2 className="font-semibold text-charcoal">Προσωπικά στοιχεία</h2>
-                <p className="text-sm text-muted">Όνομα και στοιχεία λογαριασμού</p>
-              </div>
-            </div>
-
-            <form action={formAction} className="space-y-5">
-              <input type="hidden" name="phone" value={phone} />
-              <div>
-                <label className="text-xs font-medium tracking-wide text-muted uppercase">
-                  Ονοματεπώνυμο
-                </label>
-                <input
-                  name="full_name"
-                  required
-                  defaultValue={fullName}
-                  className="mt-1 w-full rounded-xl border border-border bg-sand/50 px-4 py-3 text-charcoal outline-none focus:border-gold/50"
-                />
-              </div>
-
-              <div>
-                <label className="text-xs font-medium tracking-wide text-muted uppercase">
-                  Email
-                </label>
-                <input
-                  value={email}
-                  readOnly
-                  className="mt-1 w-full rounded-xl border border-border bg-sand/30 px-4 py-3 text-muted outline-none"
-                />
-                <p className="mt-1 text-xs text-muted/80">
-                  Το email δεν αλλάζει — χρησιμοποιείται για σύνδεση.
-                </p>
-              </div>
-
-              {state?.error && <p className="text-sm text-red-400">{state.error}</p>}
-              {state?.success && (
-                <p className="text-sm text-teal">Το προφίλ ενημερώθηκε επιτυχώς.</p>
-              )}
-
-              <Button type="submit" size="lg">
-                {pending ? "Αποθήκευση..." : "Αποθήκευση αλλαγών"}
-              </Button>
-            </form>
-          </GlassCard>
-
-          <GlassCard className="p-6 sm:p-8">
-            <div className="mb-4 flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-sand">
-                <Camera className="h-5 w-5 text-charcoal/70" />
-              </div>
-              <div>
-                <h2 className="font-semibold text-charcoal">Φωτογραφία προφίλ</h2>
-                <p className="text-sm text-muted">Η εικόνα που εμφανίζεται στις αγγελίες σου</p>
-              </div>
-            </div>
-            <Link
-              href="/dashboard/settings/profile"
-              className="inline-flex items-center gap-2 text-sm font-medium text-gold hover:underline"
-            >
-              Διαχείριση φωτογραφίας προφίλ
-            </Link>
-          </GlassCard>
-        </div>
-      )}
-
       {activeTab === "contact" && (
         <GlassCard className="p-6 sm:p-8">
           <div className="mb-4 flex items-center gap-3">
@@ -140,9 +59,9 @@ export function SettingsForm({ fullName, phone, email, activeTab }: SettingsForm
                     Εμφάνιση φωτογραφίας προφίλ στις αγγελίες μου
                   </span>
                   <span className="mt-0.5 block text-muted">
-                    Διαχειρίσου από τη{" "}
-                    <Link href="/dashboard/settings/profile" className="text-gold hover:underline">
-                      σελίδα φωτογραφίας προφίλ
+                    Διαχειρίσου από το{" "}
+                    <Link href="/dashboard/profile" className="text-gold hover:underline">
+                      Το προφίλ μου
                     </Link>
                     .
                   </span>

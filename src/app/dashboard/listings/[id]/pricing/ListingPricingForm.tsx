@@ -4,7 +4,6 @@ import { useActionState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Plus, Trash2 } from "lucide-react";
-import { AccountShell } from "@/components/account/AccountShell";
 import { GlassCard } from "@/components/ui/GlassCard";
 import {
   deleteListingPriceRule,
@@ -33,18 +32,16 @@ export function ListingPricingForm({ listing, rules, profile, email }: Props) {
   );
 
   return (
-    <AccountShell
-      profile={profile}
-      email={email}
-      active="listings"
-      title="Τιμές και διαθεσιμότητα"
-      subtitle={listing.title}
-    >
+    <div>
+      <div className="mb-4">
+        <h2 className="font-display text-lg font-semibold text-charcoal">Τιμές και διαθεσιμότητα</h2>
+        <p className="mt-1 text-sm text-muted">{listing.title}</p>
+      </div>
       <Link
-        href={`/dashboard/listings/${listing.id}/edit`}
+        href={`/dashboard/listings/${listing.id}`}
         className="mb-6 inline-flex items-center gap-1 text-sm text-muted hover:text-charcoal"
       >
-        <ArrowLeft className="h-4 w-4" /> Πίσω στην αγγελία
+        <ArrowLeft className="h-4 w-4" /> Πίσω στη διαχείριση
       </Link>
 
       <GlassCard className="space-y-6 p-6 sm:p-8">
@@ -157,6 +154,6 @@ export function ListingPricingForm({ listing, rules, profile, email }: Props) {
           επιβεβαιώνονται απευθείας με τον αγγελιοδότη.
         </p>
       </GlassCard>
-    </AccountShell>
+    </div>
   );
 }

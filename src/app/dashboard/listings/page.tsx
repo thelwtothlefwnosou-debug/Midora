@@ -44,7 +44,7 @@ export default async function DashboardListingsPage({
       profile={profile}
       email={email}
       active="listings"
-      title="Οι αγγελίες μου"
+      title="Τα ακίνητά μου"
       subtitle="Διαχειρίσου την προβολή, την κατάσταση και τα αιτήματα για κάθε ακίνητο."
     >
       {submitted === "review" && (

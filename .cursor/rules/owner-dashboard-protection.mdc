@@ -1,0 +1,34 @@
+---
+description: Protect owner dashboard redesign from accidental git revert or file deletion
+alwaysApply: true
+---
+
+# Owner dashboard — do not revert
+
+The premium owner area is **committed and intentional**. Do not undo it while "fixing" other issues.
+
+## Never do without explicit user request
+
+- `git checkout`, `git restore`, or `git reset` on `src/components/dashboard/**`, `src/app/dashboard/**`, `src/lib/owner-*.ts`, `src/lib/listing-workspace*.ts`, `src/components/dashboard/listing-workspace/**`, `src/components/dashboard/owner-home/**`, `ShortTermCalendarHub.tsx`, or related owner UI
+- `Delete` on any of the files above
+- Replacing the compact **top nav** layout with the old **left sidebar** (`AccountNav` + `DashboardProfileCard` in `DashboardShell`)
+- Replacing **property card grid** default with list-only / table CRM layout
+
+## Expected owner UI (baseline)
+
+- **DashboardShell**: no sidebar; header + centered main only
+- **DashboardHeader**: `OwnerTopNav` — Τα ακίνητά μου · Αιτήματα · Μηνύματα · Στατιστικά
+- **Listings**: `DashboardListingGridCard` default; Cards/List toggle
+- **Home**: `OwnerHomeOverview` on `/dashboard`
+- **Listing workspace**: tabs under `/dashboard/listings/[id]/*`
+- **Short-term only**: `ShortTermCalendarHub` on availability tab (daily prices in cells + `ShortTermDailyPriceTable`)
+
+## If UI looks wrong
+
+1. Assume **stale cache** first — suggest `npm run dev:restart:clean` and hard refresh
+2. Fix the **specific bug** in place; do not bulk-revert
+3. Restore from checkpoint only if user asks: `npm run checkpoint:list` then `npm run checkpoint:restore`
+
+## After meaningful owner UI changes
+
+Remind user to run `npm run checkpoint -- -Label "description"` if they want an extra backup outside git.

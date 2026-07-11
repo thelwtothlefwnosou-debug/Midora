@@ -25,7 +25,7 @@ export default async function ListingPricingPage({
   if (!listing) notFound();
 
   if (resolveSupportsShortTerm(listing)) {
-    redirect(`/dashboard/listings/${id}/edit#availability-calendar`);
+    redirect(`/dashboard/listings/${id}/availability`);
   }
 
   const rulesResult = await getListingPriceRules(id);

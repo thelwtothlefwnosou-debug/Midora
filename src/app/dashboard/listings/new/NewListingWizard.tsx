@@ -573,7 +573,7 @@ export function NewListingWizard({ profile, email, initialListingId = null }: Pr
     dbPhotoCount = savedPhotoCount
   ): string | null {
     if (targetStep === 1) {
-      return validateBasicDetails({
+      const basicErr = validateBasicDetails({
         title,
         city,
         area,
@@ -588,11 +588,11 @@ export function NewListingWizard({ profile, email, initialListingId = null }: Pr
         description,
         forSubmission: true,
       });
-    }
-    if (targetStep === 1 && forSubmission) {
-      if (latitude == null || longitude == null) {
+      if (basicErr) return basicErr;
+      if (forSubmission && (latitude == null || longitude == null)) {
         return "Ορίσε την ακριβή θέση του ακινήτου στον χάρτη για να συνεχίσεις.";
       }
+      return null;
     }
     if (targetStep === 2 && !rentalTypeChoice) {
       return "Επίλεξε τύπο μίσθωσης για να συνεχίσεις.";
@@ -767,6 +767,11 @@ export function NewListingWizard({ profile, email, initialListingId = null }: Pr
     }
     setError(null);
 
+    if (step === 1 || step === 2) {
+      ensureDraft(() => setStep((s) => Math.min(s + 1, TOTAL_STEPS)));
+      return;
+    }
+
     if (step === 3) {
       ensureDraft(() => setStep(4));
       return;
@@ -813,8 +818,10 @@ export function NewListingWizard({ profile, email, initialListingId = null }: Pr
         persistListingId(result.listingId);
         await refreshSavedPhotoCount();
         markDraftSaved();
+        router.push("/dashboard/listings?saved=draft");
+      } else {
+        setError("Δεν ήταν δυνατή η αποθήκευση. Δοκίμασε ξανά.");
       }
-      router.push("/dashboard/listings?saved=draft");
     });
   }
 

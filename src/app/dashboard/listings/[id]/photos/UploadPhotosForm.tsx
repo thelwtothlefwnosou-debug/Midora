@@ -8,8 +8,6 @@ import Link from "next/link";
 
 import { Upload, ArrowLeft, Video } from "lucide-react";
 
-import { AccountShell } from "@/components/account/AccountShell";
-
 import { GlassCard } from "@/components/ui/GlassCard";
 
 import { DeletePhotoButton } from "@/components/dashboard/DeletePhotoButton";
@@ -171,33 +169,21 @@ export function UploadPhotosForm({
 
 
   return (
-
-    <AccountShell
-
-      profile={profile}
-
-      email={email}
-
-      active="listings"
-
-      title="Φωτογραφίες & βίντεο"
-
-      subtitle={`${existingPhotos} φωτογραφίες · ${existingVideos} βίντεο · έως ${MAX_LISTING_PHOTOS} αρχεία · βίντεο έως ${MAX_VIDEO_DURATION_SECONDS} δευτ.`}
-
-    >
+    <div>
+      <div className="mb-4">
+        <h2 className="font-display text-lg font-semibold text-charcoal">Φωτογραφίες & βίντεο</h2>
+        <p className="mt-1 text-sm text-muted">
+          {existingPhotos} φωτογραφίες · {existingVideos} βίντεο · έως {MAX_LISTING_PHOTOS} αρχεία ·
+          βίντεο έως {MAX_VIDEO_DURATION_SECONDS} δευτ.
+        </p>
+      </div>
 
       <Link
-
-        href="/dashboard/listings"
-
+        href={`/dashboard/listings/${listingId}`}
         className="mb-6 inline-flex items-center gap-2 text-sm text-muted hover:text-gold"
-
       >
-
         <ArrowLeft className="h-4 w-4" />
-
-        Πίσω στις αγγελίες
-
+        Πίσω στη διαχείριση
       </Link>
 
 
@@ -377,11 +363,8 @@ export function UploadPhotosForm({
             </form>
 
           </GlassCard>
-
-    </AccountShell>
-
+    </div>
   );
-
 }
 
 

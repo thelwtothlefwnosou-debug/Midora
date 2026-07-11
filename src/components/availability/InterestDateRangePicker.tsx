@@ -38,6 +38,9 @@ type Props = {
   minimumStayNights?: number;
   listingId?: string;
   focusField?: DateRangeFocusField;
+  showPrices?: boolean;
+  priceForDate?: (dateKey: string) => number | null;
+  isWeekendDay?: (dateKey: string) => boolean;
   /** Apply range as soon as a valid start/end pair is selected. */
   autoApplyOnComplete?: boolean;
   /** Close the picker after auto-apply (requires autoApplyOnComplete). */
@@ -71,6 +74,9 @@ export function InterestDateRangePicker({
   minimumStayNights,
   listingId,
   focusField = "start",
+  showPrices = false,
+  priceForDate,
+  isWeekendDay,
   autoApplyOnComplete = false,
   closeOnAutoApply = false,
 }: Props) {
@@ -322,6 +328,9 @@ export function InterestDateRangePicker({
                 onDateHover={setHoverDate}
                 minimumStayNights={minimumStayNights}
                 showLegend={showLegend}
+                showPrices={showPrices}
+                priceForDate={priceForDate}
+                isWeekendDay={isWeekendDay}
                 layout={isMobile ? "single" : "dual"}
               />
             </div>

@@ -1,9 +1,9 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Plus } from "lucide-react";
+import { LayoutGrid, List, Plus } from "lucide-react";
 import { DashboardListingRow } from "@/components/dashboard/DashboardListingRow";
-import { DashboardListingsOverviewMetrics } from "@/components/dashboard/DashboardListingsOverviewMetrics";
+import { DashboardListingGridCard } from "@/components/dashboard/DashboardListingGridCard";
 import { DashboardListingsSmartAlerts } from "@/components/dashboard/DashboardListingsSmartAlerts";
 import {
   DashboardListingsToolbar,
@@ -18,24 +18,26 @@ import type {
 } from "@/lib/owner-listings-page";
 import {
   buildOwnerListingAlerts,
-  buildOwnerListingsOverview,
   countListingsByTab,
   filterByRentalType,
   filterOwnerListings,
   searchOwnerListings,
   sortOwnerListings,
 } from "@/lib/owner-listings-page";
+import { cn } from "@/lib/utils";
+
+type ViewMode = "cards" | "list";
 
 type Props = {
   rows: OwnerListingRowModel[];
-  newInquiries: number;
+  newInquiries?: number;
   isFree: boolean;
   initialTab?: ListingFilterTab;
 };
 
 export function DashboardListingsView({
   rows,
-  newInquiries,
+  newInquiries = 0,
   isFree,
   initialTab = "all",
 }: Props) {
@@ -43,12 +45,9 @@ export function DashboardListingsView({
   const [search, setSearch] = useState("");
   const [rentalFilter, setRentalFilter] = useState<"all" | "short_term" | "monthly">("all");
   const [sort, setSort] = useState<ListingSortOption>("recent");
+  const [view, setView] = useState<ViewMode>("cards");
 
   const tabCounts = useMemo(() => countListingsByTab(rows), [rows]);
-  const overview = useMemo(
-    () => buildOwnerListingsOverview(rows, newInquiries),
-    [rows, newInquiries]
-  );
   const alerts = useMemo(
     () => buildOwnerListingAlerts(rows, newInquiries),
     [rows, newInquiries]
@@ -68,38 +67,55 @@ export function DashboardListingsView({
       <DashboardEmptyState
         icon={Plus}
         title="Δεν έχεις ανεβάσει ακόμη αγγελία"
-        text="Δημιούργησε την πρώτη σου αγγελία και ξεκίνα να δέχεσαι αιτήματα ενδιαφέροντος."
+        text="Δημιούργησε την πρώτη σου αγγελία και ξεκίνα να προβάλλεις το ακίνητό σου."
         actionLabel="Ανέβασε την πρώτη αγγελία"
         actionHref={OWNER_LISTING_NEW_PATH}
       />
     );
   }
 
-  const hasPublished = tabCounts.published > 0;
-
   return (
     <div className="space-y-5">
-      <DashboardListingsOverviewMetrics overview={overview} />
-      <DashboardListingsSmartAlerts alerts={alerts} />
+      {alerts.length > 0 && <DashboardListingsSmartAlerts alerts={alerts} />}
 
-      {!hasPublished && rows.length > 0 && (
-        <p className="rounded-xl border border-border bg-white px-4 py-3 text-sm text-muted">
-          Οι αγγελίες σου δεν είναι ακόμη δημοσιευμένες.
-        </p>
-      )}
-
-      <DashboardListingsToolbar
-        tab={tab}
-        tabCounts={tabCounts}
-        search={search}
-        rentalFilter={rentalFilter}
-        sort={sort}
-        onTabChange={setTab}
-        onSearchChange={setSearch}
-        onRentalFilterChange={setRentalFilter}
-        onSortChange={setSort}
-        compact={compactToolbar}
-      />
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <DashboardListingsToolbar
+          tab={tab}
+          tabCounts={tabCounts}
+          search={search}
+          rentalFilter={rentalFilter}
+          sort={sort}
+          onTabChange={setTab}
+          onSearchChange={setSearch}
+          onRentalFilterChange={setRentalFilter}
+          onSortChange={setSort}
+          compact={compactToolbar}
+        />
+        <div className="flex shrink-0 rounded-lg border border-border bg-white p-0.5 shadow-soft">
+          <button
+            type="button"
+            onClick={() => setView("cards")}
+            className={cn(
+              "inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors",
+              view === "cards" ? "bg-charcoal text-white" : "text-charcoal/70 hover:bg-sand"
+            )}
+          >
+            <LayoutGrid className="h-3.5 w-3.5" />
+            Cards
+          </button>
+          <button
+            type="button"
+            onClick={() => setView("list")}
+            className={cn(
+              "inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors",
+              view === "list" ? "bg-charcoal text-white" : "text-charcoal/70 hover:bg-sand"
+            )}
+          >
+            <List className="h-3.5 w-3.5" />
+            List
+          </button>
+        </div>
+      </div>
 
       {filteredRows.length === 0 ? (
         <DashboardListingEmptyFiltered
@@ -110,6 +126,12 @@ export function DashboardListingsView({
             setSearch("");
           }}
         />
+      ) : view === "cards" ? (
+        <div className="grid gap-5 sm:grid-cols-2 2xl:grid-cols-3">
+          {filteredRows.map((row) => (
+            <DashboardListingGridCard key={row.listing.id} row={row} />
+          ))}
+        </div>
       ) : (
         <div className="space-y-3">
           {filteredRows.map((row) => (

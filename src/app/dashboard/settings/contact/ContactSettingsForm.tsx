@@ -16,6 +16,7 @@ export function ContactSettingsForm({ profile }: Props) {
 
   const [prefsPending, startPrefs] = useTransition();
   const [prefsError, setPrefsError] = useState<string | null>(null);
+  const [prefsSaved, setPrefsSaved] = useState(false);
   const [whatsappUsePrimary, setWhatsappUsePrimary] = useState(
     profile.whatsapp_use_primary_phone !== false
   );
@@ -27,9 +28,14 @@ export function ContactSettingsForm({ profile }: Props) {
     e.preventDefault();
     const fd = new FormData(e.currentTarget);
     setPrefsError(null);
+    setPrefsSaved(false);
     startPrefs(async () => {
       const result = await updateContactPreferences(fd);
-      if ("error" in result && result.error) setPrefsError(result.error);
+      if ("error" in result && result.error) {
+        setPrefsError(result.error);
+        return;
+      }
+      setPrefsSaved(true);
     });
   }
 
@@ -131,8 +137,11 @@ export function ContactSettingsForm({ profile }: Props) {
               "rounded-xl bg-charcoal px-5 py-2.5 text-sm font-semibold text-white disabled:opacity-60"
             )}
           >
-            Αποθήκευση προτιμήσεων
+            {prefsPending ? "Αποθήκευση…" : "Αποθήκευση προτιμήσεων"}
           </button>
+          {prefsSaved && (
+            <p className="text-sm text-teal">Οι αλλαγές αποθηκεύτηκαν.</p>
+          )}
           {prefsError && <p className="text-sm text-red-600">{prefsError}</p>}
         </form>
       </section>

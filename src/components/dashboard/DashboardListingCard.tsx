@@ -9,7 +9,6 @@ import {
   XCircle,
   AlertCircle,
   Eye,
-  Inbox,
   BarChart3,
   MoreHorizontal,
   Check,
@@ -51,7 +50,6 @@ type Props = {
   listing: ListingWithImages;
   effectiveStatus: ListingDisplayStatus;
   isFree: boolean;
-  interestCount?: number;
 };
 
 function formatCardDate(iso: string | null | undefined): string | null {
@@ -94,7 +92,6 @@ export function DashboardListingCard({
   listing,
   effectiveStatus,
   isFree,
-  interestCount = 0,
 }: Props) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -283,15 +280,6 @@ export function DashboardListingCard({
                 {formatViewCount(displayViews)}{" "}
                 {displayViews === 1 ? "επίσκεψη" : "επισκέψεις"}
               </span>
-            )}
-            {interestCount > 0 && (
-              <Link
-                href="/dashboard/requests"
-                className="flex items-center gap-1 font-medium text-gold-dark hover:underline"
-              >
-                <Inbox className="h-3 w-3" />
-                {interestCount} {interestCount === 1 ? "ενδιαφέρον" : "ενδιαφέροντα"}
-              </Link>
             )}
           </div>
 

@@ -5,6 +5,7 @@ import { MonthlyInquiryCard } from "@/components/listings/detail/MonthlyInquiryC
 import { ListingLegalSection } from "@/components/listings/detail/ListingLegalSection";
 import { ListingCoreContent } from "@/components/listings/detail/ListingCoreContent";
 import { ListingAreaSection } from "@/components/listings/short-term/ListingAreaSection";
+import { ListingAdvertiserSection } from "@/components/listings/short-term/ListingAdvertiserSection";
 import { SimilarListingsSection } from "@/components/listings/short-term/SimilarListingsSection";
 import { ListingPropertyDetails } from "@/components/listings/ListingPropertyDetails";
 import { ListingTermsSection } from "@/components/listings/ListingTermsSection";
@@ -37,6 +38,7 @@ export function MonthlyListingLayout({
       <div className="mt-6 grid gap-12 lg:grid-cols-3 lg:gap-10">
         <div className="min-w-0 space-y-0 lg:col-span-2">
           <ListingAreaSection listing={listing} />
+          <ListingAdvertiserSection listing={listing} />
           {similar.length > 0 && <SimilarListingsSection listings={similar} />}
           <section className="listing-section scroll-mt-32">
             <ListingPropertyDetails listing={listing} />

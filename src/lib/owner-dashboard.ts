@@ -39,6 +39,7 @@ export type ProfileCompletionItem = {
   label: string;
   done: boolean;
   href: string;
+  required: boolean;
 };
 
 export function ownerListingCompletenessItems(
@@ -108,40 +109,64 @@ export function ownerListingCompletenessPercent(
 
 export function profileCompletionItems(
   profile: Profile,
-  email: string
+  _email: string
 ): ProfileCompletionItem[] {
   return [
     {
-      id: "avatar",
-      label: "Φωτογραφία προφίλ",
-      done: Boolean(profile.avatar_path?.trim() && profile.avatar_status === "active"),
-      href: "/dashboard/settings/profile",
+      id: "name",
+      label: "Εμφανιζόμενο όνομα",
+      done: Boolean(profile.full_name?.trim()),
+      href: "/dashboard/profile",
+      required: true,
     },
     {
       id: "phone",
       label: "Τηλέφωνο",
-      done: Boolean(profile.primary_phone_verified_at),
+      done: Boolean(profile.phone?.trim()),
       href: "/dashboard/settings/contact",
+      required: true,
     },
     {
-      id: "contact",
-      label: "Στοιχεία επικοινωνίας",
-      done: Boolean(profile.full_name?.trim() && profile.phone?.trim()),
-      href: "/dashboard/settings?tab=contact",
+      id: "avatar",
+      label: "Φωτογραφία προφίλ",
+      done: Boolean(profile.avatar_path?.trim() && profile.avatar_status === "active"),
+      href: "/dashboard/profile",
+      required: false,
     },
     {
-      id: "verification",
-      label: "Επαλήθευση",
-      done: Boolean(profile.primary_phone_verified_at && profile.full_name?.trim()),
-      href: "/dashboard/verification",
+      id: "bio",
+      label: "Σύντομη περιγραφή",
+      done: Boolean(profile.bio?.trim()),
+      href: "/dashboard/profile",
+      required: false,
+    },
+    {
+      id: "languages",
+      label: "Γλώσσες επικοινωνίας",
+      done: Boolean(profile.communication_languages?.length),
+      href: "/dashboard/profile",
+      required: false,
     },
   ];
 }
 
 export function profileCompletionPercent(profile: Profile, email: string): number {
   const items = profileCompletionItems(profile, email);
-  const done = items.filter((i) => i.done).length;
-  return Math.round((done / items.length) * 100);
+  const required = items.filter((i) => i.required);
+  const recommended = items.filter((i) => !i.required);
+  const requiredDone = required.filter((i) => i.done).length;
+  const recommendedDone = recommended.filter((i) => i.done).length;
+  const requiredPct = required.length ? (requiredDone / required.length) * 70 : 70;
+  const recommendedPct = recommended.length
+    ? (recommendedDone / recommended.length) * 30
+    : 30;
+  return Math.round(requiredPct + recommendedPct);
+}
+
+export function profileRequiredComplete(profile: Profile, email: string): boolean {
+  return profileCompletionItems(profile, email)
+    .filter((i) => i.required)
+    .every((i) => i.done);
 }
 
 function daysUntil(iso: string | null | undefined): number | null {

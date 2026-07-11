@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { useTransition } from "react";
+import { useRouter } from "next/navigation";
+import { useState, useTransition } from "react";
 import {
   Calendar,
   Mail,
@@ -60,15 +61,25 @@ function formatInterestDates(lead: PropertyLeadWithListing): string | null {
 }
 
 export function PropertyLeadRow({ lead }: { lead: PropertyLeadWithListing }) {
+  const router = useRouter();
   const [pending, startTransition] = useTransition();
+  const [leadStatus, setLeadStatus] = useState(lead.status);
+  const [actionError, setActionError] = useState<string | null>(null);
   const listing = lead.listings;
   const listingHref = listing ? `/listings/${listing.slug ?? listing.id}` : null;
   const cover = listing ? listingCoverUrl(listing) : null;
   const interestDates = formatInterestDates(lead);
 
-  function setStatus(status: "read" | "replied" | "archived") {
+  function changeStatus(next: "read" | "replied" | "archived") {
+    setActionError(null);
     startTransition(async () => {
-      await updatePropertyLeadStatus(lead.id, status);
+      const result = await updatePropertyLeadStatus(lead.id, next);
+      if ("error" in result && result.error) {
+        setActionError(result.error);
+        return;
+      }
+      setLeadStatus(next);
+      router.refresh();
     });
   }
 
@@ -109,10 +120,10 @@ export function PropertyLeadRow({ lead }: { lead: PropertyLeadWithListing }) {
             <span
               className={cn(
                 "rounded-full px-2.5 py-1 text-xs font-medium",
-                STATUS_STYLE[lead.status] ?? STATUS_STYLE.new
+                STATUS_STYLE[leadStatus] ?? STATUS_STYLE.new
               )}
             >
-              {leadStatusLabel(lead.status)}
+              {leadStatusLabel(leadStatus)}
             </span>
           </div>
 
@@ -166,6 +177,9 @@ export function PropertyLeadRow({ lead }: { lead: PropertyLeadWithListing }) {
           )}
 
           <p className="mt-3 text-xs text-muted">Λήφθηκε: {created}</p>
+          {actionError && (
+            <p className="mt-2 text-sm text-red-600">{actionError}</p>
+          )}
 
           <div className="mt-4 flex flex-wrap gap-2">
             {listingHref && (
@@ -177,32 +191,32 @@ export function PropertyLeadRow({ lead }: { lead: PropertyLeadWithListing }) {
                 Προβολή ακινήτου
               </Link>
             )}
-            {lead.status === "new" && (
+            {leadStatus === "new" && (
               <button
                 type="button"
                 disabled={pending}
-                onClick={() => setStatus("read")}
+                onClick={() => changeStatus("read")}
                 className="inline-flex min-h-9 items-center gap-1.5 rounded-lg bg-teal/10 px-3 text-xs font-medium text-teal hover:bg-teal/15 disabled:opacity-50"
               >
                 <CheckCircle2 className="h-3.5 w-3.5" />
                 Σημείωση ως αναγνωσμένο
               </button>
             )}
-            {(lead.status === "new" || lead.status === "read") && (
+            {(leadStatus === "new" || leadStatus === "read") && (
               <button
                 type="button"
                 disabled={pending}
-                onClick={() => setStatus("replied")}
+                onClick={() => changeStatus("replied")}
                 className="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-border px-3 text-xs font-medium text-charcoal hover:border-gold/30 disabled:opacity-50"
               >
                 Απαντήθηκε
               </button>
             )}
-            {lead.status !== "archived" && (
+            {leadStatus !== "archived" && (
               <button
                 type="button"
                 disabled={pending}
-                onClick={() => setStatus("archived")}
+                onClick={() => changeStatus("archived")}
                 className="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-border px-3 text-xs font-medium text-muted hover:text-charcoal disabled:opacity-50"
               >
                 <Archive className="h-3.5 w-3.5" />

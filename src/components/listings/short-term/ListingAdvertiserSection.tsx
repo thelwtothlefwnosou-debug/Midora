@@ -4,6 +4,11 @@ import type { ListingPublicDetail } from "@/lib/types";
 import { ProfileAvatar } from "@/components/profile/ProfileAvatar";
 import { canShowPublicAvatar, resolveProfileAvatarUrl } from "@/lib/profile-avatar";
 import { getSupabaseUrl } from "@/lib/supabase/config";
+import {
+  advertiserTypeLabel,
+  formatCommunicationLanguages,
+  profileDisplayName,
+} from "@/lib/profile-display";
 
 export function ListingAdvertiserSection({
   listing,
@@ -15,7 +20,11 @@ export function ListingAdvertiserSection({
   const profile = listing.profiles;
   if (!profile?.full_name && !listing.contact_name) return null;
 
-  const displayName = profile?.full_name ?? listing.contact_name ?? "Αγγελιοδότης";
+  const displayName = profile
+    ? profileDisplayName(profile)
+    : listing.contact_name ?? "Αγγελιοδότης";
+  const advertiserLabel = profile ? advertiserTypeLabel(profile.advertiser_type) : null;
+  const languages = formatCommunicationLanguages(profile?.communication_languages);
   const memberSince = profile?.created_at
     ? new Date(profile.created_at).toLocaleDateString("el-GR", {
         month: "long",
@@ -36,6 +45,15 @@ export function ListingAdvertiserSection({
           <ProfileAvatar profile={profile} imageUrl={avatarUrl} size="lg" />
           <div>
             <p className="text-lg font-semibold tracking-tight text-charcoal">{displayName}</p>
+            {advertiserLabel && (
+              <p className="mt-0.5 text-sm text-muted">{advertiserLabel}</p>
+            )}
+            {profile?.bio?.trim() && (
+              <p className="mt-2 line-clamp-3 text-sm text-charcoal/80">{profile.bio}</p>
+            )}
+            {languages && (
+              <p className="mt-1 text-sm text-muted">Γλώσσες: {languages}</p>
+            )}
             {memberSince && (
               <p className="mt-1 text-sm text-muted">Μέλος από {memberSince}</p>
             )}

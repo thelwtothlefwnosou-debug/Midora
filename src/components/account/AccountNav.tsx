@@ -21,6 +21,7 @@ const PATH_MATCH: Partial<Record<AccountNavId, (path: string) => boolean>> = {
   "new-listing": (path) => path.startsWith("/dashboard/listings/new"),
   requests: (path) => path.startsWith("/dashboard/requests"),
   messages: (path) => path.startsWith("/dashboard/messages"),
+  profile: (path) => path.startsWith("/dashboard/profile"),
   verification: (path) => path.startsWith("/dashboard/verification"),
   subscription: (path) => path.startsWith("/dashboard/subscription"),
   favorites: (path) => path.startsWith("/dashboard/favorites"),

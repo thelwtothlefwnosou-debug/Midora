@@ -7,6 +7,7 @@ import { MonthlyListingLayout } from "@/components/listings/MonthlyListingLayout
 import { useListingRentalMode } from "@/components/listings/ListingRentalModeContext";
 import { ListingSleepingSection } from "@/components/listings/short-term/ListingShortTermSections";
 import { ListingAreaSection } from "@/components/listings/short-term/ListingAreaSection";
+import { ListingAdvertiserSection } from "@/components/listings/short-term/ListingAdvertiserSection";
 import { SimilarListingsSection } from "@/components/listings/short-term/SimilarListingsSection";
 import { ListingIdentityHeader } from "@/components/listings/detail/ListingIdentityHeader";
 import { StickyPropertyNav } from "@/components/listings/detail/StickyPropertyNav";
@@ -116,6 +117,7 @@ function ListingPageContentInner({
             arrangements={listing.sleeping_arrangements}
             images={listing.listing_images ?? []}
           />
+          <ListingAdvertiserSection listing={listing} />
           <SimilarListingsSection listings={similar} />
           <ListingLegalSection listing={listing} />
         </div>

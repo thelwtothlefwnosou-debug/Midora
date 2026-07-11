@@ -1,17 +1,96 @@
 import type { Listing, ListingPriceRule } from "@/lib/types";
+import type { ListingUnavailablePeriod } from "@/lib/unavailable-periods";
 import { addDays, stayNightsBetween } from "@/lib/availability-calendar";
+
+export type ShortTermPricingConfig = Pick<
+  Listing,
+  | "price_per_night"
+  | "included_guests"
+  | "extra_guest_fee_per_night"
+  | "weekend_price_per_night"
+  | "weekend_days"
+  | "weekly_discount_percent"
+  | "monthly_discount_percent"
+  | "last_minute_discount_percent"
+  | "early_bird_discount_percent"
+  | "cleaning_fee_note"
+>;
 
 export type IndicativeStayPrice = {
   nights: number;
+  subtotal: number;
+  discountPercent: number;
+  discountAmount: number;
   total: number;
   averagePerNight: number;
   extraGuestNights: number;
   ruleLabel?: string | null;
+  discountLabel?: string | null;
 };
 
+const DEFAULT_WEEKEND_DAYS = [5, 6];
+
 function ruleForDate(rules: ListingPriceRule[], dateKey: string): ListingPriceRule | null {
-  const match = rules.find((r) => r.start_date <= dateKey && r.end_date >= dateKey);
-  return match ?? null;
+  const matches = rules.filter((r) => r.start_date <= dateKey && r.end_date >= dateKey);
+  if (matches.length === 0) return null;
+  return matches.sort((a, b) => b.start_date.localeCompare(a.start_date))[0];
+}
+
+function dayOfWeek(dateKey: string): number {
+  const [y, m, d] = dateKey.split("-").map(Number);
+  return new Date(y, m - 1, d).getDay();
+}
+
+function isWeekendDay(dateKey: string, weekendDays: number[] | null | undefined): boolean {
+  const days = weekendDays?.length ? weekendDays : DEFAULT_WEEKEND_DAYS;
+  return days.includes(dayOfWeek(dateKey));
+}
+
+export function makeWeekendDayChecker(
+  weekendDays: number[] | null | undefined
+): (dateKey: string) => boolean {
+  const days = weekendDays?.length ? weekendDays : DEFAULT_WEEKEND_DAYS;
+  return (dateKey: string) => days.includes(dayOfWeek(dateKey));
+}
+
+export function isDateBlocked(
+  dateKey: string,
+  periods: Pick<ListingUnavailablePeriod, "start_date" | "end_date">[]
+): boolean {
+  return periods.some((p) => dateKey >= p.start_date && dateKey <= p.end_date);
+}
+
+/**
+ * Price precedence:
+ * 1. blocked → null
+ * 2. date-specific rule (listing_price_rules)
+ * 3. weekend price (listing.weekend_price_per_night)
+ * 4. base price
+ */
+export function resolveNightlyPrice(
+  config: ShortTermPricingConfig,
+  rules: ListingPriceRule[],
+  periods: Pick<ListingUnavailablePeriod, "start_date" | "end_date">[],
+  dateKey: string
+): number | null {
+  if (isDateBlocked(dateKey, periods)) return null;
+
+  const base = config.price_per_night ?? 0;
+  const rule = ruleForDate(rules, dateKey);
+
+  if (rule?.price_per_night && rule.price_per_night > 0) {
+    return rule.price_per_night;
+  }
+
+  if (
+    config.weekend_price_per_night &&
+    config.weekend_price_per_night > 0 &&
+    isWeekendDay(dateKey, config.weekend_days)
+  ) {
+    return config.weekend_price_per_night;
+  }
+
+  return base > 0 ? base : null;
 }
 
 export function nightlyPriceForDate(
@@ -19,21 +98,32 @@ export function nightlyPriceForDate(
   rules: ListingPriceRule[],
   dateKey: string
 ): number | null {
-  const base = basePricePerNight ?? 0;
-  if (base <= 0 && rules.length === 0) return null;
-  const rule = ruleForDate(rules, dateKey);
-  const price = rule?.price_per_night ?? base;
-  return price > 0 ? price : null;
+  return resolveNightlyPrice(
+    { price_per_night: basePricePerNight },
+    rules,
+    [],
+    dateKey
+  );
 }
 
 export function hasCustomPriceForDate(
-  basePricePerNight: number | null | undefined,
+  config: ShortTermPricingConfig,
   rules: ListingPriceRule[],
   dateKey: string
 ): boolean {
   const rule = ruleForDate(rules, dateKey);
-  if (!rule?.price_per_night) return false;
-  return rule.price_per_night !== basePricePerNight;
+  if (rule?.price_per_night && rule.price_per_night !== config.price_per_night) {
+    return true;
+  }
+  if (
+    config.weekend_price_per_night &&
+    config.weekend_price_per_night !== config.price_per_night &&
+    isWeekendDay(dateKey, config.weekend_days) &&
+    !rule
+  ) {
+    return true;
+  }
+  return false;
 }
 
 export function findPriceRuleForDate(
@@ -43,52 +133,91 @@ export function findPriceRuleForDate(
   return ruleForDate(rules, dateKey);
 }
 
+function resolveDiscountPercent(nights: number, config: ShortTermPricingConfig): {
+  percent: number;
+  label: string | null;
+} {
+  if (nights >= 28 && (config.monthly_discount_percent ?? 0) > 0) {
+    return {
+      percent: config.monthly_discount_percent!,
+      label: `Έκπτωση 28+ νυχτών (${config.monthly_discount_percent}%)`,
+    };
+  }
+  if (nights >= 7 && (config.weekly_discount_percent ?? 0) > 0) {
+    return {
+      percent: config.weekly_discount_percent!,
+      label: `Εβδομαδιαία έκπτωση (${config.weekly_discount_percent}%)`,
+    };
+  }
+  return { percent: 0, label: null };
+}
+
 /** Indicative only — not a booking total or agreement price. */
 export function computeIndicativeStayPrice(
-  listing: Pick<
-    Listing,
-    "price_per_night" | "included_guests" | "extra_guest_fee_per_night"
-  >,
+  listing: ShortTermPricingConfig &
+    Pick<Listing, "price_per_night" | "included_guests" | "extra_guest_fee_per_night">,
   rules: ListingPriceRule[],
   startDate: string,
   endDate: string,
-  guests: number
+  guests: number,
+  periods: Pick<ListingUnavailablePeriod, "start_date" | "end_date">[] = []
 ): IndicativeStayPrice | null {
   if (!startDate || !endDate || endDate < startDate) return null;
 
   const nights = stayNightsBetween(startDate, endDate);
   if (nights < 1) return null;
 
-  let total = 0;
+  let subtotal = 0;
   let extraGuestNights = 0;
   let ruleLabel: string | null = null;
 
   for (let i = 0; i < nights; i++) {
     const key = addDays(startDate, i);
     const rule = ruleForDate(rules, key);
-    const baseNight = rule?.price_per_night ?? listing.price_per_night;
-    if (!baseNight || baseNight <= 0) return null;
+    const nightPrice = resolveNightlyPrice(listing, rules, periods, key);
+    if (!nightPrice || nightPrice <= 0) return null;
 
     const included = rule?.included_guests ?? listing.included_guests ?? guests;
     const extraFee =
       rule?.extra_guest_fee_per_night ?? listing.extra_guest_fee_per_night ?? 0;
-    const extraGuests = Math.max(0, guests - included);
-    total += baseNight + extraGuests * extraFee;
+    const extraGuests = Math.max(0, guests - (included ?? guests));
+    subtotal += nightPrice + extraGuests * extraFee;
     if (extraGuests > 0) extraGuestNights += extraGuests;
     if (rule?.label && !ruleLabel) ruleLabel = rule.label;
   }
 
+  const { percent: discountPercent, label: discountLabel } = resolveDiscountPercent(
+    nights,
+    listing
+  );
+  const discountAmount = Math.round(subtotal * (discountPercent / 100));
+  const total = subtotal - discountAmount;
+
   return {
     nights,
+    subtotal,
+    discountPercent,
+    discountAmount,
     total,
     averagePerNight: Math.round(total / nights),
     extraGuestNights,
     ruleLabel,
+    discountLabel,
   };
 }
 
-export function countBedsFromSleeping(
-  arrangements: { quantity: number }[]
-): number {
+export function countBedsFromSleeping(arrangements: { quantity: number }[]): number {
   return arrangements.reduce((sum, a) => sum + a.quantity, 0);
+}
+
+export function formatIndicativePriceBreakdown(price: IndicativeStayPrice): string[] {
+  const lines: string[] = [];
+  lines.push(
+    `${price.nights} ${price.nights === 1 ? "νύχτα" : "νύχτες"} × ~€${price.averagePerNight.toLocaleString("el-GR")}`
+  );
+  if (price.discountAmount > 0 && price.discountLabel) {
+    lines.push(`${price.discountLabel}: -€${price.discountAmount.toLocaleString("el-GR")}`);
+  }
+  lines.push(`Ενδεικτική τιμή: €${price.total.toLocaleString("el-GR")}`);
+  return lines;
 }
