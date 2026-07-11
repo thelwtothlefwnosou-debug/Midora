@@ -4,7 +4,8 @@ param(
   [string]$Label = "",
   [switch]$List,
   [string]$Restore = "",
-  [switch]$Force
+  [switch]$Force,
+  [switch]$Quiet
 )
 
 $ErrorActionPreference = "Stop"
@@ -126,6 +127,10 @@ function New-Checkpoint {
     storeRoot = $StoreRoot
   }
   $meta | ConvertTo-Json -Depth 4 | Set-Content -Path (Join-Path $dest "checkpoint.json") -Encoding UTF8
+
+  if ($Quiet) {
+    return $folderName
+  }
 
   Write-Host ""
   Write-Host "Checkpoint saved:" -ForegroundColor Green

@@ -11,3 +11,11 @@ Do **not** `git checkout` / `git restore` / bulk-delete owner dashboard files to
 
 If something looks broken: fix the specific file, or `npm run dev:restart:clean` — never revert the whole dashboard to the old sidebar layout unless the user explicitly asks.
 <!-- END:owner-dashboard-protection -->
+
+<!-- BEGIN:auto-checkpoint -->
+# Auto checkpoint
+
+Cursor hooks save a file checkpoint automatically when agent edits end (`auto-agent` label in `midora-checkpoints/`). Git commits are still required for permanent version history — run `git add` + `git commit` after completed work or when the user asks.
+
+**Important:** If the UI or code changes again without the user sending a follow-up message, that change is **not** auto-saved. Only agent work that completes after a user prompt gets a checkpoint. Silent cache, restore, or revert = not recorded unless the user reports it and the agent saves/commits.
+<!-- END:auto-checkpoint -->

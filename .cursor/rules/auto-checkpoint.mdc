@@ -1,0 +1,47 @@
+---
+description: Auto-save file checkpoints after agent source edits
+alwaysApply: true
+---
+
+# Auto checkpoint after edits
+
+This project saves **file checkpoints automatically** via Cursor hooks:
+
+- `afterFileEdit` marks pending changes in tracked source paths
+- `stop` runs `scripts/checkpoint.ps1 -Label auto-agent -Quiet`
+
+Checkpoints are stored outside the repo at `../midora-checkpoints/`.
+
+## Agent behavior
+
+After completing a batch of **meaningful** source changes in a turn, you do **not** need to run `npm run checkpoint` manually — the hook handles it when the turn ends.
+
+Still run `git add` + `git commit` when the user asks to save permanently, or after large completed features — hooks are a backup layer, not a substitute for git.
+
+Manual checkpoint with a descriptive label is still fine before risky work:
+
+```powershell
+npm run checkpoint -- -Label "before-big-refactor"
+```
+
+## What is NOT saved automatically
+
+Tell the user clearly when relevant:
+
+**If something changes again without the user writing a message afterward, that change is NOT saved anywhere.**
+
+Auto-checkpoint only runs when:
+1. The **user sent a prompt** in this chat, and
+2. The **agent edited** tracked source files, and
+3. The **agent turn ended** (stop hook).
+
+These do **not** trigger auto-save:
+- Stale browser / `.next` cache showing old UI
+- `checkpoint:restore` to an older snapshot
+- `git checkout` / `git restore` / accidental revert by an agent
+- Opening the project on another machine without pull
+- Any silent drift the user notices but does not report in chat
+
+If the user sees wrong UI and says nothing, **no new checkpoint or commit is created** — the bad state is not recorded as "the saved version."
+
+When the user reports "it changed again," do not assume the last checkpoint is current. Check `git log -1`, `git status`, and compare with what they expect before fixing.
