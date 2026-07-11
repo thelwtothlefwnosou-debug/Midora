@@ -5,7 +5,8 @@ param(
   [switch]$List,
   [string]$Restore = "",
   [switch]$Force,
-  [switch]$Quiet
+  [switch]$Quiet,
+  [switch]$SkipPreRestore
 )
 
 $ErrorActionPreference = "Stop"
@@ -13,6 +14,7 @@ $ErrorActionPreference = "Stop"
 $Root = Split-Path -Parent $PSScriptRoot
 $StoreRoot = Join-Path (Split-Path -Parent $Root) "midora-checkpoints"
 
+# Paths included in every checkpoint (top-level only — never add .env here).
 $IncludePaths = @(
   "src",
   "public",
@@ -32,7 +34,35 @@ $IncludePaths = @(
   "eslint.config.js",
   "components.json",
   "AGENTS.md",
-  "CLAUDE.md"
+  "CLAUDE.md",
+  "docs"
+)
+
+# NEVER copy secrets, caches, or VCS metadata — even if nested under included folders.
+$ExcludedDirNames = @(
+  "node_modules",
+  ".next",
+  ".vercel",
+  ".git",
+  ".cursor",
+  "checkpoints"
+)
+
+$ExcludedFileNames = @(
+  ".env",
+  ".env.local",
+  ".env.production",
+  ".env.development",
+  "vercel.env"
+)
+
+$ExcludedFilePatterns = @(
+  "*.pem",
+  "*.key",
+  "*service-role*",
+  "*api-key*",
+  "*apikey*",
+  "*secret*"
 )
 
 $CanonicalUiFiles = @(
@@ -56,6 +86,53 @@ function Get-CheckpointDirs {
   Ensure-StoreRoot
   Get-ChildItem -Path $StoreRoot -Directory -ErrorAction SilentlyContinue |
     Sort-Object Name -Descending
+}
+
+function Test-ExcludedFile([string]$name) {
+  foreach ($exact in $ExcludedFileNames) {
+    if ($name -eq $exact) { return $true }
+  }
+  foreach ($pattern in $ExcludedFilePatterns) {
+    if ($name -like $pattern) { return $true }
+  }
+  if ($name -match "^\.env(\.|$)") { return $true }
+  return $false
+}
+
+function Copy-CheckpointTree {
+  param(
+    [string]$Source,
+    [string]$Destination
+  )
+
+  if (-not (Test-Path $Source)) { return }
+
+  if (-not (Test-Path $Source -PathType Container)) {
+    $leaf = Split-Path $Source -Leaf
+    if (Test-ExcludedFile $leaf) {
+      Write-Verbose "Skipping secret/cache file: $leaf"
+      return
+    }
+    $parent = Split-Path $Destination -Parent
+    if (-not (Test-Path $parent)) {
+      New-Item -ItemType Directory -Path $parent -Force | Out-Null
+    }
+    Copy-Item -Path $Source -Destination $Destination -Force
+    return
+  }
+
+  $xd = ($ExcludedDirNames | ForEach-Object { "/XD"; $_ }) -join " "
+  $xf = @()
+  foreach ($name in $ExcludedFileNames) { $xf += "/XF"; $xf += $name }
+  foreach ($pattern in $ExcludedFilePatterns) { $xf += "/XF"; $xf += $pattern }
+  $xfArg = $xf -join " "
+
+  $null = New-Item -ItemType Directory -Path $Destination -Force -ErrorAction SilentlyContinue
+  $robocopyCmd = "robocopy `"$Source`" `"$Destination`" /E /NFL /NDL /NJH /NJS /NC /NS /NP $xd $xfArg"
+  cmd /c $robocopyCmd | Out-Null
+  if ($LASTEXITCODE -ge 8) {
+    throw "robocopy failed copying $Source (exit $LASTEXITCODE)"
+  }
 }
 
 function Write-CanonicalUiManifest([string]$destRoot) {
@@ -103,16 +180,7 @@ function New-Checkpoint {
     if (-not (Test-Path $src)) { continue }
 
     $target = Join-Path $dest $rel
-    $targetParent = Split-Path $target -Parent
-    if (-not (Test-Path $targetParent)) {
-      New-Item -ItemType Directory -Path $targetParent -Force | Out-Null
-    }
-
-    if ((Get-Item $src).PSIsContainer) {
-      Copy-Item -Path $src -Destination $target -Recurse -Force
-    } else {
-      Copy-Item -Path $src -Destination $target -Force
-    }
+    Copy-CheckpointTree -Source $src -Destination $target
     $copied++
   }
 
@@ -125,8 +193,13 @@ function New-Checkpoint {
     projectRoot = $Root
     copiedPaths = $copied
     storeRoot = $StoreRoot
+    excludes = @{
+      dirs = $ExcludedDirNames
+      files = $ExcludedFileNames
+      patterns = $ExcludedFilePatterns
+    }
   }
-  $meta | ConvertTo-Json -Depth 4 | Set-Content -Path (Join-Path $dest "checkpoint.json") -Encoding UTF8
+  $meta | ConvertTo-Json -Depth 5 | Set-Content -Path (Join-Path $dest "checkpoint.json") -Encoding UTF8
 
   if ($Quiet) {
     return $folderName
@@ -171,6 +244,14 @@ function Restore-Checkpoint {
     throw "Checkpoint not found: $CheckpointId"
   }
 
+  if (-not $SkipPreRestore) {
+    Write-Host ""
+    Write-Host "Creating pre-restore safety snapshot of current files..." -ForegroundColor Cyan
+    $preId = New-Checkpoint -CheckpointLabel "pre-restore"
+    Write-Host "  Pre-restore checkpoint: $preId" -ForegroundColor Green
+    Write-Host ""
+  }
+
   if (-not $Force) {
     Write-Host "This will OVERWRITE current source files from checkpoint:"
     Write-Host "  $targetDir"
@@ -191,16 +272,7 @@ function Restore-Checkpoint {
       Remove-Item -Path $dest -Recurse -Force
     }
 
-    $destParent = Split-Path $dest -Parent
-    if (-not (Test-Path $destParent)) {
-      New-Item -ItemType Directory -Path $destParent -Force | Out-Null
-    }
-
-    if ((Get-Item $src).PSIsContainer) {
-      Copy-Item -Path $src -Destination $dest -Recurse -Force
-    } else {
-      Copy-Item -Path $src -Destination $dest -Force
-    }
+    Copy-CheckpointTree -Source $src -Destination $dest
   }
 
   Write-Host ""

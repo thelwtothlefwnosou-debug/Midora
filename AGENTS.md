@@ -23,3 +23,27 @@ After editing source files, end replies with a one-line footer: `Git: \`<hash>\`
 
 Each `git commit` auto-updates `CURRENT_GIT_COMMIT.txt` (post-commit hook). Run `npm run git:hooks` once per clone to install hooks.
 <!-- END:auto-checkpoint -->
+
+<!-- BEGIN:safety-workflow -->
+# Safety workflow
+
+**Current safe point:** commit `a57ba3c`, tag `safe-owner-workspace-a57ba3c`. Full process: `docs/MIDORA_SOURCE_OF_TRUTH.md`.
+
+## After verified good work
+
+1. checkpoint (optional label) → 2. `git commit` → 3. **`npm run git:push`** → remind user to push if not done.
+
+## Never without explicit user approval
+
+- `git reset --hard`, `git push --force`
+- checkpoint restore without noting pre-restore backup runs first
+- bulk revert of owner dashboard / deprecated old UI routes
+
+## Checkpoint restore
+
+Always creates `pre-restore` snapshot first, then asks YES. Secrets (`.env*`, keys, caches) are never copied — see `scripts/checkpoint.ps1`.
+
+## Data
+
+Code is in git/checkpoints. Database rows and uploaded photos need separate backup — `docs/DATA_BACKUP_PLAN.md`.
+<!-- END:safety-workflow -->

@@ -1,0 +1,20 @@
+#!/bin/sh
+# OPTIONAL pre-commit hook template — NOT installed by default.
+# Install with: npm run git:hooks -- -PreCommit
+# Runs npm run check before allowing a commit.
+
+ROOT="$(git rev-parse --show-toplevel)"
+cd "$ROOT" || exit 1
+
+echo "pre-commit: running npm run check..."
+npm run check
+status=$?
+
+if [ $status -ne 0 ]; then
+  echo ""
+  echo "pre-commit: check failed. Commit blocked."
+  echo "Fix issues or commit with --no-verify only if you accept the risk."
+  exit 1
+fi
+
+exit 0

@@ -49,4 +49,5 @@ Write-Host ""
 Write-Host "Git commit recorded: $short - $subject" -ForegroundColor Green
 Write-Host "  Saved to: CURRENT_GIT_COMMIT.txt" -ForegroundColor DarkGray
 Write-Host "  Restore in chat: Restore to $short" -ForegroundColor Cyan
+Write-Host "  Push to remote: npm run git:push" -ForegroundColor Yellow
 Write-Host ""
