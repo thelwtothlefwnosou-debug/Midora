@@ -5,9 +5,9 @@
 | Item | Value |
 |------|-------|
 | Branch | `recovery/midora-stabilize` |
-| Commit | `a57ba3c` |
-| Tag | `safe-owner-workspace-a57ba3c` |
-| Restore line | `Γύρισε στο a57ba3c` |
+| Commit | `61ace24` (latest) |
+| Safe tag | `safe-owner-workspace-a57ba3c` → `a57ba3c` |
+| Restore line | `Γύρισε στο 61ace24` |
 
 Update this table when a new verified safe tag is created.
 

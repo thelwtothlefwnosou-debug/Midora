@@ -27,7 +27,7 @@ Each `git commit` auto-updates `CURRENT_GIT_COMMIT.txt` (post-commit hook). Run 
 <!-- BEGIN:safety-workflow -->
 # Safety workflow
 
-**Current safe point:** commit `a57ba3c`, tag `safe-owner-workspace-a57ba3c`. Full process: `docs/MIDORA_SOURCE_OF_TRUTH.md`.
+**Current safe point:** commit `61ace24`, tag `safe-owner-workspace-a57ba3c` (baseline `a57ba3c`). Full process: `docs/MIDORA_SOURCE_OF_TRUTH.md`.
 
 ## After verified good work
 

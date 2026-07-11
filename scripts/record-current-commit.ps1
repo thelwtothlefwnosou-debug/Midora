@@ -40,7 +40,8 @@ $body = @(
   "DATE=$date",
   "",
   "COPY=$copyLine",
-  "FOOTER=$footerLine"
+  "FOOTER=$footerLine",
+  "PUSH=npm run git:push"
 ) -join "`n"
 
 Set-Content -Path $outPath -Value $body -Encoding UTF8
