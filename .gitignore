@@ -50,3 +50,6 @@ next-env.d.ts
 # temp / scratch (never commit)
 .tmp-*
 .tmp/
+
+# auto-generated after each git commit (see scripts/record-current-commit.ps1)
+CURRENT_GIT_COMMIT.txt

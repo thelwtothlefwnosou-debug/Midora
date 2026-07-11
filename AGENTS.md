@@ -18,4 +18,8 @@ If something looks broken: fix the specific file, or `npm run dev:restart:clean`
 Cursor hooks save a file checkpoint automatically when agent edits end (`auto-agent` label in `midora-checkpoints/`). Git commits are still required for permanent version history — run `git add` + `git commit` after completed work or when the user asks.
 
 **Important:** If the UI or code changes again without the user sending a follow-up message, that change is **not** auto-saved. Only agent work that completes after a user prompt gets a checkpoint. Silent cache, restore, or revert = not recorded unless the user reports it and the agent saves/commits.
+
+After editing source files, end replies with a one-line footer: `Git: \`<hash>\` — \`<subject>\` (\`uncommitted\` if not committed yet). User copies this back if UI drifts.
+
+Each `git commit` auto-updates `CURRENT_GIT_COMMIT.txt` (post-commit hook). Run `npm run git:hooks` once per clone to install hooks.
 <!-- END:auto-checkpoint -->

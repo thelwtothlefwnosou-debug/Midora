@@ -1,0 +1,36 @@
+---
+description: Show current git commit hash after making project changes
+alwaysApply: true
+---
+
+# Commit footer after changes
+
+Every **new git commit** automatically updates `CURRENT_GIT_COMMIT.txt` at the project root (via `post-commit` hook). The user can open that file anytime for the latest restore line.
+
+When you **edit project source** or **create a commit** in a turn, end your user-facing reply with:
+
+```
+---
+Git: `<hash>` — `<commit subject>`
+```
+
+Read the hash from:
+
+```powershell
+git log -1 --format="%h %s"
+```
+
+Or from `CURRENT_GIT_COMMIT.txt` → line `FOOTER=...` after a commit was made.
+
+If the turn included edits but **no commit yet**, add `(uncommitted)`:
+
+```
+---
+Git: `7a4f2dd` — Add auto-checkpoint hooks… (uncommitted)
+```
+
+If you **created a commit** in the turn, show the **new** hash without `(uncommitted)`.
+
+If the turn was **read-only** (questions only, no file edits), omit the footer.
+
+Keep the footer to **one line** — the user copies it back into chat to restore: `Γύρισε στο <hash>`.

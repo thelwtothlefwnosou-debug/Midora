@@ -10,6 +10,7 @@
     "checkpoint": "powershell -ExecutionPolicy Bypass -File scripts/checkpoint.ps1",
     "checkpoint:list": "powershell -ExecutionPolicy Bypass -File scripts/checkpoint.ps1 -List",
     "checkpoint:restore": "powershell -ExecutionPolicy Bypass -File scripts/checkpoint.ps1",
+    "git:hooks": "powershell -ExecutionPolicy Bypass -File scripts/install-git-hooks.ps1",
     "verify:ui": "powershell -ExecutionPolicy Bypass -File scripts/verify-canonical-ui.ps1",
     "git:init": "powershell -ExecutionPolicy Bypass -File scripts/init-git-checkpoint.ps1",
     "build": "node --max-old-space-size=8192 ./node_modules/next/dist/bin/next build",

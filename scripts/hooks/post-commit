@@ -1,0 +1,4 @@
+#!/bin/sh
+# Installed to .git/hooks/post-commit — runs after every git commit.
+ROOT="$(git rev-parse --show-toplevel)"
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$ROOT/scripts/record-current-commit.ps1"
