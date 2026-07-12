@@ -67,14 +67,13 @@ export function ListingHouseTourPanel({
   }
 
   return (
-    <GlassCard className="mt-6 p-5">
+    <GlassCard className="p-4 sm:p-5">
       <h2 className="font-display text-base font-semibold text-charcoal">Περιήγηση σπιτιού</h2>
       <p className="mt-1 max-w-2xl text-sm text-muted">
-        Οργάνωσε το ακίνητο ανά χώρο — οι επισκέπτες βλέπουν «Περιήγηση σπιτιού» στη δημόσια
-        αγγελία.
+        Οργάνωσε το ακίνητο ανά χώρο — εμφανίζεται στη δημόσια αγγελία.
       </p>
 
-      <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+      <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
         {rooms.map((room) => (
           <RoomCard
             key={room.key}
@@ -126,13 +125,15 @@ function RoomCard({
         isActive ? "border-gold/40 ring-1 ring-gold/20" : "border-border hover:border-gold/25"
       )}
     >
-      <div className={cn("relative bg-sand/30", isEmpty ? "aspect-[16/10]" : "aspect-[5/4]")}>
+      <div className={cn("relative bg-sand/30", isEmpty ? "aspect-[3/2]" : "aspect-[4/3]")}>
         {coverUrl ? (
-          <Image src={coverUrl} alt={room.label} fill className="object-cover" sizes="320px" />
+          <Image src={coverUrl} alt={room.label} fill className="object-cover" sizes="360px" />
         ) : (
-          <div className="flex h-full flex-col items-center justify-center gap-1.5 px-4 text-center text-muted">
-            <Bed className="h-6 w-6 text-gold/35" />
-            <span className="text-[11px]">Δεν υπάρχουν φωτογραφίες για αυτόν τον χώρο.</span>
+          <div className="flex h-full flex-col items-center justify-center gap-1 px-3 text-center">
+            <Bed className="h-5 w-5 text-gold/40" />
+            <span className="text-[10px] leading-snug text-muted">
+              Δεν υπάρχουν φωτογραφίες για αυτόν τον χώρο.
+            </span>
           </div>
         )}
         {photoCount > 0 && (

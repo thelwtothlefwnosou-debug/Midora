@@ -39,6 +39,8 @@
     "db:seed-admin-review": "tsx scripts/seed-admin-review-listings.ts",
     "db:refresh-admin-review": "tsx scripts/seed-admin-review-listings.ts -- --refresh",
     "db:seed-greece-300": "tsx scripts/seed-greece-300.ts",
+    "db:seed-owner-showcase": "tsx scripts/seed-owner-short-term-demo.ts",
+    "db:seed-cohost-demo": "tsx scripts/seed-cohost-demo.ts",
     "db:setup-admin": "tsx scripts/setup-admin-demo.ts",
     "test:listing-photo-persist": "tsx scripts/test-listing-photo-persist.ts",
     "build:locations": "tsx scripts/build-greece-locations.ts"

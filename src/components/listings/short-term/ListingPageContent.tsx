@@ -1,6 +1,7 @@
 "use client";
 
 import { Suspense, useMemo } from "react";
+import { useSearchParams } from "next/navigation";
 import { ListingRentalModeSwitcher } from "@/components/listings/ListingRentalModeSwitcher";
 import { ListingMediaGallery } from "@/components/listings/ListingMediaGallery";
 import { MonthlyListingLayout } from "@/components/listings/MonthlyListingLayout";
@@ -8,49 +9,62 @@ import { useListingRentalMode } from "@/components/listings/ListingRentalModeCon
 import { ListingSleepingSection } from "@/components/listings/short-term/ListingShortTermSections";
 import { ListingAreaSection } from "@/components/listings/short-term/ListingAreaSection";
 import { ListingAdvertiserSection } from "@/components/listings/short-term/ListingAdvertiserSection";
-import { SimilarListingsSection } from "@/components/listings/short-term/SimilarListingsSection";
-import { ListingIdentityHeader } from "@/components/listings/detail/ListingIdentityHeader";
+import { NearbyListingsCarouselSlot } from "@/components/listings/detail/NearbyListingsCarouselSlot";
+import { PublicListingTitleRow } from "@/components/listings/detail/PublicListingTitleRow";
+import { PublicListingSummary } from "@/components/listings/detail/PublicListingSummary";
+import { PublicListingMainLayout } from "@/components/listings/detail/PublicListingMainLayout";
 import { StickyPropertyNav } from "@/components/listings/detail/StickyPropertyNav";
 import { ShortTermInquiryCard } from "@/components/listings/detail/ShortTermInquiryCard";
 import { AvailabilityCalendarSection } from "@/components/listings/detail/AvailabilityCalendarSection";
 import { ListingLegalSection } from "@/components/listings/detail/ListingLegalSection";
+import { ListingExternalLinksSection } from "@/components/listings/detail/ListingExternalLinksSection";
 import { ListingCoreContent } from "@/components/listings/detail/ListingCoreContent";
-import { ListingPhotoTourSection } from "@/components/listings/detail/ListingPhotoTourSection";
 import { ListingArrivalSection } from "@/components/listings/detail/ListingArrivalSection";
 import { ListingHeaderIconActions } from "@/components/listings/detail/ListingHeaderActions";
 import { ListingInquiryDatesProvider } from "@/components/listings/detail/ListingInquiryDatesContext";
 import { hasArrivalInfo } from "@/lib/listing-arrival";
-import type { ListingPublicDetail, ListingWithImages } from "@/lib/types";
+import type { ListingPublicDetail, ListingWithImages, ListingCohostWithProfile, ListingContactNumber } from "@/lib/types";
 import type { ListingUnavailablePeriod } from "@/lib/unavailable-periods";
 import type { ListingPublicContact } from "@/lib/listing-contact";
+import { buildProfileLinkContextFromSearchParams } from "@/lib/profile-link-context";
 
 type Props = {
   listing: ListingPublicDetail;
-  similar: ListingWithImages[];
+  nearby: ListingWithImages[];
   unavailablePeriods: ListingUnavailablePeriod[];
   isFavorited: boolean;
   mapPrice: number;
   contact: ListingPublicContact;
   previewMode?: boolean;
+  publicCohosts?: ListingCohostWithProfile[];
+  publicContactPhones?: ListingContactNumber[];
 };
 
 function ListingPageContentInner({
   listing,
-  similar,
+  nearby,
   unavailablePeriods,
   isFavorited,
   contact,
-  previewMode = false,
+  publicCohosts = [],
+  publicContactPhones = [],
 }: Props) {
   const { mode, showBoth } = useListingRentalMode();
+  const searchParams = useSearchParams();
+  const profileLinkContext = useMemo(
+    () =>
+      buildProfileLinkContextFromSearchParams(
+        searchParams,
+        mode === "monthly" ? "monthly" : "short_term"
+      ),
+    [mode, searchParams]
+  );
 
   const stickyNavItems = useMemo(() => {
     const items = [
       { id: "about", label: "Περιγραφή" },
       { id: "amenities", label: "Παροχές" },
     ];
-    const hasTour = (listing.listing_images ?? []).some((img) => img.media_type !== "video");
-    if (hasTour) items.push({ id: "photo-tour", label: "Περιήγηση" });
     if (hasArrivalInfo(listing)) items.push({ id: "arrival", label: "Άφιξη" });
     items.push({ id: "availability", label: "Διαθεσιμότητα" });
     items.push({ id: "area", label: "Περιοχή" });
@@ -71,7 +85,7 @@ function ListingPageContentInner({
   }
 
   const gallery = (
-    <div id="gallery" className="mt-6 overflow-hidden rounded-[20px]">
+    <div id="gallery" className="mt-4 overflow-hidden rounded-[20px] lg:mt-5">
       <ListingMediaGallery
         images={listing.listing_images ?? []}
         title={listing.title}
@@ -87,17 +101,24 @@ function ListingPageContentInner({
     </div>
   );
 
+  const titleBlock = (
+    <PublicListingTitleRow
+      listing={listing}
+      isFavorited={isFavorited}
+      onShare={handleShare}
+    />
+  );
+
   if (mode === "monthly") {
     return (
       <>
-        <ListingIdentityHeader
+        {titleBlock}
+        {gallery}
+        <PublicListingSummary
           listing={listing}
           rentalLabel="Μηνιαία / Μεσοπρόθεσμη"
-          isFavorited={isFavorited}
-          onShare={handleShare}
           modeSwitcher={showBoth ? <ListingRentalModeSwitcher /> : undefined}
         />
-        {gallery}
         <MonthlyListingLayout
           listing={listing}
           unavailablePeriods={unavailablePeriods}
@@ -105,7 +126,13 @@ function ListingPageContentInner({
           mapPrice={0}
           contact={contact}
           hostName={listing.profiles?.full_name}
-          similar={similar}
+          cohosts={publicCohosts}
+          publicContactPhones={publicContactPhones}
+        />
+        <NearbyListingsCarouselSlot
+          currentListingId={listing.id}
+          listings={nearby}
+          rentalMode="monthly"
         />
       </>
     );
@@ -113,43 +140,54 @@ function ListingPageContentInner({
 
   return (
     <>
-      <ListingIdentityHeader
+      {titleBlock}
+      {gallery}
+      <PublicListingSummary
         listing={listing}
         rentalLabel="Βραχυχρόνια"
-        isFavorited={isFavorited}
-        onShare={handleShare}
         modeSwitcher={showBoth ? <ListingRentalModeSwitcher /> : undefined}
       />
 
-      {gallery}
+      <PublicListingMainLayout
+        content={
+          <>
+            <StickyPropertyNav items={stickyNavItems} />
+            <ListingCoreContent listing={listing} rentalMode="short_term" />
+            <ListingArrivalSection listing={listing} />
+            <AvailabilityCalendarSection listing={listing} periods={unavailablePeriods} />
+            <ListingAreaSection listing={listing} />
+            <ListingSleepingSection
+              arrangements={listing.sleeping_arrangements}
+              images={listing.listing_images ?? []}
+            />
+            <ListingAdvertiserSection
+              listing={listing}
+              rentalMode="short_term"
+              cohosts={publicCohosts}
+              publicContactPhones={publicContactPhones}
+              profileLinkContext={profileLinkContext}
+            />
+            <ListingExternalLinksSection links={listing.external_links ?? []} />
+            <ListingLegalSection listing={listing} />
+          </>
+        }
+        sidebar={
+          <Suspense fallback={null}>
+            <ShortTermInquiryCard
+              listing={listing}
+              periods={unavailablePeriods}
+              contact={contact}
+            />
+          </Suspense>
+        }
+      />
 
-      <ListingCoreContent listing={listing} rentalMode="short_term" />
-
-      <ListingPhotoTourSection listing={listing} images={listing.listing_images ?? []} />
-      <ListingArrivalSection listing={listing} />
-
-      <StickyPropertyNav items={stickyNavItems} />
-
-      <div className="mt-6 grid gap-12 lg:grid-cols-3 lg:gap-10">
-        <div className="min-w-0 space-y-0 lg:col-span-2">
-          <AvailabilityCalendarSection listing={listing} periods={unavailablePeriods} />
-          <ListingAreaSection listing={listing} />
-          <ListingSleepingSection
-            arrangements={listing.sleeping_arrangements}
-            images={listing.listing_images ?? []}
-          />
-          <ListingAdvertiserSection listing={listing} />
-          <SimilarListingsSection listings={similar} />
-          <ListingLegalSection listing={listing} />
-        </div>
-
-        <Suspense fallback={null}>
-          <ShortTermInquiryCard
-            listing={listing}
-            periods={unavailablePeriods}
-            contact={contact}
-          />
-        </Suspense>
+      <div className="mt-2 border-t border-border pt-2">
+        <NearbyListingsCarouselSlot
+          currentListingId={listing.id}
+          listings={nearby}
+          rentalMode="short_term"
+        />
       </div>
     </>
   );
@@ -157,7 +195,7 @@ function ListingPageContentInner({
 
 export function ListingPageContent(props: Props) {
   return (
-    <ListingInquiryDatesProvider listing={props.listing}>
+    <ListingInquiryDatesProvider listing={props.listing} periods={props.unavailablePeriods}>
       <ListingPageContentInner {...props} />
     </ListingInquiryDatesProvider>
   );

@@ -9,7 +9,8 @@ import {
 } from "@/lib/listing-preview-status";
 import { getListingPublicId } from "@/lib/utils";
 import { getPublicUnavailablePeriods } from "@/lib/unavailable-periods-db";
-import { getSimilarListings } from "@/lib/similar-listings";
+import { getNearbyListings } from "@/lib/nearby-listings";
+import { defaultPublicRentalMode } from "@/lib/listing-rental-modes";
 
 export default async function ListingOwnerViewPage({
   params,
@@ -24,7 +25,9 @@ export default async function ListingOwnerViewPage({
   const ctx = await loadListingWorkspace(id, profile.id);
   const listing = await requireOwnerListingPublicPreview(id, profile.id);
   const unavailablePeriods = await getPublicUnavailablePeriods(listing.id);
-  const similar = await getSimilarListings(listing);
+  const nearby = await getNearbyListings(listing, {
+    rentalMode: defaultPublicRentalMode(listing),
+  });
 
   const status = listingPreviewStatusMessage(ctx.ownerStatusKey);
   const publicId = getListingPublicId(listing);
@@ -36,7 +39,7 @@ export default async function ListingOwnerViewPage({
       <ListingOwnerPreviewBody
         listing={listing}
         unavailablePeriods={unavailablePeriods}
-        similar={similar}
+        nearby={nearby}
         embed
       />
     );
@@ -52,7 +55,7 @@ export default async function ListingOwnerViewPage({
         <ListingOwnerPreviewBody
           listing={listing}
           unavailablePeriods={unavailablePeriods}
-          similar={similar}
+          nearby={nearby}
         />
       }
     />

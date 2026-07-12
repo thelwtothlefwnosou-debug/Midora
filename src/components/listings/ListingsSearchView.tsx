@@ -126,7 +126,7 @@ export function ListingsSearchView({
   const [clientPage, setClientPage] = useState(1);
   const [mobileView, setMobileView] = useState<"list" | "map">("list");
   const [mapOpen, setMapOpen] = useState(true);
-  const [activeId, setActiveId] = useState<string | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const [mobilePreviewId, setMobilePreviewId] = useState<string | null>(null);
   const [pendingBounds, setPendingBounds] = useState<MapBounds | null>(null);
@@ -185,8 +185,25 @@ export function ListingsSearchView({
     boundsSearch,
   });
   const pageSubtitle = buildResultsSubtitle(pagination.totalCount);
+  const showDatesHint =
+    rentalType === "short_term" && !interestFrom && !interestTo && listings.length > 0;
 
-  const highlightedMarkerId = hoveredId ?? activeId;
+  const clearMarkerSelection = useCallback(() => {
+    setSelectedId(null);
+    setMobilePreviewId(null);
+  }, []);
+
+  useEffect(() => {
+    setHoveredId(null);
+    clearMarkerSelection();
+  }, [searchKey, clearMarkerSelection]);
+
+  useEffect(() => {
+    if (selectedId && !mapMarkers.some((marker) => marker.id === selectedId)) {
+      clearMarkerSelection();
+    }
+  }, [mapMarkers, selectedId, clearMarkerSelection]);
+
   const skipPageScrollRef = useRef(true);
 
   const syncBoundsToUrl = useCallback(
@@ -242,6 +259,7 @@ export function ListingsSearchView({
       skipPageScrollRef.current = false;
       return;
     }
+    setHoveredId(null);
     listScrollRef.current?.scrollTo({ top: 0, behavior: "smooth" });
   }, [clientPage]);
 
@@ -314,7 +332,7 @@ export function ListingsSearchView({
 
   const handleMarkerClick = useCallback(
     (id: string) => {
-      setActiveId(id);
+      setSelectedId(id);
       if (typeof window !== "undefined" && window.innerWidth < 1024) {
         setMobilePreviewId(id);
         return;
@@ -370,7 +388,8 @@ export function ListingsSearchView({
         lat={mapCenter.lat}
         lng={mapCenter.lng}
         markers={mapMarkers}
-        activeMarkerId={highlightedMarkerId}
+        hoveredMarkerId={hoveredId}
+        selectedMarkerId={selectedId}
         zoom={mapZoom}
         height="100%"
         initialBounds={initialBounds}
@@ -383,6 +402,7 @@ export function ListingsSearchView({
         fitMinZoom={fitMapMinZoom}
         onMarkerClick={handleMarkerClick}
         onMarkerHover={setHoveredId}
+        onMarkerDeselect={clearMarkerSelection}
         flush
       />
     </div>
@@ -471,7 +491,7 @@ export function ListingsSearchView({
               >
                 <SearchListingCardGrid
                   listing={listing}
-                  active={highlightedMarkerId === listing.id}
+                  active={hoveredId === listing.id}
                   onHover={() => setHoveredId(listing.id)}
                   onHoverEnd={() =>
                     setHoveredId((current) => (current === listing.id ? null : current))
@@ -504,6 +524,11 @@ export function ListingsSearchView({
             ? ` · ${pagination.rangeStart}–${pagination.rangeEnd}`
             : ""}
         </p>
+        {showDatesHint ? (
+          <p className="mt-1 text-xs text-muted/90">
+            Πρόσθεσε ημερομηνίες για πιο ακριβή διαθεσιμότητα.
+          </p>
+        ) : null}
       </div>
       <ListingsSortSelect
         compact
@@ -592,7 +617,7 @@ export function ListingsSearchView({
                   {mapPanel}
                   <MapListingPreviewSheet
                     marker={mobilePreviewMarker}
-                    onClose={() => setMobilePreviewId(null)}
+                    onClose={clearMarkerSelection}
                   />
                 </div>
                 <button

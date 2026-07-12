@@ -33,7 +33,8 @@ type Props = {
   zoom?: number;
   height?: string;
   markers?: MapMarker[];
-  activeMarkerId?: string | null;
+  hoveredMarkerId?: string | null;
+  selectedMarkerId?: string | null;
   interactive?: boolean;
   searchPolygon?: LatLng[];
   initialBounds?: MapBounds;
@@ -46,6 +47,7 @@ type Props = {
   fitMinZoom?: number;
   onMarkerClick?: (id: string) => void;
   onMarkerHover?: (id: string | null) => void;
+  onMarkerDeselect?: () => void;
   flush?: boolean;
   /** Detail page: listing id for approximate public coordinates */
   listingId?: string;
@@ -63,7 +65,8 @@ export function PropertyMapLoader({
   title,
   zoom,
   height,
-  activeMarkerId,
+  hoveredMarkerId,
+  selectedMarkerId,
   searchPolygon,
   initialBounds,
   onViewportChange,
@@ -72,6 +75,7 @@ export function PropertyMapLoader({
   fitMinZoom,
   onMarkerClick,
   onMarkerHover,
+  onMarkerDeselect,
   flush,
 }: Props) {
   useEffect(() => {
@@ -86,7 +90,8 @@ export function PropertyMapLoader({
         zoom={zoom}
         height={height}
         markers={markers}
-        activeMarkerId={activeMarkerId}
+        hoveredMarkerId={hoveredMarkerId}
+        selectedMarkerId={selectedMarkerId}
         searchPolygon={searchPolygon}
         initialBounds={initialBounds}
         onViewportChange={onViewportChange}
@@ -95,6 +100,7 @@ export function PropertyMapLoader({
         fitMinZoom={fitMinZoom}
         onMarkerClick={onMarkerClick}
         onMarkerHover={onMarkerHover}
+        onMarkerDeselect={onMarkerDeselect}
         flush={flush}
       />
     );

@@ -12,7 +12,8 @@ export type CompletenessItem = {
 
 export function shortTermCompletenessItems(
   listing: ListingWithImages,
-  photoCount: number
+  photoCount: number,
+  amenityCount = 0
 ): CompletenessItem[] {
   const isShort = listingSupportsShortTerm(listing);
   if (!isShort) return [];
@@ -94,7 +95,7 @@ export function shortTermCompletenessItems(
     {
       id: "amenities",
       label: "Παροχές",
-      done: false,
+      done: amenityCount >= 5,
       required: false,
     },
     {

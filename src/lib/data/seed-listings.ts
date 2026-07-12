@@ -243,6 +243,7 @@ function toListing(raw: SeedRaw, index: number): ListingWithImages {
     updated_at: now,
     listing_images: makeImages(raw.id, raw.photoCount, raw.photoOffset),
     profiles: {
+      id: `seed-owner-${raw.id}`,
       full_name: raw.hostName,
       phone: raw.hostPhone,
     },

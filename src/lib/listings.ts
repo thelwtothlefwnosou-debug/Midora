@@ -18,6 +18,8 @@ import {
   filterListingsByAvailability,
 } from "@/lib/availability-search";
 import { getUnavailablePeriodsByListingIds } from "@/lib/unavailable-periods-db";
+import { getListingAmenitiesIndex } from "@/lib/listing-amenities";
+import { listingHasAmenityKeys } from "@/lib/listing-public-amenities";
 import { PROFILE_CONTACT_SELECT } from "@/lib/profile-contact-select";
 
 function sortImages(listing: ListingWithImages): ListingWithImages {
@@ -29,11 +31,31 @@ function sortImages(listing: ListingWithImages): ListingWithImages {
   };
 }
 
+/** Search/map cards need only a cover photo — keeps catalog under Next cache limits. */
+function slimCatalogListing(listing: ListingWithImages): ListingWithImages {
+  const images = listing.listing_images ?? [];
+  const cover =
+    images.find((img) => img.is_cover && img.media_type !== "video") ??
+    images.find((img) => img.media_type !== "video");
+  return {
+    ...listing,
+    listing_images: cover ? [cover] : [],
+  };
+}
+
 async function applyFilters(
   listings: ListingWithImages[],
   filters: ListingFilters
 ): Promise<ListingWithImages[]> {
   let results = sortListings(applyListingFilters(listings, filters), filters.sort);
+
+  if (filters.amenityKeys?.length) {
+    const index = await getListingAmenitiesIndex();
+    const required = filters.amenityKeys;
+    results = results.filter((listing) =>
+      listingHasAmenityKeys(listing, required, index.get(listing.id) ?? [])
+    );
+  }
 
   const range = resolveInterestDateRange(filters);
   if (range && filters.excludeUnavailableForPeriod) {
@@ -152,18 +174,35 @@ const getApprovedListingsSnapshotCached = unstable_cache(
 
 async function loadSearchCatalogSnapshot(): Promise<ListingWithImages[] | null> {
   if (!isSupabaseConfigured()) return null;
-  return fetchApprovedFromDb({
+  const rows = await fetchApprovedFromDb({
     useServiceClient: true,
     limit: DEFAULT_APPROVED_FETCH_LIMIT,
     minimal: true,
   });
+  if (!rows) return null;
+  return rows.map((listing) => slimCatalogListing(sortImages(listing)));
 }
 
 const getSearchCatalogSnapshotCached = unstable_cache(
   loadSearchCatalogSnapshot,
-  ["midora-search-catalog-snapshot"],
+  ["midora-search-catalog-slim-catalog-v1"],
   { revalidate: 60, tags: [LISTINGS_CATALOG_TAG] }
 );
+
+async function getSearchCatalogSnapshot(): Promise<ListingWithImages[] | null> {
+  if (process.env.NODE_ENV === "development") {
+    return loadSearchCatalogSnapshot();
+  }
+  try {
+    return await getSearchCatalogSnapshotCached();
+  } catch (error) {
+    console.error(
+      "[listings] search catalog cache unavailable, using direct fetch:",
+      error
+    );
+    return loadSearchCatalogSnapshot();
+  }
+}
 
 async function resolveCatalogListings(
   snapshot: ListingWithImages[] | null,
@@ -262,7 +301,7 @@ export async function getSearchCatalogListings(
   if (!isSupabaseConfigured()) {
     return shouldUseSeedListings() ? filterSeedListings(filters, limit) : [];
   }
-  const snapshot = await getSearchCatalogSnapshotCached();
+  const snapshot = await getSearchCatalogSnapshot();
   return resolveCatalogListings(snapshot, filters, limit);
 }
 

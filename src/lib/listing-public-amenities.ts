@@ -1,44 +1,28 @@
-import { AMENITY_BY_KEY } from "@/lib/amenities-catalog";
+import {
+  AMENITY_BY_KEY,
+  isKnownAmenityKey,
+  normalizeAmenityKey,
+} from "@/lib/amenities-catalog";
 import type { ListingAmenityRow, ListingHighlight, ListingWithImages } from "@/lib/types";
 
 type ListingAmenitySource = Pick<
   ListingWithImages,
-  "id" | "description" | "description_en" | "has_parking" | "has_elevator" | "has_balcony"
+  "id" | "has_parking" | "has_elevator" | "has_balcony" | "pets_allowed" | "furnished" | "utilities_included"
 >;
 
-type ListingHighlightSource = ListingAmenitySource &
-  Pick<
-    ListingWithImages,
-    | "nearby_metro"
-    | "pets_allowed"
-    | "furnished"
-    | "distance_beach"
-  > & {
-    highlights?: ListingHighlight[];
-  };
-
-const DESCRIPTION_AMENITY_PATTERNS: { pattern: RegExp; key: string }[] = [
-  { pattern: /wifi|wi-fi|internet|οπτικών ινών|mbps/i, key: "wifi" },
-  { pattern: /πλυντήριο/i, key: "washer" },
-  { pattern: /κουζίνα/i, key: "kitchen" },
-  { pattern: /κλιματισμ/i, key: "ac" },
-  { pattern: /θέρμαν/i, key: "heating" },
-  { pattern: /τηλεόραση|smart\s*tv|smarttv|hdtv/i, key: "tv" },
-  { pattern: /χώρος εργασίας|workspace|γραφείο/i, key: "workspace" },
-  { pattern: /μπαλκόνι|βεράντα|αίθριο|τεράτσα/i, key: "balcony" },
-  { pattern: /parking|πάρκινγκ|στάθμευ/i, key: "free_parking" },
-  { pattern: /ασανσέρ/i, key: "elevator" },
-  { pattern: /πισίνα/i, key: "pool" },
-  { pattern: /κήπος|αυλή/i, key: "garden" },
-  { pattern: /self check-?in/i, key: "self_checkin" },
-  { pattern: /θέα/i, key: "view" },
+const LEGACY_BOOLEAN_KEYS: {
+  when: (listing: ListingAmenitySource) => boolean;
+  key: string;
+}[] = [
+  { when: (l) => Boolean(l.has_parking), key: "free_parking" },
+  { when: (l) => Boolean(l.has_elevator), key: "elevator" },
+  { when: (l) => Boolean(l.has_balcony), key: "balcony" },
+  { when: (l) => Boolean(l.pets_allowed), key: "pets_allowed" },
+  { when: (l) => Boolean(l.furnished), key: "furnished" },
+  { when: (l) => Boolean(l.utilities_included), key: "bills_included" },
 ];
 
-function isKnownAmenityKey(key: string): boolean {
-  return Boolean(AMENITY_BY_KEY[key]);
-}
-
-/** Merge DB amenity rows with listing fields + description hints (legacy listings). */
+/** Merge DB amenity rows with legacy listing booleans (no description inference). */
 export function resolvePublicAmenityKeys(
   listing: ListingAmenitySource,
   rows: ListingAmenityRow[] = []
@@ -46,19 +30,21 @@ export function resolvePublicAmenityKeys(
   const keys = new Set<string>();
 
   for (const row of rows) {
-    if (isKnownAmenityKey(row.amenity_key)) keys.add(row.amenity_key);
+    const normalized = normalizeAmenityKey(row.amenity_key);
+    if (isKnownAmenityKey(normalized)) keys.add(normalized);
   }
 
-  if (listing.has_parking) keys.add("free_parking");
-  if (listing.has_elevator) keys.add("elevator");
-  if (listing.has_balcony) keys.add("balcony");
-
-  const text = `${listing.description ?? ""}\n${listing.description_en ?? ""}`;
-  for (const { pattern, key } of DESCRIPTION_AMENITY_PATTERNS) {
-    if (pattern.test(text) && isKnownAmenityKey(key)) keys.add(key);
+  for (const legacy of LEGACY_BOOLEAN_KEYS) {
+    if (legacy.when(listing) && isKnownAmenityKey(legacy.key)) {
+      keys.add(legacy.key);
+    }
   }
 
-  return [...keys];
+  return [...keys].sort((a, b) => {
+    const orderA = AMENITY_BY_KEY[a]?.sortOrder ?? 9999;
+    const orderB = AMENITY_BY_KEY[b]?.sortOrder ?? 9999;
+    return orderA - orderB;
+  });
 }
 
 export function resolvePublicAmenityRows(
@@ -67,12 +53,35 @@ export function resolvePublicAmenityRows(
 ): ListingAmenityRow[] {
   const keys = resolvePublicAmenityKeys(listing, rows);
   return keys.map((amenity_key, sort_order) => ({
-    id: rows.find((r) => r.amenity_key === amenity_key)?.id ?? `resolved-${amenity_key}`,
+    id: rows.find((r) => normalizeAmenityKey(r.amenity_key) === amenity_key)?.id ?? `resolved-${amenity_key}`,
     listing_id: listing.id,
     amenity_key,
     sort_order,
   }));
 }
+
+export function listingHasAmenityKeys(
+  listing: ListingAmenitySource,
+  requiredKeys: string[],
+  storedKeys: string[] = []
+): boolean {
+  if (!requiredKeys.length) return true;
+  const resolved = new Set(resolvePublicAmenityKeys(listing, storedKeys.map((amenity_key, sort_order) => ({
+    id: `idx-${amenity_key}`,
+    listing_id: listing.id,
+    amenity_key,
+    sort_order,
+  }))));
+  return requiredKeys.every((key) => resolved.has(normalizeAmenityKey(key)));
+}
+
+type ListingHighlightSource = ListingAmenitySource &
+  Pick<
+    ListingWithImages,
+    "nearby_metro" | "distance_beach" | "description"
+  > & {
+    highlights?: ListingHighlight[];
+  };
 
 export function resolvePublicHighlights(listing: ListingHighlightSource): ListingHighlight[] {
   if (listing.highlights?.length) return listing.highlights;
@@ -99,9 +108,6 @@ export function resolvePublicHighlights(listing: ListingHighlightSource): Listin
       label: `Κοντά σε παραλία · ${listing.distance_beach.trim()}`,
       icon_key: "umbrella",
     });
-  }
-  if (/εργασία|workspace|remote|100mbps|mbps|internet/i.test(listing.description ?? "")) {
-    inferred.push({ label: "Κατάλληλο για εργασία εξ αποστάσεως", icon_key: "laptop" });
   }
 
   return inferred.slice(0, 3).map((item, sort_order) => ({

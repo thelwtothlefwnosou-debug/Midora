@@ -1,5 +1,6 @@
 import { AccountShell } from "@/components/account/AccountShell";
 import { DashboardListingsView } from "@/components/dashboard/DashboardListingsView";
+import { CohostManagedListingsSection } from "@/components/dashboard/CohostManagedListingsSection";
 import { requireDashboardContext } from "@/lib/dashboard-context";
 import { getUserListings } from "@/lib/listings";
 import { getEffectiveListingStatus } from "@/lib/listing-status";
@@ -64,6 +65,8 @@ export default async function DashboardListingsPage({
         isFree={isFree}
         initialTab={mapLegacyStatusFilter(statusFilter)}
       />
+
+      <CohostManagedListingsSection userId={profile.id} />
     </AccountShell>
   );
 }

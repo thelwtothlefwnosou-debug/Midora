@@ -2,7 +2,7 @@ import { ListingWorkspaceLayoutGate } from "@/components/dashboard/listing-works
 import { requireDashboardContext } from "@/lib/dashboard-context";
 import {
   loadListingWorkspace,
-  loadOwnerListingSwitcherItems,
+  loadAllAccessibleListingSwitcherItems,
 } from "@/lib/listing-workspace-server";
 
 export default async function ListingWorkspaceLayout({
@@ -15,9 +15,9 @@ export default async function ListingWorkspaceLayout({
   const { id } = await params;
   const { profile, email } = await requireDashboardContext("/dashboard/listings");
   const ctx = await loadListingWorkspace(id, profile.id);
-  let switcherItems: Awaited<ReturnType<typeof loadOwnerListingSwitcherItems>> = [];
+  let switcherItems: Awaited<ReturnType<typeof loadAllAccessibleListingSwitcherItems>> = [];
   try {
-    switcherItems = await loadOwnerListingSwitcherItems(profile.id);
+    switcherItems = await loadAllAccessibleListingSwitcherItems(profile.id);
   } catch {
     switcherItems = [];
   }

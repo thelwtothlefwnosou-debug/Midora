@@ -9,13 +9,15 @@ import { listingSupportsShortTerm } from "@/lib/rental-types";
 export function ListingCompletenessCard({
   listing,
   photoCount,
+  amenityCount = 0,
 }: {
   listing: ListingWithImages;
   photoCount: number;
+  amenityCount?: number;
 }) {
   if (!listingSupportsShortTerm(listing)) return null;
 
-  const items = shortTermCompletenessItems(listing, photoCount);
+  const items = shortTermCompletenessItems(listing, photoCount, amenityCount);
   const percent = completenessPercent(items);
   const missing = items.filter((i) => i.required && !i.done);
 

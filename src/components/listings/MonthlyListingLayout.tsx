@@ -1,17 +1,22 @@
 "use client";
 
+import { useMemo } from "react";
+import { useSearchParams } from "next/navigation";
 import { StickyPropertyNav } from "@/components/listings/detail/StickyPropertyNav";
 import { MonthlyInquiryCard } from "@/components/listings/detail/MonthlyInquiryCard";
+import { PublicListingMainLayout } from "@/components/listings/detail/PublicListingMainLayout";
 import { ListingLegalSection } from "@/components/listings/detail/ListingLegalSection";
+import { ListingExternalLinksSection } from "@/components/listings/detail/ListingExternalLinksSection";
 import { ListingCoreContent } from "@/components/listings/detail/ListingCoreContent";
 import { ListingAreaSection } from "@/components/listings/short-term/ListingAreaSection";
 import { ListingAdvertiserSection } from "@/components/listings/short-term/ListingAdvertiserSection";
-import { SimilarListingsSection } from "@/components/listings/short-term/SimilarListingsSection";
 import { ListingPropertyDetails } from "@/components/listings/ListingPropertyDetails";
 import { ListingTermsSection } from "@/components/listings/ListingTermsSection";
-import type { ListingPublicDetail, ListingWithImages } from "@/lib/types";
+import type { ListingPublicDetail } from "@/lib/types";
+import type { ListingCohostWithProfile, ListingContactNumber } from "@/lib/types";
 import type { ListingUnavailablePeriod } from "@/lib/unavailable-periods";
 import type { ListingPublicContact } from "@/lib/listing-contact";
+import { buildProfileLinkContextFromSearchParams } from "@/lib/profile-link-context";
 
 type Props = {
   listing: ListingPublicDetail;
@@ -20,41 +25,54 @@ type Props = {
   mapPrice: number;
   contact: ListingPublicContact;
   hostName?: string | null;
-  similar?: ListingWithImages[];
+  cohosts?: ListingCohostWithProfile[];
+  publicContactPhones?: ListingContactNumber[];
 };
 
 export function MonthlyListingLayout({
   listing,
   contact,
   hostName,
-  similar = [],
+  cohosts = [],
+  publicContactPhones = [],
 }: Props) {
+  const searchParams = useSearchParams();
+  const profileLinkContext = useMemo(
+    () => buildProfileLinkContextFromSearchParams(searchParams, "monthly"),
+    [searchParams]
+  );
+
   return (
-    <>
-      <ListingCoreContent listing={listing} rentalMode="monthly" />
-
-      <StickyPropertyNav
-        items={[
-          { id: "about", label: "Περιγραφή" },
-          { id: "amenities", label: "Παροχές" },
-          { id: "area", label: "Περιοχή" },
-        ]}
-      />
-
-      <div className="mt-6 grid gap-12 lg:grid-cols-3 lg:gap-10">
-        <div className="min-w-0 space-y-0 lg:col-span-2">
+    <PublicListingMainLayout
+      content={
+        <>
+          <StickyPropertyNav
+            items={[
+              { id: "about", label: "Περιγραφή" },
+              { id: "amenities", label: "Παροχές" },
+              { id: "area", label: "Περιοχή" },
+            ]}
+          />
+          <ListingCoreContent listing={listing} rentalMode="monthly" />
           <ListingAreaSection listing={listing} />
-          <ListingAdvertiserSection listing={listing} />
-          {similar.length > 0 && <SimilarListingsSection listings={similar} />}
           <section className="listing-section scroll-mt-32">
             <ListingPropertyDetails listing={listing} />
             <ListingTermsSection listing={listing} />
           </section>
+          <ListingAdvertiserSection
+            listing={listing}
+            rentalMode="monthly"
+            profileLinkContext={profileLinkContext}
+            cohosts={cohosts}
+            publicContactPhones={publicContactPhones}
+          />
+          <ListingExternalLinksSection links={listing.external_links ?? []} />
           <ListingLegalSection listing={listing} />
-        </div>
-
+        </>
+      }
+      sidebar={
         <MonthlyInquiryCard listing={listing} contact={contact} hostName={hostName} />
-      </div>
-    </>
+      }
+    />
   );
 }

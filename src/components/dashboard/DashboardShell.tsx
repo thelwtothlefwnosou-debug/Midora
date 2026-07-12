@@ -46,9 +46,10 @@ export function DashboardShell({
       <div className="mx-auto flex w-full max-w-[min(100%,1480px)]">
         <aside
           className={cn(
-            "fixed inset-y-0 left-0 z-30 flex w-72 flex-col border-r border-border bg-white p-4 pt-16 transition-transform lg:static lg:translate-x-0 lg:pt-4",
+            "fixed inset-y-0 left-0 z-30 flex w-[min(100vw-3rem,17rem)] flex-col border-r border-border/80 bg-white/95 p-3 pt-16 backdrop-blur-sm transition-transform lg:static lg:translate-x-0 lg:pt-3",
             mobileOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0",
-            sidebarCollapsed ? "lg:w-[88px]" : "lg:w-64"
+            sidebarCollapsed ? "lg:w-[4.5rem]" : "lg:w-52",
+            variant === "workspace" && "lg:border-border/60"
           )}
         >
           <div className="mb-4 lg:hidden">
@@ -67,6 +68,7 @@ export function DashboardShell({
             email={email}
             avatarUrl={avatarUrl}
             collapsed={sidebarCollapsed}
+            compact={variant === "workspace"}
           />
 
           <div className="mt-4 flex-1 overflow-y-auto">
@@ -106,7 +108,7 @@ export function DashboardShell({
           />
         )}
 
-        <main className="min-w-0 flex-1 px-3 py-5 sm:px-5 lg:py-8">
+        <main className="min-w-0 flex-1 px-3 py-4 sm:px-4 lg:py-6">
           <div className="mb-5 flex items-center gap-3 lg:hidden">
             <button
               type="button"

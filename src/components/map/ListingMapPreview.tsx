@@ -13,7 +13,11 @@ export function ListingMapPreview({ marker, className, compact = true }: Props) 
   const href = marker.href ?? `/listings/${marker.id}`;
 
   return (
-    <div className={cn("midora-map-popup", compact && "midora-map-popup--compact", className)}>
+    <div
+      className={cn("midora-map-popup", compact && "midora-map-popup--compact", className)}
+      onClick={(e) => e.stopPropagation()}
+      onMouseDown={(e) => e.stopPropagation()}
+    >
       {marker.coverUrl ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img

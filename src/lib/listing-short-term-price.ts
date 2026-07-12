@@ -1,6 +1,7 @@
 import type { Listing, ListingPriceRule } from "@/lib/types";
 import type { ListingUnavailablePeriod } from "@/lib/unavailable-periods";
-import { addDays, stayNightsBetween } from "@/lib/availability-calendar";
+import { addDays, stayNightsBetween, todayDateKey } from "@/lib/availability-calendar";
+import { getDefaultFiveNightRange } from "@/lib/listing-default-stay-range";
 
 export type ShortTermPricingConfig = Pick<
   Listing,
@@ -218,6 +219,70 @@ export function formatIndicativePriceBreakdown(price: IndicativeStayPrice): stri
   if (price.discountAmount > 0 && price.discountLabel) {
     lines.push(`${price.discountLabel}: -€${price.discountAmount.toLocaleString("el-GR")}`);
   }
-  lines.push(`Ενδεικτική τιμή: €${price.total.toLocaleString("el-GR")}`);
+  lines.push(`Σύνολο: €${price.total.toLocaleString("el-GR")}`);
   return lines;
+}
+
+/** Default indicative stay length when visitor has not selected dates. */
+export const INDICATIVE_DEFAULT_NIGHTS = 5;
+
+export function formatIndicativeNightsLabel(nights: number): string {
+  return nights === 1 ? "διανυκτέρευση" : "διανυκτερεύσεις";
+}
+
+export function formatShortTermIndicativeDisplay(
+  total: number,
+  nights: number,
+  options?: { prefixFrom?: boolean }
+): string {
+  const amount = `€${total.toLocaleString("el-GR")}`;
+  const prefix = options?.prefixFrom ? "Από " : "";
+  return `${prefix}${amount} για ${nights} ${formatIndicativeNightsLabel(nights)}`;
+}
+
+export function formatPublicStayPriceTotal(total: number): string {
+  return `€${total.toLocaleString("el-GR")} συνολικά`;
+}
+
+export function formatPublicStayPriceNightsLine(nights: number): string {
+  return `για ${nights} ${formatIndicativeNightsLabel(nights)}`;
+}
+
+export function stayRangeHasBlockedNight(
+  startDate: string,
+  endDate: string,
+  periods: Pick<ListingUnavailablePeriod, "start_date" | "end_date">[]
+): boolean {
+  const nights = stayNightsBetween(startDate, endDate);
+  for (let i = 0; i < nights; i++) {
+    if (isDateBlocked(addDays(startDate, i), periods)) return true;
+  }
+  return false;
+}
+
+/** Indicative default stay price when no user dates are selected. */
+export function computeDefaultIndicativeStayPrice(
+  listing: ShortTermPricingConfig,
+  rules: ListingPriceRule[] = [],
+  periods: Pick<ListingUnavailablePeriod, "start_date" | "end_date">[] = [],
+  guests = 2,
+  minimumStayNights = 1
+): IndicativeStayPrice | null {
+  const range = getDefaultFiveNightRange(
+    listing,
+    rules,
+    periods,
+    minimumStayNights,
+    guests
+  );
+  if (!range) return null;
+
+  return computeIndicativeStayPrice(
+    listing,
+    rules,
+    range.checkIn,
+    range.checkOut,
+    guests,
+    periods
+  );
 }

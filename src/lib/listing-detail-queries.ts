@@ -12,6 +12,7 @@ import {
   resolvePublicAmenityRows,
   resolvePublicHighlights,
 } from "@/lib/listing-public-amenities";
+import { getPublicListingExternalLinks } from "@/lib/listing-external-links-db";
 
 import { PROFILE_CONTACT_SELECT } from "@/lib/profile-contact-select";
 
@@ -74,13 +75,14 @@ export async function getListingPublicDetail(id: string): Promise<ListingPublicD
   const listing = await getListingById(id);
   if (!listing) return null;
 
-  const [highlights, sleeping, amenities, price_rules, advertiser_active_listings] =
+  const [highlights, sleeping, amenities, price_rules, advertiser_active_listings, external_links] =
     await Promise.all([
       safeSelect<ListingHighlight>("listing_highlights", listing.id, "sort_order"),
       getPublicSleepingArrangements(listing.id),
       safeSelect<ListingAmenityRow>("listing_amenities", listing.id, "sort_order"),
       getPublicPriceRules(listing.id),
       getAdvertiserActiveListingCount(listing.user_id),
+      getPublicListingExternalLinks(listing.id),
     ]);
 
   const resolvedAmenities = resolvePublicAmenityRows(listing, amenities);
@@ -96,5 +98,6 @@ export async function getListingPublicDetail(id: string): Promise<ListingPublicD
     amenities: resolvedAmenities,
     price_rules,
     advertiser_active_listings,
+    external_links,
   };
 }

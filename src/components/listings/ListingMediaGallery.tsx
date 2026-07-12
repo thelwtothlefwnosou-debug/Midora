@@ -1,116 +1,15 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import Image from "next/image";
-import { Grid2X2, X, ChevronLeft, ChevronRight, Share2 } from "lucide-react";
+import { useState } from "react";
+import { Grid2X2, Share2 } from "lucide-react";
 import { ListingImageCarousel } from "@/components/listings/ListingImageCarousel";
-import { GalleryImage, GalleryImagePlaceholder } from "@/components/listings/GalleryImage";
+import { GalleryImage } from "@/components/listings/GalleryImage";
+import { ListingGalleryLightbox } from "@/components/listings/detail/ListingGalleryLightbox";
 import type { ListingImage } from "@/lib/types";
-import {
-  LISTING_PLACEHOLDER_IMAGE,
-  resolveListingImageUrl,
-} from "@/lib/listing-media";
+import { resolveListingImageUrl } from "@/lib/listing-media";
+import { sortListingPhotosForDisplay } from "@/lib/listing-photo-display";
 import { COPY } from "@/lib/copy";
 import { cn } from "@/lib/utils";
-
-function PhotoLightbox({
-  photos,
-  title,
-  startIndex,
-  onClose,
-}: {
-  photos: ListingImage[];
-  title: string;
-  startIndex: number;
-  onClose: () => void;
-}) {
-  const [index, setIndex] = useState(startIndex);
-
-  useEffect(() => {
-    function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") onClose();
-      if (e.key === "ArrowRight") setIndex((i) => Math.min(i + 1, photos.length - 1));
-      if (e.key === "ArrowLeft") setIndex((i) => Math.max(i - 1, 0));
-    }
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [onClose, photos.length]);
-
-  return (
-    <div className="fixed inset-0 z-[200] flex flex-col bg-charcoal/95">
-      <div className="flex items-center justify-between px-4 py-3 text-white">
-        <p className="text-sm font-medium">
-          {index + 1} / {photos.length}
-        </p>
-        <button
-          type="button"
-          onClick={onClose}
-          className="rounded-lg p-2 hover:bg-white/10"
-          aria-label="Κλείσιμο"
-        >
-          <X className="h-5 w-5" />
-        </button>
-      </div>
-      <div className="relative flex-1">
-        {photos.length > 1 && (
-          <>
-            <button
-              type="button"
-              onClick={() => setIndex((i) => Math.max(i - 1, 0))}
-              disabled={index === 0}
-              className="absolute left-3 top-1/2 z-10 -translate-y-1/2 rounded-full bg-white/90 p-2 shadow disabled:opacity-40"
-              aria-label="Προηγούμενη"
-            >
-              <ChevronLeft className="h-5 w-5" />
-            </button>
-            <button
-              type="button"
-              onClick={() => setIndex((i) => Math.min(i + 1, photos.length - 1))}
-              disabled={index === photos.length - 1}
-              className="absolute right-3 top-1/2 z-10 -translate-y-1/2 rounded-full bg-white/90 p-2 shadow disabled:opacity-40"
-              aria-label="Επόμενη"
-            >
-              <ChevronRight className="h-5 w-5" />
-            </button>
-          </>
-        )}
-        <GalleryImage
-          src={resolveListingImageUrl(photos[index]?.url) ?? ""}
-          alt={`${title} — φωτογραφία ${index + 1}`}
-          className="object-contain"
-          sizes="100vw"
-          priority
-        />
-      </div>
-      {photos.length > 1 && (
-        <div className="flex gap-2 overflow-x-auto px-4 py-3">
-          {photos.map((photo, i) => (
-            <button
-              key={photo.id}
-              type="button"
-              onClick={() => setIndex(i)}
-              className={cn(
-                "relative h-14 w-20 shrink-0 overflow-hidden rounded-lg ring-offset-2",
-                i === index ? "ring-2 ring-gold" : "opacity-70 hover:opacity-100"
-              )}
-            >
-              <Image
-                src={resolveListingImageUrl(photo.url) ?? ""}
-                alt=""
-                fill
-                className="object-cover"
-                sizes="80px"
-                onError={(e) => {
-                  (e.target as HTMLImageElement).style.visibility = "hidden";
-                }}
-              />
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
 
 function GalleryPhoto({
   photo,
@@ -184,7 +83,7 @@ function DesktopGallery({
 }: {
   photos: ListingImage[];
   title: string;
-  onOpen: (index: number) => void;
+  onOpen: () => void;
 }) {
   const count = photos.length;
 
@@ -203,7 +102,7 @@ function DesktopGallery({
           <GalleryPhoto
             photo={photos[0]}
             title={title}
-            onClick={() => onOpen(0)}
+            onClick={onOpen}
             className="absolute inset-0"
             priority
             sizes="(max-width: 1024px) 100vw, 70vw"
@@ -222,7 +121,7 @@ function DesktopGallery({
             photo={photo}
             title={title}
             alt={`${title} — φωτογραφία ${i + 1}`}
-            onClick={() => onOpen(i)}
+            onClick={onOpen}
             className="h-full min-h-0"
             priority={i === 0}
             sizes="35vw"
@@ -230,7 +129,7 @@ function DesktopGallery({
         ))}
         <ViewAllButton
           count={count}
-          onClick={() => onOpen(0)}
+          onClick={onOpen}
           className="absolute bottom-4 right-4 z-10 border-white/80 bg-white/95 shadow-md"
         />
       </div>
@@ -243,7 +142,7 @@ function DesktopGallery({
         <GalleryPhoto
           photo={photos[0]}
           title={title}
-          onClick={() => onOpen(0)}
+          onClick={onOpen}
           className="h-full min-h-0"
           priority
           sizes="45vw"
@@ -255,7 +154,7 @@ function DesktopGallery({
               photo={photo}
               title={title}
               alt={`${title} — φωτογραφία ${i + 2}`}
-              onClick={() => onOpen(i + 1)}
+              onClick={onOpen}
               className="h-full min-h-0"
               sizes="25vw"
             />
@@ -263,7 +162,7 @@ function DesktopGallery({
         </div>
         <ViewAllButton
           count={count}
-          onClick={() => onOpen(0)}
+          onClick={onOpen}
           className="absolute bottom-4 right-4 z-10 border-white/80 bg-white/95 shadow-md"
         />
       </div>
@@ -276,7 +175,7 @@ function DesktopGallery({
         <GalleryPhoto
           photo={photos[0]}
           title={title}
-          onClick={() => onOpen(0)}
+          onClick={onOpen}
           className="h-full min-h-0"
           priority
           sizes="45vw"
@@ -288,7 +187,7 @@ function DesktopGallery({
               photo={photo}
               title={title}
               alt={`${title} — φωτογραφία ${i + 2}`}
-              onClick={() => onOpen(i + 1)}
+              onClick={onOpen}
               className="h-full min-h-0"
               sizes="20vw"
             />
@@ -297,14 +196,14 @@ function DesktopGallery({
             photo={photos[3]}
             title={title}
             alt={`${title} — φωτογραφία 4`}
-            onClick={() => onOpen(3)}
+            onClick={onOpen}
             className="col-span-2 h-full min-h-0"
             sizes="40vw"
           />
         </div>
         <ViewAllButton
           count={count}
-          onClick={() => onOpen(0)}
+          onClick={onOpen}
           className="absolute bottom-4 right-4 z-10 border-white/80 bg-white/95 shadow-md"
         />
       </div>
@@ -320,7 +219,7 @@ function DesktopGallery({
         <GalleryPhoto
           photo={photos[0]}
           title={title}
-          onClick={() => onOpen(0)}
+          onClick={onOpen}
           className="h-full min-h-0"
           priority
           sizes="45vw"
@@ -335,7 +234,7 @@ function DesktopGallery({
                 photo={photo}
                 title={title}
                 alt={`${title} — φωτογραφία ${photoIndex + 1}`}
-                onClick={() => onOpen(photoIndex)}
+                onClick={onOpen}
                 className="h-full min-h-0"
                 sizes="20vw"
                 overlay={
@@ -352,7 +251,7 @@ function DesktopGallery({
         {count > 1 && (
           <ViewAllButton
             count={count}
-            onClick={() => onOpen(0)}
+            onClick={onOpen}
             className="absolute bottom-4 right-4 z-10 border-white/80 bg-white/95 shadow-md"
           />
         )}
@@ -375,15 +274,15 @@ export function ListingMediaGallery({
   /** Share / save / more circles on mobile carousel */
   mobileActions?: React.ReactNode;
 }) {
-  const sorted = [...images].sort((a, b) => a.sort_order - b.sort_order);
-  const photos = sorted.filter((item) => item.media_type !== "video");
-  const videos = sorted.filter((item) => item.media_type === "video");
+  const sorted = sortListingPhotosForDisplay(images);
+  const photos = sorted;
+  const videos = [...images]
+    .sort((a, b) => a.sort_order - b.sort_order)
+    .filter((item) => item.media_type === "video");
   const [activeIndex, setActiveIndex] = useState(0);
   const [lightboxOpen, setLightboxOpen] = useState(false);
-  const [lightboxIndex, setLightboxIndex] = useState(0);
 
-  function openLightbox(index: number) {
-    setLightboxIndex(index);
+  function openLightbox() {
     setLightboxOpen(true);
   }
 
@@ -428,13 +327,13 @@ export function ListingMediaGallery({
             maxDots={8}
             index={activeIndex}
             onIndexChange={setActiveIndex}
-            onImageClick={() => hasRealPhotos && openLightbox(activeIndex)}
+            onImageClick={() => hasRealPhotos && openLightbox()}
           />
         </div>
         {hasRealPhotos && galleryPhotos.length > 1 && (
           <ViewAllButton
             count={galleryPhotos.length}
-            onClick={() => openLightbox(activeIndex)}
+            onClick={openLightbox}
             className="mt-3 flex min-h-11 w-full justify-center"
           />
         )}
@@ -442,7 +341,6 @@ export function ListingMediaGallery({
 
       {/* Desktop: adaptive layout */}
       <div className="relative hidden lg:block">
-        {overlayActions}
         <DesktopGallery
           photos={galleryPhotos}
           title={title}
@@ -469,11 +367,12 @@ export function ListingMediaGallery({
       )}
 
       {lightboxOpen && hasRealPhotos && (
-        <PhotoLightbox
+        <ListingGalleryLightbox
           photos={galleryPhotos}
           title={title}
-          startIndex={lightboxIndex}
           onClose={() => setLightboxOpen(false)}
+          onShare={onShare}
+          favoriteSlot={favoriteSlot}
         />
       )}
     </>

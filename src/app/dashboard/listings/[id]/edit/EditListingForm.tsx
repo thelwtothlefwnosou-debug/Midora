@@ -5,18 +5,22 @@ import Link from "next/link";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { ListingForm } from "@/components/listings/ListingForm";
 import { ListingBedroomsEditor } from "@/components/dashboard/ListingBedroomsEditor";
+import { ListingAmenitiesEditor } from "@/components/dashboard/ListingAmenitiesEditor";
 import { ListingLocationEditor } from "@/components/dashboard/ListingLocationEditor";
+import { ListingExternalLinksEditor } from "@/components/dashboard/ListingExternalLinksEditor";
 import { DeleteListingButton } from "@/components/dashboard/DeleteListingButton";
 import { ListingCompletenessCard } from "@/components/dashboard/ListingCompletenessCard";
 import { listingRentalType } from "@/lib/rental-types";
 import type { ListingUnavailablePeriod } from "@/lib/unavailable-periods";
 import { updateListing } from "@/lib/actions";
 import type {
+  ListingAmenityRow,
   ListingPriceRule,
   ListingSleepingArrangement,
   ListingWithImages,
   Profile,
 } from "@/lib/types";
+import type { ListingExternalLink } from "@/lib/listing-external-links";
 
 type Props = {
   listing: ListingWithImages;
@@ -25,11 +29,15 @@ type Props = {
   unavailablePeriods: ListingUnavailablePeriod[];
   priceRules: ListingPriceRule[];
   sleepingArrangements: ListingSleepingArrangement[];
+  externalLinks: ListingExternalLink[];
+  amenities: ListingAmenityRow[];
 };
 
 export function EditListingForm({
   listing,
   sleepingArrangements,
+  externalLinks,
+  amenities,
 }: Props) {
   const [state, formAction, pending] = useActionState(
     async (_prev: { error?: string; saved?: boolean } | null, formData: FormData) => {
@@ -71,7 +79,11 @@ export function EditListingForm({
 
       {isShortTerm && (
         <div className="mb-6">
-          <ListingCompletenessCard listing={listing} photoCount={photoCount} />
+          <ListingCompletenessCard
+            listing={listing}
+            photoCount={photoCount}
+            amenityCount={amenities.length}
+          />
         </div>
       )}
 
@@ -82,7 +94,11 @@ export function EditListingForm({
         />
       )}
 
+      <ListingAmenitiesEditor listing={listing} initialAmenities={amenities} />
+
       <ListingLocationEditor listing={listing} />
+
+      <ListingExternalLinksEditor listingId={listing.id} initialLinks={externalLinks} />
 
       <GlassCard className="mt-6 p-6 sm:p-8">
         <ListingForm

@@ -753,7 +753,7 @@ export function ListingWizardPhotosStep({
       )}
 
       {showGrid && (
-        <div className={cn("grid gap-3", isManager ? "sm:grid-cols-2 lg:grid-cols-3" : "sm:grid-cols-2 lg:grid-cols-3")}>
+      <div className={cn("grid gap-4", isManager ? "sm:grid-cols-2 xl:grid-cols-3" : "sm:grid-cols-2 lg:grid-cols-3")}>
           {images.map((img, index) => {
             const cover = isCoverPhoto(img, index);
             const roomLabel = roomBadgeLabel(img.room_key);
@@ -772,11 +772,11 @@ export function ListingWizardPhotosStep({
                   handleReorderDrop(index);
                 }}
                 className={cn(
-                  "group relative overflow-hidden rounded-2xl border border-border bg-white shadow-soft",
+                  "group relative overflow-hidden rounded-xl border border-border bg-white shadow-soft",
                   dragReorderIndex === index && "ring-2 ring-gold/50"
                 )}
               >
-                <div className="relative aspect-[5/4]">
+                <div className="relative aspect-[4/3]">
                   <Image
                     src={img.url}
                     alt={img.caption ?? img.file_name ?? "Φωτογραφία αγγελίας"}

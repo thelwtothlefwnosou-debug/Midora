@@ -8,6 +8,10 @@ const OPTIONAL_PROFILE_COLUMNS = [
   "preferred_contact_method",
   "business_name",
   "business_title",
+  "public_slug",
+  "public_profile_enabled",
+  "show_owned_listings_on_profile",
+  "show_cohosted_listings_on_profile",
 ] as const;
 
 const MAX_RETRIES = OPTIONAL_PROFILE_COLUMNS.length + 4;

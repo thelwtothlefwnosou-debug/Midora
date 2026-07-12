@@ -25,11 +25,6 @@ export default async function ListingAvailabilityPage({
   if (isShortTerm) {
     return (
       <div>
-        <h2 className="mb-1 font-display text-lg font-semibold text-charcoal">Διαθεσιμότητα</h2>
-        <p className="mb-5 text-sm text-muted">
-          Ορίσε τιμές ανά ημέρα, κλείσε ημερομηνίες και δες πώς θα εμφανίζεται στον ενδιαφερόμενο.
-          Ενδεικτική διαθεσιμότητα — χωρίς κράτηση ή πληρωμή.
-        </p>
         <ShortTermCalendarHub
           listing={listing}
           periods={unavailablePeriods}

@@ -1,94 +1,192 @@
-import Link from "next/link";
-import { BadgeCheck, Phone } from "lucide-react";
-import type { ListingPublicDetail } from "@/lib/types";
-import { ProfileAvatar } from "@/components/profile/ProfileAvatar";
+import type { ListingCohostWithProfile, ListingContactNumber, ListingPublicDetail } from "@/lib/types";
+
 import { canShowPublicAvatar, resolveProfileAvatarUrl } from "@/lib/profile-avatar";
+
 import { getSupabaseUrl } from "@/lib/supabase/config";
+
+import { advertiserSectionTitle, profileDisplayName } from "@/lib/profile-display";
+
 import {
-  advertiserTypeLabel,
-  formatCommunicationLanguages,
-  profileDisplayName,
-} from "@/lib/profile-display";
+
+  publicProfilePath,
+
+  type PublicProfileLinkContext,
+
+} from "@/lib/profile-public-url";
+
+import {
+
+  AdvertiserPublicProfileBlock,
+
+  buildAdvertiserPublicProfileData,
+
+} from "@/components/profile/AdvertiserPublicProfileBlock";
+
+import { PublicCohostsBlock } from "@/components/listings/detail/PublicCohostsBlock";
+
+
 
 export function ListingAdvertiserSection({
+
   listing,
+
   onContact,
+
+  rentalMode = "short_term",
+
+  cohosts = [],
+
+  publicContactPhones = [],
+
+  profileLinkContext,
+
 }: {
+
   listing: ListingPublicDetail;
+
   onContact?: () => void;
+
+  rentalMode?: "short_term" | "monthly";
+
+  cohosts?: ListingCohostWithProfile[];
+
+  publicContactPhones?: ListingContactNumber[];
+
+  profileLinkContext?: PublicProfileLinkContext;
+
 }) {
+
   const profile = listing.profiles;
-  if (!profile?.full_name && !listing.contact_name) return null;
+
+  if (!profile?.full_name && !profile?.display_name && !listing.contact_name) return null;
+
+
 
   const displayName = profile
+
     ? profileDisplayName(profile)
-    : listing.contact_name ?? "Αγγελιοδότης";
-  const advertiserLabel = profile ? advertiserTypeLabel(profile.advertiser_type) : null;
-  const languages = formatCommunicationLanguages(profile?.communication_languages);
-  const memberSince = profile?.created_at
-    ? new Date(profile.created_at).toLocaleDateString("el-GR", {
-        month: "long",
-        year: "numeric",
-      })
-    : null;
+
+    : listing.contact_name ?? "Ιδιοκτήτης";
+
   const phoneVerified = Boolean(profile?.primary_phone_verified_at);
+
   const avatarUrl =
+
     profile && canShowPublicAvatar(profile)
+
       ? resolveProfileAvatarUrl(profile, getSupabaseUrl())
+
       : null;
 
+  const roleLabel = rentalMode === "short_term" ? "Οικοδεσπότης" : "Ιδιοκτήτης";
+
+
+
+  const ownerPublicPhone = publicContactPhones.find((p) => p.role === "owner");
+
+
+
+  const ownerProfileHref =
+
+    profile?.id != null
+
+      ? publicProfilePath(
+
+          {
+
+            id: profile.id,
+
+            public_slug: profile.public_slug,
+
+            public_profile_enabled: profile.public_profile_enabled,
+
+          },
+
+          profileLinkContext
+
+        )
+
+      : null;
+
+
+
+  const blockData = buildAdvertiserPublicProfileData({
+
+    profile: profile ?? null,
+
+    displayName,
+
+    roleLabel,
+
+    avatarUrl,
+
+    phoneVerified,
+
+    activeListings: listing.advertiser_active_listings ?? 0,
+
+    rentalMode,
+
+  });
+
+
+
   return (
+
     <section id="advertiser" className="listing-section scroll-mt-28">
-      <h2 className="listing-section-title">Γνώρισε τον αγγελιοδότη</h2>
-      <div className="listing-card mt-5 flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-start gap-4">
-          <ProfileAvatar profile={profile} imageUrl={avatarUrl} size="lg" />
-          <div>
-            <p className="text-lg font-semibold tracking-tight text-charcoal">{displayName}</p>
-            {advertiserLabel && (
-              <p className="mt-0.5 text-sm text-muted">{advertiserLabel}</p>
-            )}
-            {profile?.bio?.trim() && (
-              <p className="mt-2 line-clamp-3 text-sm text-charcoal/80">{profile.bio}</p>
-            )}
-            {languages && (
-              <p className="mt-1 text-sm text-muted">Γλώσσες: {languages}</p>
-            )}
-            {memberSince && (
-              <p className="mt-1 text-sm text-muted">Μέλος από {memberSince}</p>
-            )}
-            {phoneVerified && (
-              <p className="mt-1 inline-flex items-center gap-1 text-sm font-medium text-teal">
-                <BadgeCheck className="h-4 w-4" />
-                Επαληθευμένο τηλέφωνο
-              </p>
-            )}
-            {(listing.advertiser_active_listings ?? 0) > 1 && (
-              <p className="mt-1 text-sm text-muted">
-                {listing.advertiser_active_listings} ενεργές αγγελίες
-              </p>
-            )}
+
+      <h2 className="listing-section-title">{advertiserSectionTitle(rentalMode)}</h2>
+
+
+
+      <div className="mt-6">
+
+        <AdvertiserPublicProfileBlock
+
+          {...blockData}
+
+          onContact={onContact}
+
+          profileHref={ownerProfileHref}
+
+        />
+
+        {ownerPublicPhone && (
+
+          <div className="mt-4 text-sm text-charcoal/80">
+
+            <p className="font-medium text-charcoal">Τηλέφωνα επικοινωνίας</p>
+
+            <p className="mt-1">
+
+              {displayName} — {ownerPublicPhone.label || "Ιδιοκτήτης"} —{" "}
+
+              <a href={`tel:${ownerPublicPhone.phone_number}`} className="hover:text-gold-dark">
+
+                {ownerPublicPhone.phone_number}
+
+              </a>
+
+            </p>
+
           </div>
-        </div>
-        {onContact ? (
-          <button
-            type="button"
-            onClick={onContact}
-            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-border px-5 text-sm font-medium text-charcoal hover:border-gold/40"
-          >
-            <Phone className="h-4 w-4 text-gold" />
-            Επικοινωνία με αγγελιοδότη
-          </button>
-        ) : (
-          <Link
-            href="#listing-contact"
-            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-border px-5 text-sm font-medium text-charcoal hover:border-gold/40"
-          >
-            <Phone className="h-4 w-4 text-gold" />
-            Επικοινωνία με αγγελιοδότη
-          </Link>
+
         )}
+
+        <PublicCohostsBlock
+
+          cohosts={cohosts}
+
+          publicPhones={publicContactPhones.filter((p) => p.role === "cohost")}
+
+          profileLinkContext={profileLinkContext}
+
+        />
+
       </div>
+
     </section>
+
   );
+
 }
+

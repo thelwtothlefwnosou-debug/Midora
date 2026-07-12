@@ -14,8 +14,9 @@ import {
   Users,
   Home,
 } from "lucide-react";
-import type { PropertyLeadWithListing } from "@/lib/types";
+import type { PropertyLeadWithListing, PropertyLeadReply } from "@/lib/types";
 import { updatePropertyLeadStatus } from "@/lib/actions";
+import { replyToPropertyLead } from "@/lib/listing-cohost-actions";
 import { leadStatusLabel } from "@/lib/lead-labels";
 import { cn } from "@/lib/utils";
 
@@ -60,11 +61,19 @@ function formatInterestDates(lead: PropertyLeadWithListing): string | null {
   return null;
 }
 
-export function PropertyLeadRow({ lead }: { lead: PropertyLeadWithListing }) {
+export function PropertyLeadRow({
+  lead,
+  replies = [],
+}: {
+  lead: PropertyLeadWithListing;
+  replies?: PropertyLeadReply[];
+}) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [leadStatus, setLeadStatus] = useState(lead.status);
   const [actionError, setActionError] = useState<string | null>(null);
+  const [replyText, setReplyText] = useState("");
+  const [showReply, setShowReply] = useState(false);
   const listing = lead.listings;
   const listingHref = listing ? `/listings/${listing.slug ?? listing.id}` : null;
   const cover = listing ? listingCoverUrl(listing) : null;
@@ -81,6 +90,28 @@ export function PropertyLeadRow({ lead }: { lead: PropertyLeadWithListing }) {
       setLeadStatus(next);
       router.refresh();
     });
+  }
+
+  function submitReply() {
+    setActionError(null);
+    startTransition(async () => {
+      const result = await replyToPropertyLead(lead.id, replyText);
+      if ("error" in result && result.error) {
+        setActionError(result.error);
+        return;
+      }
+      setReplyText("");
+      setShowReply(false);
+      setLeadStatus("replied");
+      router.refresh();
+    });
+  }
+
+  function replySenderLabel(reply: PropertyLeadReply): string {
+    if (reply.sender_role === "cohost") {
+      return `${reply.sender_display_name}, συνοικοδεσπότης, απάντησε`;
+    }
+    return `${reply.sender_display_name} απάντησε`;
   }
 
   const created = new Intl.DateTimeFormat("el-GR", {
@@ -174,6 +205,59 @@ export function PropertyLeadRow({ lead }: { lead: PropertyLeadWithListing }) {
             <p className="mt-4 rounded-xl bg-sand/50 px-4 py-3 text-sm leading-relaxed text-charcoal/75">
               {lead.message}
             </p>
+          )}
+
+          {replies.length > 0 && (
+            <div className="mt-4 space-y-2">
+              {replies.map((reply) => (
+                <div
+                  key={reply.id}
+                  className="rounded-xl border border-border bg-white px-4 py-3 text-sm"
+                >
+                  <p className="text-xs font-medium text-muted">
+                    {replySenderLabel(reply)}
+                  </p>
+                  <p className="mt-1 leading-relaxed text-charcoal/80">{reply.body}</p>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {showReply ? (
+            <div className="mt-4 space-y-2">
+              <textarea
+                value={replyText}
+                onChange={(e) => setReplyText(e.target.value)}
+                rows={3}
+                placeholder="Γράψε την απάντησή σου..."
+                className="w-full rounded-xl border border-border px-3 py-2 text-sm"
+              />
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  disabled={pending || !replyText.trim()}
+                  onClick={submitReply}
+                  className="rounded-lg bg-charcoal px-3 py-1.5 text-xs font-medium text-white disabled:opacity-50"
+                >
+                  Αποστολή απάντησης
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowReply(false)}
+                  className="rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-muted"
+                >
+                  Ακύρωση
+                </button>
+              </div>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setShowReply(true)}
+              className="mt-4 text-sm font-medium text-gold-dark hover:underline"
+            >
+              Απάντηση στον επισκέπτη
+            </button>
           )}
 
           <p className="mt-3 text-xs text-muted">Λήφθηκε: {created}</p>

@@ -4,9 +4,9 @@ export type ListingWorkspaceTabId =
   | "photos"
   | "availability"
   | "inquiries"
-  | "messages"
   | "analytics"
-  | "publish";
+  | "publish"
+  | "cohosts";
 
 export type ListingWorkspaceTab = {
   id: ListingWorkspaceTabId;
@@ -25,7 +25,7 @@ export const LISTING_WORKSPACE_TABS: ListingWorkspaceTab[] = [
   },
   {
     id: "edit",
-    label: "Καταχώριση",
+    label: "Αγγελία",
     href: (id) => `/dashboard/listings/${id}/edit`,
     match: (path, id) =>
       path.startsWith(`/dashboard/listings/${id}/edit`) ||
@@ -50,12 +50,6 @@ export const LISTING_WORKSPACE_TABS: ListingWorkspaceTab[] = [
     match: (path, id) => path.startsWith(`/dashboard/listings/${id}/inquiries`),
   },
   {
-    id: "messages",
-    label: "Μηνύματα",
-    href: (id) => `/dashboard/listings/${id}/messages`,
-    match: (path, id) => path.startsWith(`/dashboard/listings/${id}/messages`),
-  },
-  {
     id: "analytics",
     label: "Στατιστικά",
     href: (id) => `/dashboard/listings/${id}/analytics`,
@@ -68,6 +62,12 @@ export const LISTING_WORKSPACE_TABS: ListingWorkspaceTab[] = [
     match: (path, id) =>
       path.startsWith(`/dashboard/listings/${id}/publish`) ||
       path.startsWith(`/dashboard/listings/${id}/pay`),
+  },
+  {
+    id: "cohosts",
+    label: "Συνοικοδεσπότες",
+    href: (id) => `/dashboard/listings/${id}/cohosts`,
+    match: (path, id) => path.startsWith(`/dashboard/listings/${id}/cohosts`),
   },
 ];
 

@@ -41,7 +41,11 @@ export function ListingWorkspaceLayoutGate({
       subtitle="Διαχείριση ακινήτου — διαθεσιμότητα, τιμές και αιτήματα."
     >
       <ListingWorkspaceHeader ctx={ctx} switcherItems={switcherItems} />
-      <ListingWorkspaceTabs listingId={listingId} />
+      <ListingWorkspaceTabs
+        listingId={listingId}
+        role={ctx.access.role}
+        permissions={ctx.permissions}
+      />
       {children}
     </AccountShell>
   );

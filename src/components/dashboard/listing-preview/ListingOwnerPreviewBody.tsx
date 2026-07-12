@@ -13,14 +13,14 @@ import { cn } from "@/lib/utils";
 type Props = {
   listing: ListingPublicDetail;
   unavailablePeriods: ListingUnavailablePeriod[];
-  similar: ListingWithImages[];
+  nearby: ListingWithImages[];
   embed?: boolean;
 };
 
 export function ListingOwnerPreviewBody({
   listing,
   unavailablePeriods,
-  similar,
+  nearby,
   embed = false,
 }: Props) {
   const contact = resolveListingPublicContact(listing, listing.profiles ?? null);
@@ -35,7 +35,7 @@ export function ListingOwnerPreviewBody({
         <ListingRentalModeProvider listing={listing}>
           <main
             className={cn(
-              "listing-detail overflow-x-hidden bg-white",
+              "listing-detail bg-white",
               embed ? "pb-24 pt-2" : "pb-28 pt-4 lg:pb-16"
             )}
           >
@@ -43,7 +43,7 @@ export function ListingOwnerPreviewBody({
               {isShortCapable ? (
                 <ListingPageContent
                   listing={listing}
-                  similar={similar}
+                  nearby={nearby}
                   unavailablePeriods={unavailablePeriods}
                   isFavorited={false}
                   mapPrice={mapPrice}
@@ -58,7 +58,7 @@ export function ListingOwnerPreviewBody({
                   mapPrice={mapPrice}
                   contact={contact}
                   hostName={hostName}
-                  similar={similar}
+                  nearby={nearby}
                   previewMode
                 />
               )}

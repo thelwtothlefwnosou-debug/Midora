@@ -1,12 +1,11 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
-import { X, ChevronLeft, ChevronRight } from "lucide-react";
+import { ArrowLeft, Share2 } from "lucide-react";
 import {
   availableGalleryFilters,
   filterPhotosByGalleryTab,
-  filterPhotosByRoomKey,
   PHOTO_GALLERY_FILTERS,
   sortListingPhotosForDisplay,
   type PhotoGalleryFilterId,
@@ -18,79 +17,116 @@ import { cn } from "@/lib/utils";
 type Props = {
   photos: ListingImage[];
   title: string;
-  startIndex: number;
   onClose: () => void;
+  onShare?: () => void;
+  favoriteSlot?: React.ReactNode;
   initialFilter?: PhotoGalleryFilterId;
-  roomKeyFilter?: string | null;
 };
 
 export function ListingGalleryLightbox({
   photos,
   title,
-  startIndex,
   onClose,
+  onShare,
+  favoriteSlot,
   initialFilter = "all",
-  roomKeyFilter = null,
 }: Props) {
   const sorted = useMemo(() => sortListingPhotosForDisplay(photos), [photos]);
   const [filter, setFilter] = useState<PhotoGalleryFilterId>(initialFilter);
   const tabs = useMemo(() => availableGalleryFilters(sorted), [sorted]);
+  const sectionRefs = useRef(new Map<string, HTMLElement>());
 
-  const filtered = useMemo(() => {
-    if (roomKeyFilter) return filterPhotosByRoomKey(sorted, roomKeyFilter);
-    return filterPhotosByGalleryTab(sorted, filter);
-  }, [sorted, filter, roomKeyFilter]);
-
-  const [index, setIndex] = useState(() =>
-    Math.min(Math.max(0, startIndex), Math.max(0, filtered.length - 1))
+  const filtered = useMemo(
+    () => filterPhotosByGalleryTab(sorted, filter),
+    [sorted, filter]
   );
 
-  useEffect(() => {
-    setIndex(0);
-  }, [filter]);
+  const groupedSections = useMemo(() => {
+    if (filter !== "all") {
+      return [{ id: filter, label: PHOTO_GALLERY_FILTERS.find((t) => t.id === filter)?.label ?? "Φωτογραφίες", photos: filtered }];
+    }
+
+    const hasRooms = tabs.length > 1;
+    if (!hasRooms) {
+      return [{ id: "all", label: "Όλες οι φωτογραφίες", photos: sorted }];
+    }
+
+    return PHOTO_GALLERY_FILTERS.filter((t) => tabs.includes(t.id) && t.id !== "all").map(
+      (tab) => ({
+        id: tab.id,
+        label: tab.label,
+        photos: filterPhotosByGalleryTab(sorted, tab.id),
+      })
+    );
+  }, [filter, filtered, sorted, tabs]);
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
       if (e.key === "Escape") onClose();
-      if (e.key === "ArrowRight") setIndex((i) => Math.min(i + 1, filtered.length - 1));
-      if (e.key === "ArrowLeft") setIndex((i) => Math.max(i - 1, 0));
     }
     window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [onClose, filtered.length]);
+    document.body.style.overflow = "hidden";
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      document.body.style.overflow = "";
+    };
+  }, [onClose]);
 
-  const current = filtered[index];
-  const src = resolveListingImageUrl(current?.url) ?? current?.url ?? "";
+  function handleTabClick(id: PhotoGalleryFilterId) {
+    setFilter(id);
+    if (id === "all") {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      return;
+    }
+    const el = sectionRefs.current.get(id);
+    el?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
 
   return (
-    <div className="fixed inset-0 z-[200] flex flex-col bg-charcoal/95">
-      <div className="border-b border-white/10 px-4 py-3 text-white">
-        <div className="flex items-center justify-between gap-3">
-          <div>
-            <p className="font-display text-base font-semibold">Όλες οι φωτογραφίες</p>
-            <p className="text-xs text-white/70">{title}</p>
+    <div className="fixed inset-0 z-[200] flex flex-col bg-white">
+      <header className="sticky top-0 z-10 border-b border-charcoal/8 bg-white/95 backdrop-blur-sm">
+        <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3 sm:px-6">
+          <div className="flex min-w-0 items-center gap-3">
+            <button
+              type="button"
+              onClick={onClose}
+              className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-charcoal/10 text-charcoal transition-colors hover:bg-charcoal/[0.04]"
+              aria-label="Κλείσιμο"
+            >
+              <ArrowLeft className="h-5 w-5" />
+            </button>
+            <div className="min-w-0">
+              <p className="font-display text-base font-semibold text-charcoal">Φωτογραφίες</p>
+              <p className="truncate text-xs text-muted">{title}</p>
+            </div>
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded-lg p-2 hover:bg-white/10"
-            aria-label="Κλείσιμο"
-          >
-            <X className="h-5 w-5" />
-          </button>
+          <div className="flex shrink-0 items-center gap-2">
+            {onShare ? (
+              <button
+                type="button"
+                onClick={onShare}
+                className="inline-flex min-h-10 items-center gap-1.5 rounded-lg px-3 text-sm font-medium text-charcoal/75 transition-colors hover:bg-charcoal/[0.04] hover:text-charcoal"
+              >
+                <Share2 className="h-4 w-4" />
+                <span className="hidden sm:inline">Κοινοποίηση</span>
+              </button>
+            ) : null}
+            {favoriteSlot}
+          </div>
         </div>
-        {tabs.length > 1 && !roomKeyFilter && (
-          <div className="mt-3 flex gap-2 overflow-x-auto pb-1">
+
+        {tabs.length > 1 && (
+          <div className="mx-auto flex max-w-6xl gap-2 overflow-x-auto px-4 pb-3 sm:px-6">
             {PHOTO_GALLERY_FILTERS.filter((t) => tabs.includes(t.id)).map((tab) => (
               <button
                 key={tab.id}
                 type="button"
-                onClick={() => setFilter(tab.id)}
+                onClick={() => handleTabClick(tab.id)}
                 className={cn(
-                  "shrink-0 rounded-full px-3 py-1.5 text-xs font-medium transition-colors",
+                  "shrink-0 rounded-full px-3.5 py-1.5 text-xs font-medium transition-colors",
                   filter === tab.id
-                    ? "bg-white text-charcoal"
-                    : "bg-white/10 text-white hover:bg-white/20"
+                    ? "bg-charcoal text-white"
+                    : "bg-sand/60 text-charcoal/75 hover:bg-sand"
                 )}
               >
                 {tab.label}
@@ -98,50 +134,53 @@ export function ListingGalleryLightbox({
             ))}
           </div>
         )}
-      </div>
+      </header>
 
-      <div className="relative flex-1">
-        {filtered.length > 1 && (
-          <>
-            <button
-              type="button"
-              onClick={() => setIndex((i) => Math.max(i - 1, 0))}
-              disabled={index === 0}
-              className="absolute left-3 top-1/2 z-10 -translate-y-1/2 rounded-full bg-white/90 p-2 shadow disabled:opacity-40"
-              aria-label="Προηγούμενη"
+      <div className="min-h-0 flex-1 overflow-y-auto">
+        <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6 sm:py-8">
+          {groupedSections.map((section) => (
+            <section
+              key={section.id}
+              ref={(el) => {
+                if (el) sectionRefs.current.set(section.id, el);
+                else sectionRefs.current.delete(section.id);
+              }}
+              className="scroll-mt-36 not-first:mt-10"
             >
-              <ChevronLeft className="h-5 w-5" />
-            </button>
-            <button
-              type="button"
-              onClick={() => setIndex((i) => Math.min(i + 1, filtered.length - 1))}
-              disabled={index === filtered.length - 1}
-              className="absolute right-3 top-1/2 z-10 -translate-y-1/2 rounded-full bg-white/90 p-2 shadow disabled:opacity-40"
-              aria-label="Επόμενη"
-            >
-              <ChevronRight className="h-5 w-5" />
-            </button>
-          </>
-        )}
-        {current && (
-          <div className="relative h-full w-full">
-            <Image
-              src={src}
-              alt={current.caption ?? `${title} — φωτογραφία ${index + 1}`}
-              fill
-              className="object-contain"
-              sizes="100vw"
-              priority
-            />
-          </div>
-        )}
-      </div>
+              <h2 className="font-display text-lg font-semibold text-charcoal sm:text-xl">
+                {section.id === "all" ? "Όλες οι φωτογραφίες" : section.label}
+              </h2>
+              <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {section.photos.map((photo, index) => {
+                  const src = resolveListingImageUrl(photo.url) ?? photo.url;
+                  return (
+                    <figure
+                      key={photo.id}
+                      className="relative aspect-[4/3] overflow-hidden rounded-xl bg-sand/30"
+                    >
+                      <Image
+                        src={src}
+                        alt={photo.caption ?? `${title} — ${section.label} ${index + 1}`}
+                        fill
+                        className="object-cover"
+                        sizes="(max-width: 640px) 100vw, 33vw"
+                      />
+                      {photo.caption ? (
+                        <figcaption className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-charcoal/70 to-transparent px-3 py-2 text-xs text-white">
+                          {photo.caption}
+                        </figcaption>
+                      ) : null}
+                    </figure>
+                  );
+                })}
+              </div>
+            </section>
+          ))}
 
-      <div className="border-t border-white/10 px-4 py-3 text-center text-sm text-white/80">
-        {filtered.length > 0 ? `${index + 1} / ${filtered.length}` : "Δεν υπάρχουν φωτογραφίες"}
-        {current?.caption && (
-          <p className="mt-1 text-xs text-white/60">{current.caption}</p>
-        )}
+          {filtered.length === 0 && (
+            <p className="py-16 text-center text-sm text-muted">Δεν υπάρχουν φωτογραφίες σε αυτή την κατηγορία.</p>
+          )}
+        </div>
       </div>
     </div>
   );

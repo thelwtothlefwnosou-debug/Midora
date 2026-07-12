@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { ChevronDown } from "lucide-react";
 import { ListingContactCard } from "@/components/listings/ListingContactCard";
 import { ListingPortalDisclaimer } from "@/components/listings/detail/ListingPortalDisclaimer";
@@ -42,6 +43,11 @@ export function MonthlyInquiryCard({
   const [durationMonths, setDurationMonths] = useState(minStayMonths);
   const [guests, setGuests] = useState(listing.max_guests ?? 2);
   const [contactOpen, setContactOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
   const activeDuration = Math.max(minStayMonths, durationMonths);
   const maxGuests = listing.max_guests ?? 16;
 
@@ -92,10 +98,7 @@ export function MonthlyInquiryCard({
 
   const cardBody = (
     <>
-      <h3 className="font-display text-lg font-semibold text-charcoal">
-        Ενδιαφέρεστε για αυτή τη μίσθωση;
-      </h3>
-      <p className="listing-price-display mt-3 text-2xl text-gold">
+      <p className="listing-price-display text-2xl text-charcoal">
         {price.display}
       </p>
       <p className="mt-2 text-sm text-charcoal/65">
@@ -190,34 +193,37 @@ export function MonthlyInquiryCard({
     </>
   );
 
+  const mobileBar = (
+    <div className="mobile-inquiry-card fixed inset-x-0 bottom-0 z-40 border-t border-charcoal/10 bg-white/95 px-4 py-3 backdrop-blur-md">
+      <div className="mx-auto flex max-w-6xl items-center gap-3 pb-[env(safe-area-inset-bottom)]">
+        <div className="min-w-0 flex-1">
+          <p className="listing-price-display text-lg">{price.display}</p>
+          <p className="text-[11px] text-muted">Μηνιαία / μεσοπρόθεσμη</p>
+        </div>
+        <button
+          type="button"
+          onClick={openRentalRequest}
+          className="min-h-11 shrink-0 rounded-xl bg-gold px-4 text-sm font-semibold text-white"
+        >
+          Αίτημα
+        </button>
+      </div>
+    </div>
+  );
+
   return (
     <>
-      <div className={cn("hidden lg:block", className)} id="listing-contact">
-        <div className="sticky top-28 rounded-2xl border border-charcoal/10 bg-white p-6 shadow-[0_8px_32px_-8px_rgba(0,0,0,0.1)]">
-          {cardBody}
-        </div>
-      </div>
-
       <div
+        id="listing-contact"
         className={cn(
-          "fixed inset-x-0 bottom-0 z-40 border-t border-charcoal/10 bg-white/95 px-4 py-3 backdrop-blur-md lg:hidden",
+          "sticky-inquiry-card rounded-2xl border border-charcoal/10 bg-white p-6 shadow-[0_8px_32px_-8px_rgba(0,0,0,0.1)]",
           className
         )}
       >
-        <div className="mx-auto flex max-w-6xl items-center gap-3 pb-[env(safe-area-inset-bottom)]">
-          <div className="min-w-0 flex-1">
-            <p className="listing-price-display text-lg">{price.display}</p>
-            <p className="text-[11px] text-muted">Μηνιαία / μεσοπρόθεσμη</p>
-          </div>
-          <button
-            type="button"
-            onClick={openRentalRequest}
-            className="min-h-11 shrink-0 rounded-xl bg-gold px-4 text-sm font-semibold text-white"
-          >
-            Αίτημα
-          </button>
-        </div>
+        {cardBody}
       </div>
+
+      {mounted ? createPortal(mobileBar, document.body) : null}
     </>
   );
 }

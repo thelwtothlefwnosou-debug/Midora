@@ -60,28 +60,39 @@ function SearchCardPrice({
   interestTo,
   durationMonths,
   rentalTypeFilter,
+  unavailablePeriods = [],
 }: {
   listing: ListingWithImages;
   interestFrom?: string;
   interestTo?: string;
   durationMonths?: number;
   rentalTypeFilter?: string | null;
+  unavailablePeriods?: Pick<ListingUnavailablePeriod, "start_date" | "end_date">[];
 }) {
   const resolved = resolveListingSearchPrice(listing, {
     interestFrom,
     interestTo,
     durationMonths,
     rentalTypeFilter,
+    unavailablePeriods,
   });
   const minStay = formatMinStayLabel(listing);
   const rt = listingRentalType(listing);
 
+  if (resolved.isUnavailable) {
+    return (
+      <div className="mt-2">
+        <p className="text-[15px] font-semibold text-charcoal/70">{resolved.display}</p>
+        {resolved.helper ? (
+          <p className="mt-0.5 text-xs text-muted">{resolved.helper}</p>
+        ) : null}
+      </div>
+    );
+  }
+
   return (
     <div className="mt-2">
       <p className="text-[15px] font-semibold text-charcoal">{resolved.display}</p>
-      {resolved.isStayTotal && resolved.breakdown ? (
-        <p className="mt-0.5 text-xs text-muted">{resolved.breakdown}</p>
-      ) : null}
       {minStay && (
         <p className="mt-0.5 text-xs text-muted">
           {rt === "short_term" ? "Ελάχιστη διαμονή" : "Ελάχιστη διάρκεια"}: {minStay}
@@ -126,8 +137,9 @@ export const SearchListingCardGrid = memo(function SearchListingCardGrid({
       onMouseEnter={onHover}
       onMouseLeave={onHoverEnd}
       className={cn(
-        "group h-full rounded-xl transition-shadow",
-        active && "ring-2 ring-[#222222] ring-offset-2"
+        "group h-full rounded-xl border border-transparent transition-[box-shadow,background-color,border-color] duration-150",
+        active &&
+          "border-charcoal/20 bg-charcoal/[0.02] shadow-[0_4px_14px_rgba(0,0,0,0.08)]"
       )}
     >
       <Link href={href} className="block">
@@ -162,6 +174,7 @@ export const SearchListingCardGrid = memo(function SearchListingCardGrid({
             interestTo={interestTo}
             durationMonths={durationMonths}
             rentalTypeFilter={rentalTypeFilter}
+            unavailablePeriods={unavailablePeriods}
           />
         </div>
       </Link>
@@ -217,6 +230,7 @@ export function SearchListingCardCompact({
             interestTo={interestTo}
             durationMonths={durationMonths}
             rentalTypeFilter={rentalTypeFilter}
+            unavailablePeriods={unavailablePeriods}
           />
         </div>
       </Link>

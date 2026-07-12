@@ -9,6 +9,7 @@ const DETAILED_KEYS = [
   "parking",
   "pets",
   "heating",
+  "amenities",
   "minSqm",
   "minMonths",
   "minPrice",
@@ -41,7 +42,8 @@ export function countActiveFilterGroups(values: ListingsFilterValues): number {
     values.bills === "true" ||
     values.parking === "true" ||
     values.pets === "true" ||
-    values.heating === "true";
+    values.heating === "true" ||
+    Boolean(values.amenities?.trim());
   if (amenityOn) groups++;
 
   if (values.minMonths) groups++;

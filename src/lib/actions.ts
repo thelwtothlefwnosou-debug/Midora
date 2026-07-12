@@ -47,7 +47,9 @@ import {
 import { insertListingRow, updateListingRow } from "@/lib/listing-db-write";
 import { rewardReferrerForListingApproval, resolveReferrerId } from "@/lib/referrals";
 import { storagePathFromPublicUrl } from "@/lib/storage";
-import type { ListingImage } from "@/lib/types";
+import type { ListingImage, PropertyLeadStatus } from "@/lib/types";
+import { accessAllows, resolveListingAccess } from "@/lib/listing-access";
+import type { ListingAccessPermission } from "@/lib/listing-cohost-permissions";
 import { logAppEvent } from "@/lib/admin/audit";
 import {
   toggleFavoriteForUser,
@@ -60,7 +62,6 @@ import {
   isListingAvailabilityStatus,
   parseListingAvailabilityStatus,
 } from "@/lib/listing-availability-status";
-import type { PropertyLeadStatus } from "@/lib/types";
 
 export async function signUp(formData: FormData) {
   const supabase = await createClient();
@@ -196,18 +197,25 @@ async function requireAdmin() {
   return auth;
 }
 
-async function requireListingOwner(listingId: string) {
+async function requireListingOwner(
+  listingId: string,
+  permission: ListingAccessPermission = "manage_listing"
+) {
   const auth = await requireUser();
   if ("error" in auth) return auth;
+  const access = await resolveListingAccess(auth.supabase, listingId, auth.user.id);
+  if (!access || !accessAllows(access, permission)) {
+    return { error: "Δεν έχεις πρόσβαση" as const };
+  }
   const { data: listing } = await auth.supabase
     .from("listings")
     .select("user_id")
     .eq("id", listingId)
     .single();
-  if (!listing || listing.user_id !== auth.user.id) {
+  if (!listing) {
     return { error: "Δεν έχεις πρόσβαση" as const };
   }
-  return { ...auth, listing };
+  return { ...auth, listing, access };
 }
 
 export async function signIn(formData: FormData) {
@@ -424,7 +432,7 @@ export async function getWizardListingPhotoCount(listingId: string) {
 }
 
 export async function getOwnerListingImages(listingId: string) {
-  const auth = await requireListingOwner(listingId);
+  const auth = await requireListingOwner(listingId, "manage_photos");
   if ("error" in auth) return { error: auth.error };
 
   const { images, error } = await fetchOwnerListingImages(auth.supabase, listingId);
@@ -687,7 +695,7 @@ export async function uploadWizardListingPhoto(
   listingId: string,
   formData: FormData
 ): Promise<{ image?: ListingImage; error?: string; successMessage?: string }> {
-  const auth = await requireListingOwner(listingId);
+  const auth = await requireListingOwner(listingId, "manage_photos");
   if ("error" in auth) return { error: auth.error };
 
   const file = formData.get("photo") as File | null;
@@ -841,7 +849,7 @@ export async function reorderListingPhotos(
   listingId: string,
   orderedImageIds: string[]
 ) {
-  const auth = await requireListingOwner(listingId);
+  const auth = await requireListingOwner(listingId, "manage_photos");
   if ("error" in auth) return { error: auth.error };
 
   for (let i = 0; i < orderedImageIds.length; i++) {
@@ -859,7 +867,7 @@ export async function reorderListingPhotos(
 }
 
 export async function setListingCoverPhoto(listingId: string, imageId: string) {
-  const auth = await requireListingOwner(listingId);
+  const auth = await requireListingOwner(listingId, "manage_photos");
   if ("error" in auth) return { error: auth.error };
 
   const { data: image } = await auth.supabase
@@ -969,7 +977,7 @@ export async function updateListing(listingId: string, formData: FormData) {
 
 /** Ενημέρωση διαθεσιμότητας χωρίς επαν-έγκριση */
 export async function updateListingAvailability(listingId: string, formData: FormData) {
-  const auth = await requireListingOwner(listingId);
+  const auth = await requireListingOwner(listingId, "manage_availability");
   if ("error" in auth) return { error: auth.error };
 
   const rawStatus = (formData.get("availability_status") as string)?.trim();
@@ -1008,7 +1016,7 @@ export async function updateListingAvailability(listingId: string, formData: For
 }
 
 export async function deleteListing(listingId: string) {
-  const auth = await requireListingOwner(listingId);
+  const auth = await requireListingOwner(listingId, "owner_only");
   if ("error" in auth) return { error: auth.error };
 
   const { data: images } = await auth.supabase
@@ -1038,7 +1046,7 @@ export async function deleteListing(listingId: string) {
 }
 
 export async function deleteListingPhoto(listingId: string, imageId: string) {
-  const auth = await requireListingOwner(listingId);
+  const auth = await requireListingOwner(listingId, "manage_photos");
   if ("error" in auth) return { error: auth.error };
 
   const { data: image } = await auth.supabase
@@ -1090,7 +1098,7 @@ export async function deleteListingPhotosBulk(
   listingId: string,
   imageIds: string[]
 ) {
-  const auth = await requireListingOwner(listingId);
+  const auth = await requireListingOwner(listingId, "manage_photos");
   if ("error" in auth) return { error: auth.error };
 
   const uniqueIds = [...new Set(imageIds.filter(Boolean))];
@@ -1149,7 +1157,7 @@ export async function deleteListingPhotosBulk(
 }
 
 export async function renewListingFree(listingId: string) {
-  const auth = await requireListingOwner(listingId);
+  const auth = await requireListingOwner(listingId, "owner_only");
   if ("error" in auth) return { error: auth.error };
 
   const expiresAt = new Date();
@@ -1168,7 +1176,7 @@ export async function renewListingFree(listingId: string) {
 }
 
 export async function uploadListingPhotos(listingId: string, formData: FormData) {
-  const auth = await requireListingOwner(listingId);
+  const auth = await requireListingOwner(listingId, "manage_photos");
   if ("error" in auth) return { error: auth.error };
 
   const photoFiles = formData.getAll("photos") as File[];
@@ -1516,7 +1524,7 @@ export async function saveUnavailablePeriod(formData: FormData) {
     return { error: "Δεν μπορείς να δηλώσεις μη διαθεσιμότητα στο παρελθόν." };
   }
 
-  const auth = await requireListingOwner(listingId);
+  const auth = await requireListingOwner(listingId, "manage_availability");
   if ("error" in auth) return { error: auth.error };
 
   const { getOwnerUnavailablePeriods } = await import("@/lib/unavailable-periods-db");
@@ -1675,7 +1683,7 @@ export async function saveUnavailablePeriod(formData: FormData) {
 }
 
 export async function deleteUnavailablePeriod(periodId: string, listingId: string) {
-  const auth = await requireListingOwner(listingId);
+  const auth = await requireListingOwner(listingId, "manage_availability");
   if ("error" in auth) return { error: auth.error };
 
   const { error } = await auth.supabase
@@ -1763,7 +1771,7 @@ export async function updateListingLocation(
 }
 
 export async function activateListingFree(listingId: string) {
-  const auth = await requireListingOwner(listingId);
+  const auth = await requireListingOwner(listingId, "owner_only");
   if ("error" in auth) {
     redirect(
       `/dashboard/listings/${listingId}/pay?error=${encodeURIComponent(auth.error ?? "Σφάλμα πρόσβασης")}`
@@ -2018,14 +2026,97 @@ export async function updatePropertyLeadStatus(
   const allowed: PropertyLeadStatus[] = ["new", "read", "replied", "archived"];
   if (!allowed.includes(status)) return { error: "Άκυρη κατάσταση." };
 
+  const { data: lead } = await auth.supabase
+    .from("property_leads")
+    .select("listing_id")
+    .eq("id", leadId)
+    .single();
+
+  if (!lead) return { error: "Το αίτημα δεν βρέθηκε." };
+
+  const access = await resolveListingAccess(
+    auth.supabase,
+    lead.listing_id,
+    auth.user.id
+  );
+  if (!access || !accessAllows(access, "manage_messages")) {
+    return { error: "Δεν έχεις δικαίωμα." };
+  }
+
   const { error } = await auth.supabase
     .from("property_leads")
     .update({ status, updated_at: new Date().toISOString() })
-    .eq("id", leadId)
-    .eq("owner_id", auth.user.id);
+    .eq("id", leadId);
 
   if (error) return { error: mapLeadError(error) };
 
   revalidatePath("/dashboard/requests");
+  return { success: true };
+}
+
+export async function saveListingExternalLink(
+  listingId: string,
+  platform: string,
+  url: string,
+  isPublic: boolean,
+  label?: string | null
+) {
+  const auth = await requireListingOwner(listingId);
+  if ("error" in auth) return { error: auth.error };
+
+  const { validateExternalLinkUrl } = await import("@/lib/listing-external-links");
+  type ExternalLinkPlatform = import("@/lib/listing-external-links").ExternalLinkPlatform;
+
+  const plat = platform as ExternalLinkPlatform;
+  const validation = validateExternalLinkUrl(plat, url);
+  if (!validation.valid || !validation.normalizedUrl) {
+    return { error: validation.error ?? "Μη έγκυρο URL." };
+  }
+
+  const now = new Date().toISOString();
+  const row = {
+    listing_id: listingId,
+    platform: plat,
+    url: validation.normalizedUrl,
+    label: label?.trim() || null,
+    is_public: isPublic,
+    updated_at: now,
+  };
+
+  const { error } = await auth.supabase.from("listing_external_links").upsert(row, {
+    onConflict: "listing_id,platform",
+  });
+
+  if (error) {
+    if (error.message.includes("does not exist") || error.message.includes("Could not find")) {
+      return { error: "Η βάση δεδομένων δεν έχει ακόμα external links. Τρέξε migrations." };
+    }
+    return { error: error.message };
+  }
+
+  revalidatePath(`/dashboard/listings/${listingId}/edit`);
+  revalidatePath(`/listings/${listingId}`);
+  return { success: true, warning: validation.warning };
+}
+
+export async function removeListingExternalLink(listingId: string, platform: string) {
+  const auth = await requireListingOwner(listingId);
+  if ("error" in auth) return { error: auth.error };
+
+  const { error } = await auth.supabase
+    .from("listing_external_links")
+    .delete()
+    .eq("listing_id", listingId)
+    .eq("platform", platform);
+
+  if (error) {
+    if (error.message.includes("does not exist") || error.message.includes("Could not find")) {
+      return { success: true };
+    }
+    return { error: error.message };
+  }
+
+  revalidatePath(`/dashboard/listings/${listingId}/edit`);
+  revalidatePath(`/listings/${listingId}`);
   return { success: true };
 }

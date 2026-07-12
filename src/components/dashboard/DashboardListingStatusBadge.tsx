@@ -39,6 +39,7 @@ type Props = {
   statusKey: OwnerListingStatusKey;
   label: string;
   helperText?: string | null;
+  compact?: boolean;
   className?: string;
 };
 
@@ -46,9 +47,25 @@ export function DashboardListingStatusBadge({
   statusKey,
   label,
   helperText,
+  compact = false,
   className,
 }: Props) {
   const styles = STATUS_STYLES[statusKey];
+
+  if (compact) {
+    return (
+      <span
+        className={cn(
+          "inline-flex items-center gap-1 rounded-md border px-1.5 py-px text-[10px] font-semibold",
+          styles.badge,
+          className
+        )}
+      >
+        <span className={cn("h-1 w-1 rounded-full", styles.dot)} aria-hidden />
+        {label}
+      </span>
+    );
+  }
 
   return (
     <div className={cn("space-y-1", className)}>

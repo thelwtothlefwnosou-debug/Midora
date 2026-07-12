@@ -13,6 +13,8 @@ import {
   updateOwnerProfilePage,
   type ProfilePageSaveState,
 } from "@/lib/profile-page-actions";
+import { publicProfilePath } from "@/lib/profile-public-url";
+import { normalizePublicProfileSlug } from "@/lib/profile-slug";
 import { ProfilePreviewCard } from "@/components/profile/ProfilePreviewCard";
 import { useUnsavedChangesPrompt } from "@/hooks/useUnsavedChangesPrompt";
 import { cn } from "@/lib/utils";
@@ -23,6 +25,7 @@ type Props = {
   avatarUrl?: string | null;
   phoneVerified?: boolean;
   emailVerified?: boolean;
+  showPublicPhoto?: boolean;
 };
 
 type SaveUiState = "idle" | "saving" | "saved" | "error";
@@ -37,6 +40,7 @@ export function OwnerProfileForm({
   avatarUrl,
   phoneVerified = false,
   emailVerified = false,
+  showPublicPhoto,
 }: Props) {
   const formRef = useRef<HTMLFormElement>(null);
   const [dirty, setDirty] = useState(false);
@@ -54,6 +58,16 @@ export function OwnerProfileForm({
   );
   const [businessName, setBusinessName] = useState(profile.business_name ?? "");
   const [businessTitle, setBusinessTitle] = useState(profile.business_title ?? "");
+  const [publicSlug, setPublicSlug] = useState(profile.public_slug ?? "");
+  const [publicProfileEnabled, setPublicProfileEnabled] = useState(
+    profile.public_profile_enabled !== false
+  );
+  const [showOwnedListings, setShowOwnedListings] = useState(
+    profile.show_owned_listings_on_profile !== false
+  );
+  const [showCohostedListings, setShowCohostedListings] = useState(
+    profile.show_cohosted_listings_on_profile !== false
+  );
 
   const [state, formAction, pending] = useActionState<
     ProfilePageSaveState | null,
@@ -95,6 +109,12 @@ export function OwnerProfileForm({
     if (dirty) return "Έχεις μη αποθηκευμένες αλλαγές";
     return "";
   })();
+
+  const previewPublicHref = publicProfilePath({
+    id: profile.id,
+    public_slug: publicSlug.trim() || profile.public_slug,
+    public_profile_enabled: publicProfileEnabled,
+  });
 
   return (
     <form
@@ -215,8 +235,123 @@ export function OwnerProfileForm({
               ))}
             </div>
           </fieldset>
+
+          <div>
+            <label htmlFor="public_slug" className="text-xs font-medium text-muted uppercase">
+              Δημόσιο URL προφίλ
+              <span className="ml-1 font-normal normal-case text-muted/80">(προαιρετικό)</span>
+            </label>
+            <div className="mt-1.5 flex items-center gap-2">
+              <span className="shrink-0 text-sm text-muted">/users/</span>
+              <input
+                id="public_slug"
+                name="public_slug"
+                value={publicSlug}
+                onChange={(e) => {
+                  setPublicSlug(e.target.value);
+                  markDirty();
+                }}
+                onBlur={() => {
+                  const normalized = normalizePublicProfileSlug(publicSlug);
+                  if (normalized !== publicSlug) setPublicSlug(normalized);
+                }}
+                placeholder="maria-host"
+                className={fieldClassName()}
+              />
+            </div>
+            <p className="mt-1 text-xs text-muted">
+              Αν το αφήσεις κενό, δημιουργείται αυτόματα από το εμφανιζόμενο όνομα.
+            </p>
+            {previewPublicHref && publicProfileEnabled ? (
+              <Link
+                href={previewPublicHref}
+                target="_blank"
+                className="mt-2 inline-block text-sm font-medium text-gold hover:underline"
+              >
+                Προεπισκόπηση δημόσιου προφίλ
+              </Link>
+            ) : null}
+          </div>
+
+          <fieldset className="space-y-3">
+            <legend className="text-xs font-medium text-muted uppercase">Ρυθμίσεις ορατότητας</legend>
+            <input
+              type="hidden"
+              name="public_profile_enabled"
+              value={publicProfileEnabled ? "true" : "false"}
+            />
+            <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-border px-4 py-3">
+              <input
+                type="checkbox"
+                checked={publicProfileEnabled}
+                onChange={(e) => {
+                  setPublicProfileEnabled(e.target.checked);
+                  markDirty();
+                }}
+                className="mt-0.5 accent-gold"
+              />
+              <span>
+                <span className="block text-sm font-medium text-charcoal">
+                  Επιτρέπεται στους επισκέπτες να ανοίγουν το δημόσιο προφίλ μου
+                </span>
+                <span className="mt-0.5 block text-xs text-muted">
+                  Εμφανίζεται όταν έχεις δημοσιευμένες αγγελίες.
+                </span>
+              </span>
+            </label>
+
+            <input
+              type="hidden"
+              name="show_owned_listings_on_profile"
+              value={showOwnedListings ? "true" : "false"}
+            />
+            <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-border px-4 py-3">
+              <input
+                type="checkbox"
+                checked={showOwnedListings}
+                onChange={(e) => {
+                  setShowOwnedListings(e.target.checked);
+                  markDirty();
+                }}
+                className="mt-0.5 accent-gold"
+              />
+              <span className="text-sm text-charcoal">Εμφάνιση δημοσιευμένων αγγελιών στο προφίλ</span>
+            </label>
+
+            <input
+              type="hidden"
+              name="show_cohosted_listings_on_profile"
+              value={showCohostedListings ? "true" : "false"}
+            />
+            <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-border px-4 py-3">
+              <input
+                type="checkbox"
+                checked={showCohostedListings}
+                onChange={(e) => {
+                  setShowCohostedListings(e.target.checked);
+                  markDirty();
+                }}
+                className="mt-0.5 accent-gold"
+              />
+              <span className="text-sm text-charcoal">
+                Εμφάνιση ακινήτων που συνδιαχειρίζομαι ως συνοικοδεσπότης
+              </span>
+            </label>
+          </fieldset>
         </div>
       </section>
+
+      <ProfilePreviewCard
+        profile={profile}
+        avatarUrl={avatarUrl}
+        phoneVerified={phoneVerified}
+        displayNameOverride={displayName}
+        bioOverride={bio}
+        advertiserTypeOverride={advertiserType}
+        languagesOverride={languages}
+        businessTitleOverride={businessTitle}
+        showPublicPhoto={showPublicPhoto}
+      />
 
       <section className="rounded-2xl border border-border bg-white p-6 shadow-soft">
         <h2 className="font-display text-lg font-semibold text-charcoal">
@@ -332,21 +467,6 @@ export function OwnerProfileForm({
           ξεκινά μέσω αιτήματος ή μηνύματος Midora.
         </p>
       </section>
-
-      <ProfilePreviewCard
-        profile={{
-          ...profile,
-          display_name: displayName,
-          bio,
-          advertiser_type: advertiserType,
-          communication_languages: languages,
-        }}
-        email={email}
-        avatarUrl={avatarUrl}
-        phoneVerified={phoneVerified}
-        emailVerified={emailVerified}
-        displayNameOverride={displayName}
-      />
 
       {saveUi === "error" && (
         <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">

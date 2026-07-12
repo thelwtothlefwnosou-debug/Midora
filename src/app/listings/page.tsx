@@ -188,6 +188,7 @@ export default async function ListingsPage({
     parking: params.parking,
     pets: params.pets,
     heating: params.heating,
+    amenities: params.amenities,
     sort: params.sort ?? "recommended",
   };
 

@@ -33,7 +33,8 @@ type Props = {
   zoom?: number;
   height?: string;
   markers?: MapMarker[];
-  activeMarkerId?: string | null;
+  hoveredMarkerId?: string | null;
+  selectedMarkerId?: string | null;
   searchPolygon?: LatLng[];
   initialBounds?: MapBounds;
   onViewportChange?: (bounds: MapBounds, meta: MapViewportChangeMeta) => void;
@@ -42,6 +43,7 @@ type Props = {
   fitMinZoom?: number;
   onMarkerClick?: (id: string) => void;
   onMarkerHover?: (id: string | null) => void;
+  onMarkerDeselect?: () => void;
   flush?: boolean;
 };
 
@@ -138,13 +140,44 @@ function isUserMapEvent(event: ViewStateChangeEvent): boolean {
   return Boolean(event.originalEvent);
 }
 
+function markerNeedsPanForPreview(map: MapRef, marker: MapMarker): boolean {
+  const point = map.project([marker.lng, marker.lat]);
+  const container = map.getContainer();
+  const edge = 96;
+  const topReserve = 200;
+  return (
+    point.x < edge ||
+    point.x > container.clientWidth - edge ||
+    point.y < topReserve ||
+    point.y > container.clientHeight - edge
+  );
+}
+
+function panToRevealMarker(map: MapRef, marker: MapMarker) {
+  const container = map.getContainer();
+  const center = map.getCenter();
+  const centerPoint = map.project([center.lng, center.lat]);
+  const markerPoint = map.project([marker.lng, marker.lat]);
+  const targetX = container.clientWidth / 2;
+  const targetY = container.clientHeight * 0.58;
+  const newCenter = map.unproject([
+    centerPoint.x + (markerPoint.x - targetX),
+    centerPoint.y + (markerPoint.y - targetY),
+  ]);
+  map.easeTo({
+    center: newCenter,
+    duration: 280,
+  });
+}
+
 export function MidoraResultsMap({
   lat,
   lng,
   zoom = 12,
   height = "100%",
   markers = [],
-  activeMarkerId,
+  hoveredMarkerId,
+  selectedMarkerId,
   searchPolygon,
   initialBounds,
   onViewportChange,
@@ -153,6 +186,7 @@ export function MidoraResultsMap({
   fitMinZoom = 6,
   onMarkerClick,
   onMarkerHover,
+  onMarkerDeselect,
   flush = false,
 }: Props) {
   const mapRef = useRef<MapRef>(null);
@@ -167,9 +201,9 @@ export function MidoraResultsMap({
     zoom,
   });
 
-  const [popupMarkerId, setPopupMarkerId] = useState<string | null>(null);
   const [clusterBounds, setClusterBounds] = useState<BBox>([-180, -85, 180, 85]);
   const [clusterZoom, setClusterZoom] = useState(zoom);
+  const prevSelectedMarkerRef = useRef<string | null>(null);
 
   onViewportChangeRef.current = onViewportChange;
 
@@ -182,15 +216,9 @@ export function MidoraResultsMap({
   clusterIndexRef.current = clusterIndex;
 
   const popupMarker = useMemo(
-    () => markers.find((m) => m.id === popupMarkerId) ?? null,
-    [markers, popupMarkerId]
+    () => markers.find((m) => m.id === selectedMarkerId) ?? null,
+    [markers, selectedMarkerId]
   );
-
-  useEffect(() => {
-    if (popupMarkerId && !markers.some((m) => m.id === popupMarkerId)) {
-      setPopupMarkerId(null);
-    }
-  }, [markers, popupMarkerId]);
 
   const syncClusterViewport = useCallback(() => {
     const map = mapRef.current;
@@ -263,25 +291,29 @@ export function MidoraResultsMap({
     [reportViewport, syncClusterViewport]
   );
 
-  const flyToMarker = useCallback((marker: MapMarker) => {
+  useEffect(() => {
+    const nextId = selectedMarkerId ?? null;
+    if (nextId === prevSelectedMarkerRef.current) return;
+    prevSelectedMarkerRef.current = nextId;
+
+    if (!nextId) return;
+
+    const marker = markers.find((m) => m.id === nextId);
     const map = mapRef.current;
-    if (!map) return;
-    userMovedRef.current = true;
-    ignoreViewportUntilRef.current = Date.now() + 600;
-    map.easeTo({
-      center: { lng: marker.lng, lat: marker.lat },
-      zoom: MIDORA_MAP_LISTING_FOCUS_ZOOM,
-      duration: 450,
-    });
-  }, []);
+    if (!marker || !map) return;
+
+    if (markerNeedsPanForPreview(map, marker)) {
+      userMovedRef.current = true;
+      ignoreViewportUntilRef.current = Date.now() + 600;
+      panToRevealMarker(map, marker);
+    }
+  }, [selectedMarkerId, markers]);
 
   const handleMarkerClick = useCallback(
     (marker: MapMarker) => {
-      setPopupMarkerId(marker.id);
-      flyToMarker(marker);
       onMarkerClick?.(marker.id);
     },
-    [flyToMarker, onMarkerClick]
+    [onMarkerClick]
   );
 
   const handleClusterClick = useCallback(
@@ -307,6 +339,10 @@ export function MidoraResultsMap({
     return polygonGeoJson(searchPolygon);
   }, [searchPolygon]);
 
+  const handleMapBackgroundClick = useCallback(() => {
+    onMarkerDeselect?.();
+  }, [onMarkerDeselect]);
+
   return (
     <MidoraMapCore
       mapRef={mapRef}
@@ -316,11 +352,14 @@ export function MidoraResultsMap({
       onLoad={handleLoad}
       onMoveStart={handleMoveStart}
       onMoveEnd={handleMoveEnd}
-      scrollZoom
+      onMapClick={handleMapBackgroundClick}
+      scrollZoomMode="full"
       dragPan
       doubleClickZoom
       touchZoomRotate
       boxZoom
+      keyboard
+      showZoomControls
       className={cn("midora-results-map")}
     >
       {polygonFeature ? (
@@ -364,7 +403,9 @@ export function MidoraResultsMap({
         }
 
         const { marker, longitude, latitude } = item;
-        const highlighted = marker.id === activeMarkerId || marker.id === popupMarkerId;
+        const isHovered = marker.id === hoveredMarkerId;
+        const isSelected = marker.id === selectedMarkerId;
+        const isActive = isHovered || isSelected;
 
         return (
           <Marker
@@ -372,11 +413,11 @@ export function MidoraResultsMap({
             longitude={longitude}
             latitude={latitude}
             anchor="center"
-            style={{ zIndex: highlighted ? 2 : 1 }}
+            style={{ zIndex: isSelected ? 3 : isHovered ? 2 : 1 }}
           >
             <MidoraPriceMarker
               label={formatMarkerPriceLabel(marker.priceLabel, marker.price)}
-              active={highlighted}
+              active={isActive}
               onClick={() => handleMarkerClick(marker)}
               onMouseEnter={() => onMarkerHover?.(marker.id)}
               onMouseLeave={() => onMarkerHover?.(null)}
@@ -394,7 +435,7 @@ export function MidoraResultsMap({
           closeButton={false}
           closeOnClick={false}
           className="midora-map-popup-shell"
-          onClose={() => setPopupMarkerId(null)}
+          onClose={() => onMarkerDeselect?.()}
         >
           <ListingMapPreview marker={popupMarker} />
         </Popup>

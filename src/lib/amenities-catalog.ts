@@ -1,67 +1,84 @@
-export type AmenityCategory =
-  | "basic"
-  | "spaces"
-  | "access"
-  | "safety"
-  | "accessibility";
+import {
+  buildAmenitiesCatalog,
+  LEGACY_AMENITY_KEY_ALIASES,
+  MONTHLY_RECOMMENDED_KEYS,
+  SHORT_TERM_RECOMMENDED_KEYS,
+} from "@/lib/amenities-catalog-data";
+import type {
+  AmenityCategory,
+  AmenityDef,
+  AmenityDisplayGroup,
+  RentalModeScope,
+} from "@/lib/amenities-catalog-types";
 
-export type AmenityDef = {
-  key: string;
-  label: string;
-  category: AmenityCategory;
-};
+export type { AmenityCategory, AmenityDef, AmenityDisplayGroup, RentalModeScope };
+
+export const AMENITIES_CATALOG: AmenityDef[] = buildAmenitiesCatalog();
+
+export const AMENITY_BY_KEY = Object.fromEntries(
+  AMENITIES_CATALOG.map((a) => [a.key, a])
+) as Record<string, AmenityDef>;
 
 export const AMENITY_CATEGORY_LABELS: Record<AmenityCategory, string> = {
-  basic: "Βασικές",
-  spaces: "Χώροι",
-  access: "Πρόσβαση",
-  safety: "Ασφάλεια",
-  accessibility: "Προσβασιμότητα",
+  basic: "Βασικά",
+  bathroom: "Μπάνιο",
+  bedroom_laundry: "Υπνοδωμάτιο και πλυντήριο",
+  entertainment: "Ψυχαγωγία",
+  family: "Οικογένεια",
+  climate: "Θέρμανση και ψύξη",
+  safety: "Ασφάλεια σπιτιού",
+  internet_work: "Internet και χώρος εργασίας",
+  kitchen_dining: "Κουζίνα και τραπεζαρία",
+  location_features: "Χαρακτηριστικά τοποθεσίας",
+  outdoor: "Εξωτερικοί χώροι",
+  parking_facilities: "Parking και εγκαταστάσεις",
+  accessibility: "Πρόσβαση / προσβασιμότητα",
+  services: "Υπηρεσίες και ευκολίες",
+  monthly_terms: "Μηνιαία / μεσοπρόθεσμη διαμονή",
 };
 
-/** Public detail modal — richer category labels */
-export const AMENITY_MODAL_CATEGORY_LABELS: Record<AmenityCategory, string> = {
-  basic: "Βασικές παροχές",
-  spaces: "Εξωτερικοί χώροι",
-  access: "Parking και πρόσβαση",
-  safety: "Ασφάλεια",
-  accessibility: "Προσβασιμότητα",
-};
+export const AMENITY_CATEGORY_ORDER: AmenityCategory[] = [
+  "basic",
+  "bathroom",
+  "bedroom_laundry",
+  "entertainment",
+  "family",
+  "climate",
+  "safety",
+  "internet_work",
+  "kitchen_dining",
+  "location_features",
+  "outdoor",
+  "parking_facilities",
+  "accessibility",
+  "services",
+  "monthly_terms",
+];
 
-const KITCHEN_AMENITY_KEYS = new Set(["kitchen", "washer", "bbq"]);
-const WORK_AMENITY_KEYS = new Set(["workspace"]);
-const COMFORT_AMENITY_KEYS = new Set([
-  "tv",
-  "ac",
-  "heating",
-  "wifi",
-  "hair_dryer",
-  "iron",
-  "linens",
-]);
+export function normalizeAmenityKey(key: string): string {
+  return LEGACY_AMENITY_KEY_ALIASES[key] ?? key;
+}
 
-export type AmenityDisplayGroup = {
-  id: string;
-  label: string;
-  keys: string[];
-};
+export function isKnownAmenityKey(key: string): boolean {
+  const normalized = normalizeAmenityKey(key);
+  return Boolean(AMENITY_BY_KEY[normalized]);
+}
 
-const MONTHLY_AMENITY_PRIORITY = [
-  "kitchen",
-  "washer",
-  "workspace",
-  "wifi",
-  "ac",
-  "heating",
-  "free_parking",
-  "street_parking",
-  "elevator",
-  "tv",
-  "balcony",
-  "terrace",
-] as const;
+export function amenityForMode(def: AmenityDef, mode: RentalModeScope): boolean {
+  return def.modes === "both" || def.modes === mode;
+}
 
-const SHORT_TERM_AMENITY_PRIORITY = [
+export function catalogForRentalMode(mode: "short_term" | "monthly"): AmenityDef[] {
+  return AMENITIES_CATALOG.filter((def) => amenityForMode(def, mode));
+}
+
+export function popularFilterAmenities(mode: "short_term" | "monthly"): AmenityDef[] {
+  return catalogForRentalMode(mode).filter((def) =>
+    mode === "monthly" ? def.isPopularFilterMonthly : def.isPopularFilterShort
+  );
+}
+
+const SHORT_TERM_PRIORITY = [
   "wifi",
   "ac",
   "heating",
@@ -74,105 +91,102 @@ const SHORT_TERM_AMENITY_PRIORITY = [
   "tv",
   "elevator",
   "self_checkin",
+  "private_pool",
+  "hot_tub",
+  "pets_allowed",
+  "kid_friendly",
+  "furnished",
+  "bills_included",
+] as const;
+
+const MONTHLY_PRIORITY = [
+  "furnished",
+  "bills_included",
+  "kitchen",
+  "washer",
+  "workspace",
+  "wifi",
+  "ac",
+  "heating",
+  "free_parking",
+  "street_parking",
+  "elevator",
+  "tv",
+  "balcony",
+  "terrace",
+  "students_suitable",
+  "professionals_suitable",
+  "pets_allowed",
 ] as const;
 
 export function prioritizeAmenityKeys(
   keys: string[],
   mode: "short_term" | "monthly" = "short_term"
 ): string[] {
-  const priority = mode === "monthly" ? MONTHLY_AMENITY_PRIORITY : SHORT_TERM_AMENITY_PRIORITY;
+  const priority = mode === "monthly" ? MONTHLY_PRIORITY : SHORT_TERM_PRIORITY;
   const rank = new Map(priority.map((key, index) => [key, index]));
-  return [...keys].sort((a, b) => {
+  const normalized = [...new Set(keys.map(normalizeAmenityKey).filter(isKnownAmenityKey))];
+  return normalized.sort((a, b) => {
     const ra = rank.get(a as (typeof priority)[number]) ?? 999;
     const rb = rank.get(b as (typeof priority)[number]) ?? 999;
     if (ra !== rb) return ra - rb;
+    const orderA = AMENITY_BY_KEY[a]?.sortOrder ?? 9999;
+    const orderB = AMENITY_BY_KEY[b]?.sortOrder ?? 9999;
+    if (orderA !== orderB) return orderA - orderB;
     return amenityLabel(a).localeCompare(amenityLabel(b), "el");
   });
 }
 
-export function amenitiesByDisplayCategory(keys: string[]): AmenityDisplayGroup[] {
-  const kitchen: string[] = [];
-  const comfort: string[] = [];
-  const work: string[] = [];
+export function amenitiesByCategoryGroups(keys: string[]): AmenityDisplayGroup[] {
+  const normalized = [...new Set(keys.map(normalizeAmenityKey).filter(isKnownAmenityKey))];
   const grouped = new Map<AmenityCategory, string[]>();
 
-  for (const key of keys) {
+  for (const key of normalized) {
     const def = AMENITY_BY_KEY[key];
     if (!def) continue;
-    if (KITCHEN_AMENITY_KEYS.has(key)) {
-      kitchen.push(key);
-      continue;
-    }
-    if (WORK_AMENITY_KEYS.has(key)) {
-      work.push(key);
-      continue;
-    }
-    if (COMFORT_AMENITY_KEYS.has(key)) {
-      comfort.push(key);
-      continue;
-    }
     const list = grouped.get(def.category) ?? [];
     list.push(key);
     grouped.set(def.category, list);
   }
 
-  const sections: AmenityDisplayGroup[] = [];
-  if (kitchen.length) sections.push({ id: "kitchen", label: "Κουζίνα", keys: kitchen });
-  if (comfort.length) {
-    sections.push({ id: "comfort", label: "Άνεση και ψυχαγωγία", keys: comfort });
-  }
-  if (work.length) sections.push({ id: "work", label: "Εργασία", keys: work });
-
-  const categoryOrder: AmenityCategory[] = ["basic", "spaces", "access", "safety", "accessibility"];
-  for (const cat of categoryOrder) {
-    const catKeys = grouped.get(cat);
-    if (!catKeys?.length) continue;
-    sections.push({
-      id: cat,
-      label: AMENITY_MODAL_CATEGORY_LABELS[cat],
-      keys: catKeys,
-    });
-  }
-
-  return sections;
+  return AMENITY_CATEGORY_ORDER.flatMap((category) => {
+    const catKeys = grouped.get(category);
+    if (!catKeys?.length) return [];
+    return [
+      {
+        id: category,
+        label: AMENITY_CATEGORY_LABELS[category],
+        keys: prioritizeAmenityKeys(catKeys, "short_term"),
+      },
+    ];
+  });
 }
 
-export const AMENITIES_CATALOG: AmenityDef[] = [
-  { key: "wifi", label: "WiFi", category: "basic" },
-  { key: "ac", label: "Κλιματισμός", category: "basic" },
-  { key: "heating", label: "Θέρμανση", category: "basic" },
-  { key: "washer", label: "Πλυντήριο", category: "basic" },
-  { key: "kitchen", label: "Κουζίνα", category: "basic" },
-  { key: "tv", label: "Τηλεόραση", category: "basic" },
-  { key: "workspace", label: "Χώρος εργασίας", category: "basic" },
-  { key: "iron", label: "Σίδερο", category: "basic" },
-  { key: "hair_dryer", label: "Πιστολάκι", category: "basic" },
-  { key: "linens", label: "Λευκά είδη", category: "basic" },
-  { key: "balcony", label: "Μπαλκόνι", category: "spaces" },
-  { key: "view", label: "Θέα", category: "spaces" },
-  { key: "garden", label: "Κήπος", category: "spaces" },
-  { key: "pool", label: "Πισίνα", category: "spaces" },
-  { key: "yard", label: "Αυλή", category: "spaces" },
-  { key: "terrace", label: "Ταράτσα", category: "spaces" },
-  { key: "bbq", label: "BBQ", category: "spaces" },
-  { key: "elevator", label: "Ασανσέρ", category: "access" },
-  { key: "free_parking", label: "Δωρεάν parking", category: "access" },
-  { key: "street_parking", label: "Parking κοντά", category: "access" },
-  { key: "ground_floor", label: "Ισόγειο", category: "access" },
-  { key: "self_checkin", label: "Self check-in", category: "access" },
-  { key: "smoke_detector", label: "Ανιχνευτής καπνού", category: "safety" },
-  { key: "fire_extinguisher", label: "Πυροσβεστήρας", category: "safety" },
-  { key: "first_aid", label: "Φαρμακείο", category: "safety" },
-  { key: "outdoor_lighting", label: "Εξωτερικός φωτισμός εισόδου", category: "safety" },
-  { key: "step_free", label: "Πρόσβαση χωρίς σκαλοπάτια", category: "accessibility" },
-  { key: "accessible_elevator", label: "Ανελκυστήρας", category: "accessibility" },
-  { key: "accessible_bathroom", label: "Προσβάσιμο μπάνιο", category: "accessibility" },
-  { key: "accessible_entrance", label: "Προσβάσιμη είσοδος", category: "accessibility" },
-];
+/** @deprecated Use amenitiesByCategoryGroups */
+export function amenitiesByDisplayCategory(keys: string[]): AmenityDisplayGroup[] {
+  return amenitiesByCategoryGroups(keys);
+}
 
-export const AMENITY_BY_KEY = Object.fromEntries(
-  AMENITIES_CATALOG.map((a) => [a.key, a])
-) as Record<string, AmenityDef>;
+export function amenitiesByCategory(keys: string[]) {
+  const grouped = new Map<AmenityCategory, string[]>();
+  for (const key of keys.map(normalizeAmenityKey).filter(isKnownAmenityKey)) {
+    const def = AMENITY_BY_KEY[key];
+    if (!def) continue;
+    const list = grouped.get(def.category) ?? [];
+    list.push(def.label);
+    grouped.set(def.category, list);
+  }
+  return grouped;
+}
+
+export function amenityLabel(key: string): string {
+  const normalized = normalizeAmenityKey(key);
+  return AMENITY_BY_KEY[normalized]?.label ?? key;
+}
+
+export function recommendedAmenityKeys(mode: "short_term" | "monthly"): readonly string[] {
+  return mode === "monthly" ? MONTHLY_RECOMMENDED_KEYS : SHORT_TERM_RECOMMENDED_KEYS;
+}
 
 export const HIGHLIGHT_PRESETS: { label: string; icon_key: string }[] = [
   { label: "Self check-in", icon_key: "key" },
@@ -199,18 +213,25 @@ export const BED_TYPES = [
 
 export type BedType = (typeof BED_TYPES)[number];
 
-export function amenityLabel(key: string): string {
-  return AMENITY_BY_KEY[key]?.label ?? key;
-}
+export const PARKING_AMENITY_KEYS = new Set([
+  "free_parking",
+  "street_parking",
+  "paid_parking_nearby",
+  "private_parking",
+  "garage_parking",
+  "accessible_parking",
+]);
 
-export function amenitiesByCategory(keys: string[]) {
-  const grouped = new Map<AmenityCategory, string[]>();
-  for (const key of keys) {
-    const def = AMENITY_BY_KEY[key];
-    if (!def) continue;
-    const list = grouped.get(def.category) ?? [];
-    list.push(def.label);
-    grouped.set(def.category, list);
-  }
-  return grouped;
-}
+export const FURNISHED_AMENITY_KEYS = new Set([
+  "furnished",
+  "partially_furnished",
+]);
+
+export const BILLS_AMENITY_KEYS = new Set([
+  "bills_included",
+  "electricity_included",
+  "water_included",
+  "internet_included",
+  "common_charges_included",
+  "heating_included",
+]);

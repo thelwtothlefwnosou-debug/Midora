@@ -19,11 +19,13 @@ export function DashboardProfileCard({
   email,
   avatarUrl,
   collapsed = false,
+  compact = false,
 }: {
   profile: Profile;
   email: string;
   avatarUrl?: string | null;
   collapsed?: boolean;
+  compact?: boolean;
 }) {
   const percent = profileCompletionPercent(profile, email);
   const items = profileCompletionItems(profile, email);
@@ -41,6 +43,24 @@ export function DashboardProfileCard({
       setDismissed(false);
     }
   }, []);
+
+  if (compact && requiredDone && !collapsed) {
+    return (
+      <div className="flex items-center gap-2.5 rounded-xl border border-border/70 bg-white px-2.5 py-2 shadow-soft">
+        <ProfileAvatar profile={{ ...profile, email }} imageUrl={avatarUrl} size="sm" />
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-xs font-semibold text-charcoal">
+            {profile.full_name || "Χρήστης"}
+          </p>
+          {recommendedPending.length > 0 && (
+            <Link href="/dashboard/profile" className="text-[10px] font-medium text-gold-dark hover:underline">
+              Προφίλ {percent}%
+            </Link>
+          )}
+        </div>
+      </div>
+    );
+  }
 
   if (requiredDone && recommendedPending.length === 0) {
     if (collapsed) {

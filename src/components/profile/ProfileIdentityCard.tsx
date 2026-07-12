@@ -30,6 +30,7 @@ type Props = {
   avatarUrl?: string | null;
   emailVerified?: boolean;
   showPublicPhoto?: boolean;
+  onShowPublicPhotoChange?: (value: boolean) => void;
 };
 
 export function ProfileIdentityCard({
@@ -37,7 +38,8 @@ export function ProfileIdentityCard({
   email,
   avatarUrl,
   emailVerified = false,
-  showPublicPhoto = true,
+  showPublicPhoto: showPublicPhotoProp,
+  onShowPublicPhotoChange,
 }: Props) {
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
@@ -45,7 +47,11 @@ export function ProfileIdentityCard({
   const [cropFile, setCropFile] = useState<File | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
-  const [publicPhoto, setPublicPhoto] = useState(showPublicPhoto);
+  const [publicPhoto, setPublicPhoto] = useState(
+    showPublicPhotoProp ?? profile.show_profile_photo_public !== false
+  );
+  const showPublicPhoto =
+    showPublicPhotoProp !== undefined ? showPublicPhotoProp : publicPhoto;
   const [pending, startTransition] = useTransition();
 
   const displayUrl = previewUrl ?? avatarUrl ?? null;
@@ -215,11 +221,20 @@ export function ProfileIdentityCard({
               disabled={pending}
               onChange={(e) => {
                 const checked = e.target.checked;
-                setPublicPhoto(checked);
+                if (onShowPublicPhotoChange) {
+                  onShowPublicPhotoChange(checked);
+                } else {
+                  setPublicPhoto(checked);
+                }
                 startTransition(async () => {
                   const result = await updateShowProfilePhotoPublic(checked);
                   if (result.error) {
-                    setPublicPhoto(!checked);
+                    const revert = !checked;
+                    if (onShowPublicPhotoChange) {
+                      onShowPublicPhotoChange(revert);
+                    } else {
+                      setPublicPhoto(revert);
+                    }
                     setError(result.error);
                   }
                 });

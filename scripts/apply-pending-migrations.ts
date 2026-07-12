@@ -16,6 +16,10 @@ const MIGRATION_FILES = [
   "supabase/migrations/20250711120000_short_term_pricing_fields.sql",
   "supabase/migrations/20250711130000_listing_image_room_key.sql",
   "supabase/migrations/20250711140000_listing_image_caption.sql",
+  "supabase/migrations/20250711200000_listing_external_links.sql",
+  "supabase/migrations/20250615130000_property_leads.sql",
+  "supabase/migrations/20250712150000_listing_cohosts.sql",
+  "supabase/migrations/20250712180000_profile_public_slug.sql",
 ] as const;
 
 async function main() {

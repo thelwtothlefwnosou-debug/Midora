@@ -4,6 +4,12 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { updateProfileRow } from "@/lib/profile-db-write";
 import { PROFILE_BIO_MAX } from "@/lib/profile-display";
+import {
+  ensureUniquePublicProfileSlug,
+  isValidPublicProfileSlug,
+  normalizePublicProfileSlug,
+  slugifyPublicProfileName,
+} from "@/lib/profile-slug";
 
 export type ProfilePageSaveState = {
   error?: string;
@@ -13,6 +19,12 @@ export type ProfilePageSaveState = {
 function parseLanguages(formData: FormData): string[] {
   const raw = formData.getAll("communication_languages");
   return raw.map((v) => String(v).trim()).filter(Boolean);
+}
+
+function parseBooleanField(formData: FormData, name: string, defaultValue: boolean): boolean {
+  const raw = formData.get(name);
+  if (raw == null) return defaultValue;
+  return String(raw) === "true";
 }
 
 export async function updateOwnerProfilePage(
@@ -36,6 +48,18 @@ export async function updateOwnerProfilePage(
   const businessName = (formData.get("business_name") as string)?.trim() || null;
   const businessTitle = (formData.get("business_title") as string)?.trim() || null;
   const languages = parseLanguages(formData);
+  const publicSlugInput = (formData.get("public_slug") as string)?.trim() || "";
+  const publicProfileEnabled = parseBooleanField(formData, "public_profile_enabled", true);
+  const showOwnedListings = parseBooleanField(
+    formData,
+    "show_owned_listings_on_profile",
+    true
+  );
+  const showCohostedListings = parseBooleanField(
+    formData,
+    "show_cohosted_listings_on_profile",
+    true
+  );
 
   if (!fullName) return { error: "Συμπλήρωσε το ονοματεπώνυμο." };
   if (bio && bio.length > PROFILE_BIO_MAX) {
@@ -50,7 +74,7 @@ export async function updateOwnerProfilePage(
 
   const { data: existing } = await supabase
     .from("profiles")
-    .select("phone")
+    .select("phone, public_slug")
     .eq("id", user.id)
     .maybeSingle();
 
@@ -59,6 +83,37 @@ export async function updateOwnerProfilePage(
     return {
       error: "Πρόσθεσε τηλέφωνο από τις ρυθμίσεις επικοινωνίας πριν αποθηκεύσεις.",
     };
+  }
+
+  const isSlugTaken = async (slug: string) => {
+    const { data } = await supabase
+      .from("profiles")
+      .select("id")
+      .eq("public_slug", slug)
+      .neq("id", user.id)
+      .maybeSingle();
+    return Boolean(data);
+  };
+
+  let publicSlug: string | null = null;
+  if (publicSlugInput) {
+    publicSlug = normalizePublicProfileSlug(publicSlugInput);
+    if (!isValidPublicProfileSlug(publicSlug)) {
+      return {
+        error:
+          "Μη έγκυρο URL προφίλ — χρησιμοποίησε μόνο λατινικούς χαρακτήρες, αριθμούς και παύλες (3–60 χαρακτήρες).",
+      };
+    }
+    if (await isSlugTaken(publicSlug)) {
+      return { error: "Αυτό το URL προφίλ χρησιμοποιείται ήδη από άλλον χρήστη." };
+    }
+  } else if (existing?.public_slug?.trim()) {
+    publicSlug = existing.public_slug.trim();
+  } else {
+    publicSlug = await ensureUniquePublicProfileSlug(
+      slugifyPublicProfileName(displayName || fullName),
+      isSlugTaken
+    );
   }
 
   const row: Record<string, unknown> = {
@@ -70,6 +125,10 @@ export async function updateOwnerProfilePage(
     preferred_contact_method: preferredContact,
     business_name: advertiserType === "professional" ? businessName : null,
     business_title: advertiserType === "professional" ? businessTitle : null,
+    public_slug: publicSlug,
+    public_profile_enabled: publicProfileEnabled,
+    show_owned_listings_on_profile: showOwnedListings,
+    show_cohosted_listings_on_profile: showCohostedListings,
   };
 
   const { error } = await updateProfileRow(supabase, user.id, row);
@@ -85,5 +144,9 @@ export async function updateOwnerProfilePage(
   revalidatePath("/dashboard/requests");
   revalidatePath("/dashboard/messages");
   revalidatePath("/listings", "layout");
+  if (publicSlug) {
+    revalidatePath(`/users/${publicSlug}`);
+  }
+  revalidatePath(`/users/${user.id}`);
   return { success: true };
 }

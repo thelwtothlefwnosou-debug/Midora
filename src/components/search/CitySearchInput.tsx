@@ -25,6 +25,7 @@ type CitySearchInputProps = {
   onSelect?: (location: SearchLocation) => void;
   onValueChange?: (value: string) => void;
   onNearbySelect?: (coords: { lat: number; lng: number }) => void;
+  onFocus?: () => void;
 };
 
 function suggestionSubtitle(loc: SearchLocation): string {
@@ -45,6 +46,7 @@ export function CitySearchInput({
   onSelect,
   onValueChange,
   onNearbySelect,
+  onFocus,
 }: CitySearchInputProps) {
   const [value, setValue] = useState(defaultValue);
   const [open, setOpen] = useState(false);
@@ -203,6 +205,7 @@ export function CitySearchInput({
       setActiveIndex(0);
     },
     onFocus: () => {
+      onFocus?.();
       if (trimmed) {
         setOpen(true);
         setShowEmptyMenu(false);

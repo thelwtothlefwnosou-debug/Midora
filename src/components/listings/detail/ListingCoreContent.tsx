@@ -13,7 +13,7 @@ type Props = {
 /** Full-width description, highlights and amenities — visible immediately after gallery. */
 export function ListingCoreContent({ listing, rentalMode = "short_term" }: Props) {
   return (
-    <div className="listing-core-content mt-8 space-y-0">
+    <div className="listing-core-content space-y-0">
       <PropertyDescriptionSection
         description={listing.description}
         descriptionEn={listing.description_en}

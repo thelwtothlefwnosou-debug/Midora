@@ -5,6 +5,8 @@ import { EditListingForm } from "./EditListingForm";
 import { getOwnerUnavailablePeriods } from "@/lib/unavailable-periods-db";
 import { getListingPriceRules } from "@/lib/listing-price-rules";
 import { getOwnerSleepingArrangements } from "@/lib/listing-sleeping-arrangements";
+import { getOwnerListingExternalLinks } from "@/lib/listing-external-links-db";
+import { getOwnerListingAmenities } from "@/lib/listing-amenities";
 
 export default async function EditListingPage({
   params,
@@ -29,6 +31,8 @@ export default async function EditListingPage({
   const priceRulesResult = await getListingPriceRules(id);
   const priceRules = "rules" in priceRulesResult ? priceRulesResult.rules ?? [] : [];
   const sleepingArrangements = await getOwnerSleepingArrangements(id);
+  const externalLinks = await getOwnerListingExternalLinks(id, profile.id);
+  const amenities = await getOwnerListingAmenities(id);
 
   return (
     <EditListingForm
@@ -38,6 +42,8 @@ export default async function EditListingPage({
       unavailablePeriods={unavailablePeriods}
       priceRules={priceRules}
       sleepingArrangements={sleepingArrangements}
+      externalLinks={externalLinks}
+      amenities={amenities}
     />
   );
 }

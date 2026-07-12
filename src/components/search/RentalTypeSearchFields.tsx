@@ -671,7 +671,11 @@ export function appendRentalSearchParams(
     if (startMonth && !isPastMonthInAthens(startMonth)) {
       params.set("startMonth", startMonth);
     }
-    const duration = parseInt(durationMonths ?? "2", 10);
-    params.set("durationMonths", String(Math.max(2, duration)));
+    if (durationMonths) {
+      const duration = parseInt(durationMonths, 10);
+      if (Number.isFinite(duration) && duration >= 2) {
+        params.set("durationMonths", String(duration));
+      }
+    }
   }
 }

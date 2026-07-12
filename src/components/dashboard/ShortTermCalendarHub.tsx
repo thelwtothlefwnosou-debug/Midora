@@ -142,10 +142,15 @@ export function ShortTermCalendarHub({ listing, periods, priceRules }: Props) {
   }
 
   return (
-    <GlassCard id="availability-calendar" className="mb-6 p-6 ring-1 ring-gold/15">
-      <div className="flex flex-wrap items-start justify-between gap-4">
+    <GlassCard id="availability-calendar" className="mb-6 p-4 sm:p-5 ring-1 ring-gold/10">
+      {pending && (
+        <p className="mb-4 rounded-lg border border-gold/25 bg-gold/5 px-3 py-2 text-xs font-medium text-charcoal">
+          Αποθήκευση…
+        </p>
+      )}
+      <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h2 className="font-display text-lg font-semibold text-charcoal">
+          <h2 className="font-display text-base font-semibold text-charcoal">
             Ημερολόγιο τιμών και διαθεσιμότητας
           </h2>
           <p className="mt-2 max-w-2xl text-sm leading-relaxed text-muted">

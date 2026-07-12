@@ -90,12 +90,6 @@ export function ListingAreaSection({ listing }: { listing: ListingPublicDetail }
           </a>
         </div>
       )}
-      {!exact && hasCoords && (
-        <p className="mt-3 text-xs text-muted">
-          Η ακριβής τοποθεσία επιβεβαιώνεται απευθείας με τον αγγελιοδότη. Ο χάρτης δείχνει
-          κατά προσέγγιση την περιοχή.
-        </p>
-      )}
     </section>
   );
 }

@@ -9,6 +9,7 @@ import type { ListingLeadStats } from "@/lib/owner-listing-analytics";
 import { listingRentalType } from "@/lib/rental-types";
 import { ownerListingCompletenessPercent } from "@/lib/owner-dashboard";
 import { MIN_LISTING_PHOTOS_FOR_REVIEW } from "@/lib/constants";
+import { getDisplayViewCount } from "@/lib/listing-views";
 
 export type ListingFilterTab =
   | "all"
@@ -133,7 +134,7 @@ export function sortOwnerListings(
   switch (sort) {
     case "views":
       return copy.sort(
-        (a, b) => (b.listing.view_count ?? 0) - (a.listing.view_count ?? 0)
+        (a, b) => getDisplayViewCount(b.listing) - getDisplayViewCount(a.listing)
       );
     case "inquiries":
       return copy.sort(
@@ -175,8 +176,11 @@ export function buildOwnerListingsOverview(
   newInquiries: number
 ): OwnerListingsOverview {
   const published = rows.filter((r) => r.ownerStatusKey === "published");
-  const hasViewData = published.some((r) => (r.listing.view_count ?? 0) > 0);
-  const viewsSum = published.reduce((sum, r) => sum + (r.listing.view_count ?? 0), 0);
+  const hasViewData = published.some((r) => getDisplayViewCount(r.listing) > 0);
+  const viewsSum = published.reduce(
+    (sum, r) => sum + getDisplayViewCount(r.listing),
+    0
+  );
 
   return {
     activeCount: published.length,

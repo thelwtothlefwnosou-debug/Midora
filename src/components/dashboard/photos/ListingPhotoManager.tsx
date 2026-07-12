@@ -61,12 +61,12 @@ export function ListingPhotoManager({
 
   return (
     <div className="space-y-5">
-      <header className="rounded-xl border border-border bg-white p-4 shadow-soft">
-        <div className="flex flex-wrap items-start justify-between gap-3">
+      <header className="rounded-xl border border-border bg-white px-4 py-3 shadow-soft">
+        <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h2 className="font-display text-lg font-semibold text-charcoal">Φωτογραφίες</h2>
-            <p className="mt-1 max-w-2xl text-sm text-muted">
-              Εξώφυλλο, σειρά, χώροι και λεζάντες — όλα αποθηκεύονται αμέσως.
+            <h2 className="font-display text-base font-semibold text-charcoal">Φωτογραφίες</h2>
+            <p className="mt-0.5 text-xs text-muted">
+              Εξώφυλλο, σειρά, χώροι — αποθηκεύονται αμέσως.
             </p>
           </div>
           <button

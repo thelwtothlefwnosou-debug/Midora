@@ -1,6 +1,7 @@
 import type { ListingWithImages } from "@/lib/types";
 import type { ListingDisplayStatus } from "@/lib/listing-status";
 import type { OwnerListingStatusKey } from "@/lib/dashboard-listings";
+import { getDisplayViewCount } from "@/lib/listing-views";
 
 export type ListingAnalytics = {
   viewsTotal: number | null;
@@ -29,10 +30,10 @@ export function buildListingAnalytics(
   leadStats?: ListingLeadStats
 ): ListingAnalytics {
   const published = ownerStatusKey === "published" || ownerStatusKey === "paused";
-  const rawViews = listing.view_count;
+  const displayViews = published ? getDisplayViewCount(listing) : null;
 
   return {
-    viewsTotal: published && rawViews != null ? rawViews : published ? 0 : null,
+    viewsTotal: displayViews,
     viewsLast7Days: null,
     viewsLast30Days: null,
     uniqueViewersLast30Days: null,

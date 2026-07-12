@@ -1,15 +1,16 @@
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
+import { ListingDetailScrollFix } from "@/components/listings/detail/ListingDetailScrollFix";
 import { ListingDetailHeader } from "@/components/listings/detail/ListingDetailHeader";
 import { Footer } from "@/components/layout/Footer";
 import { getListingPublicDetail } from "@/lib/listing-detail-queries";
-import { getSimilarListings } from "@/lib/similar-listings";
+import { getNearbyListings } from "@/lib/nearby-listings";
 import { getFavoriteListingIds } from "@/lib/user-features";
 import { createClient, getCurrentProfile } from "@/lib/supabase/server";
 import { resolveListingPublicContact } from "@/lib/listing-contact";
 import { getPublicUnavailablePeriods } from "@/lib/unavailable-periods-db";
 import { isPublicMvpListing } from "@/lib/rental-types";
-import { defaultPublicRentalMode, publicPricePrimary } from "@/lib/listing-rental-modes";
+import { defaultPublicRentalMode, publicPricePrimary, resolveSupportsShortTerm } from "@/lib/listing-rental-modes";
 import { isListingActive } from "@/lib/listings";
 import { ListingInterestProvider } from "@/components/listings/ListingInterestContext";
 import { ListingRentalModeProvider } from "@/components/listings/ListingRentalModeContext";
@@ -17,8 +18,9 @@ import { ListingInterestBridge } from "@/components/listings/ListingInterestBrid
 import { ListingViewTracker } from "@/components/listings/ListingViewTracker";
 import { ListingPageContent } from "@/components/listings/short-term/ListingPageContent";
 import { MonthlyListingPageShell } from "@/components/listings/detail/MonthlyListingPageShell";
-import { resolveSupportsShortTerm } from "@/lib/listing-rental-modes";
 import { notFound } from "next/navigation";
+import { getAcceptedPublicCohosts } from "@/lib/listing-cohosts-db";
+import { getPublicListingContactNumbers } from "@/lib/listing-contact-numbers-db";
 import { ListingJsonLd } from "@/components/seo/ListingJsonLd";
 
 export async function ListingDetailBody({ id }: { id: string }) {
@@ -31,7 +33,13 @@ export async function ListingDetailBody({ id }: { id: string }) {
   const favoriteIds = await getFavoriteListingIds();
   const isFavorited = favoriteIds.includes(listing.id);
   const unavailablePeriods = await getPublicUnavailablePeriods(listing.id);
-  const similar = await getSimilarListings(listing);
+  const [nearby, publicCohosts, publicContactPhones] = await Promise.all([
+    getNearbyListings(listing, {
+      rentalMode: defaultPublicRentalMode(listing),
+    }),
+    getAcceptedPublicCohosts(listing.id),
+    getPublicListingContactNumbers(listing.id),
+  ]);
 
   const supabase = await createClient();
   const { data: { user } } = (await supabase?.auth.getUser()) ?? { data: { user: null } };
@@ -53,12 +61,13 @@ export async function ListingDetailBody({ id }: { id: string }) {
     <ListingInterestProvider>
       <ListingJsonLd listing={listing} canonicalPath={canonicalPath} />
       <ListingRentalModeProvider listing={listing}>
+        <ListingDetailScrollFix />
         <ListingDetailHeader />
-        <main className="listing-detail min-h-screen overflow-x-hidden bg-white pt-[4.25rem] pb-28 lg:pb-16">
-          <div className="mx-auto max-w-6xl px-4 sm:px-6">
+        <main className="listing-detail min-h-screen bg-white pt-[4.25rem] pb-28 lg:pb-16">
+          <div className="mx-auto max-w-6xl px-4 pt-3 sm:px-6 lg:pt-4">
             <Link
               href="/listings"
-              className="mb-6 inline-flex min-h-10 items-center gap-2 text-sm text-muted hover:text-gold"
+              className="mb-2 inline-flex min-h-7 items-center gap-1.5 text-sm text-muted hover:text-gold"
             >
               <ArrowLeft className="h-4 w-4" />
               Πίσω στα ακίνητα
@@ -67,11 +76,13 @@ export async function ListingDetailBody({ id }: { id: string }) {
             {isShortCapable ? (
               <ListingPageContent
                 listing={listing}
-                similar={similar}
+                nearby={nearby}
                 unavailablePeriods={unavailablePeriods}
                 isFavorited={isFavorited}
                 mapPrice={mapPrice}
                 contact={contact}
+                publicCohosts={publicCohosts}
+                publicContactPhones={publicContactPhones}
               />
             ) : (
               <MonthlyListingPageShell
@@ -81,7 +92,7 @@ export async function ListingDetailBody({ id }: { id: string }) {
                 mapPrice={mapPrice}
                 contact={contact}
                 hostName={hostName}
-                similar={similar}
+                nearby={nearby}
               />
             )}
           </div>

@@ -1,6 +1,16 @@
 import { stayNightsBetween } from "@/lib/availability-calendar";
 import { formatListingPrice, listingRentalType } from "@/lib/rental-types";
-import type { Listing } from "@/lib/types";
+import {
+  computeDefaultIndicativeStayPrice,
+  computeIndicativeStayPrice,
+  formatIndicativeNightsLabel,
+  formatShortTermIndicativeDisplay,
+  INDICATIVE_DEFAULT_NIGHTS,
+  stayRangeHasBlockedNight,
+  type ShortTermPricingConfig,
+} from "@/lib/listing-short-term-price";
+import type { Listing, ListingPriceRule } from "@/lib/types";
+import type { ListingUnavailablePeriod } from "@/lib/unavailable-periods";
 
 const STAY_QUERY_KEYS = [
   "rentalType",
@@ -42,6 +52,9 @@ export type ListingSearchPriceContext = {
   interestTo?: string;
   durationMonths?: number;
   rentalTypeFilter?: string | null;
+  guests?: number;
+  priceRules?: ListingPriceRule[];
+  unavailablePeriods?: Pick<ListingUnavailablePeriod, "start_date" | "end_date">[];
 };
 
 export type ResolvedListingSearchPrice = {
@@ -50,15 +63,122 @@ export type ResolvedListingSearchPrice = {
   priceUnit: string;
   display: string;
   breakdown?: string;
+  helper?: string;
   isStayTotal: boolean;
+  isIndicative: boolean;
+  isUnavailable?: boolean;
   nights?: number;
   months?: number;
   total?: number;
 };
 
-/** Total stay price when dates/duration are set; otherwise nightly/monthly rate. */
+type ShortTermListing = Pick<
+  Listing,
+  | "rental_type"
+  | "price_type"
+  | "price_per_night"
+  | "price_monthly"
+  | "included_guests"
+  | "extra_guest_fee_per_night"
+  | "weekend_price_per_night"
+  | "weekend_days"
+  | "weekly_discount_percent"
+  | "monthly_discount_percent"
+  | "last_minute_discount_percent"
+  | "early_bird_discount_percent"
+  | "cleaning_fee_note"
+>;
+
+function resolveShortTermSearchPrice(
+  listing: ShortTermListing,
+  context: ListingSearchPriceContext
+): ResolvedListingSearchPrice | null {
+  const rules = context.priceRules ?? [];
+  const periods = context.unavailablePeriods ?? [];
+  const guests = context.guests ?? 2;
+  const pricing = listing as ShortTermPricingConfig;
+
+  if (context.interestFrom && context.interestTo) {
+    const nights = stayNightsBetween(context.interestFrom, context.interestTo);
+    if (nights >= 1) {
+      if (stayRangeHasBlockedNight(context.interestFrom, context.interestTo, periods)) {
+        return {
+          sortAmount: 0,
+          priceLabel: "—",
+          priceUnit: "",
+          display: "Μη διαθέσιμο",
+          helper: "Οι επιλεγμένες ημερομηνίες δεν είναι διαθέσιμες.",
+          isStayTotal: false,
+          isIndicative: false,
+          isUnavailable: true,
+          nights,
+        };
+      }
+
+      const computed = computeIndicativeStayPrice(
+        pricing,
+        rules,
+        context.interestFrom,
+        context.interestTo,
+        guests,
+        periods
+      );
+
+      if (computed) {
+        const display = formatShortTermIndicativeDisplay(computed.total, computed.nights);
+        return {
+          sortAmount: computed.total,
+          priceLabel: `€${computed.total.toLocaleString("el-GR")}`,
+          priceUnit: ` · ${computed.nights} ${formatIndicativeNightsLabel(computed.nights)}`,
+          display,
+          isStayTotal: true,
+          isIndicative: true,
+          nights: computed.nights,
+          total: computed.total,
+        };
+      }
+
+      const perNight = listing.price_per_night ?? 0;
+      if (perNight > 0) {
+        const total = perNight * nights;
+        const display = formatShortTermIndicativeDisplay(total, nights);
+        return {
+          sortAmount: total,
+          priceLabel: `€${total.toLocaleString("el-GR")}`,
+          priceUnit: ` · ${nights} ${formatIndicativeNightsLabel(nights)}`,
+          display,
+          isStayTotal: true,
+          isIndicative: true,
+          nights,
+          total,
+        };
+      }
+    }
+  }
+
+  const defaultStay = computeDefaultIndicativeStayPrice(pricing, rules, periods, guests);
+  if (!defaultStay) return null;
+
+  const display = formatShortTermIndicativeDisplay(
+    defaultStay.total,
+    defaultStay.nights
+  );
+
+  return {
+    sortAmount: defaultStay.total,
+    priceLabel: `€${defaultStay.total.toLocaleString("el-GR")}`,
+    priceUnit: ` · ${defaultStay.nights} ${formatIndicativeNightsLabel(defaultStay.nights)}`,
+    display,
+    isStayTotal: true,
+    isIndicative: true,
+    nights: defaultStay.nights,
+    total: defaultStay.total,
+  };
+}
+
+/** Total stay price when dates/duration are set; otherwise indicative 5-night (short-term) or rate. */
 export function resolveListingSearchPrice(
-  listing: Pick<Listing, "rental_type" | "price_type" | "price_per_night" | "price_monthly">,
+  listing: ShortTermListing,
   context: ListingSearchPriceContext = {}
 ): ResolvedListingSearchPrice {
   const rt = listingRentalType(listing);
@@ -68,29 +188,9 @@ export function resolveListingSearchPrice(
   const preferMonthly =
     filter === "monthly" || (filter !== "short_term" && rt === "monthly");
 
-  if (
-    (preferShort || filter === "short_term" || filter == null) &&
-    context.interestFrom &&
-    context.interestTo
-  ) {
-    const nights = stayNightsBetween(context.interestFrom, context.interestTo);
-    if (nights >= 1) {
-      const perNight = listing.price_per_night ?? listing.price_monthly ?? 0;
-      if (perNight > 0) {
-        const total = perNight * nights;
-        const nightLabel = nights === 1 ? "νύχτα" : "νύχτες";
-        return {
-          sortAmount: total,
-          priceLabel: `€${total.toLocaleString("el-GR")}`,
-          priceUnit: ` · ${nights} ${nightLabel}`,
-          display: `€${total.toLocaleString("el-GR")} · ${nights} ${nightLabel}`,
-          breakdown: `€${perNight.toLocaleString("el-GR")} / βράδυ × ${nights} ${nightLabel}`,
-          isStayTotal: true,
-          nights,
-          total,
-        };
-      }
-    }
+  if (preferShort || filter === "short_term" || (filter == null && rt === "short_term")) {
+    const shortTerm = resolveShortTermSearchPrice(listing, context);
+    if (shortTerm) return shortTerm;
   }
 
   if (preferMonthly && context.durationMonths && context.durationMonths >= 1) {
@@ -106,6 +206,7 @@ export function resolveListingSearchPrice(
         display: `€${total.toLocaleString("el-GR")} · ${months} ${monthLabel}`,
         breakdown: `€${perMonth.toLocaleString("el-GR")} / μήνα × ${months} ${monthLabel}`,
         isStayTotal: true,
+        isIndicative: true,
         months,
         total,
       };
@@ -119,11 +220,12 @@ export function resolveListingSearchPrice(
     priceUnit: price.unit,
     display: price.display,
     isStayTotal: false,
+    isIndicative: false,
   };
 }
 
 export function formatListingStayPrice(
-  listing: Pick<Listing, "rental_type" | "price_type" | "price_per_night" | "price_monthly">,
+  listing: ShortTermListing,
   interestFrom?: string,
   interestTo?: string,
   durationMonths?: number,
@@ -136,10 +238,10 @@ export function formatListingStayPrice(
     rentalTypeFilter,
   });
 
-  if (!resolved.isStayTotal || resolved.total == null) return null;
+  if (!resolved.isStayTotal || resolved.total == null || resolved.isUnavailable) return null;
 
   return {
-    nights: resolved.nights ?? resolved.months ?? 0,
+    nights: resolved.nights ?? resolved.months ?? INDICATIVE_DEFAULT_NIGHTS,
     total: resolved.total,
     display: resolved.display,
   };

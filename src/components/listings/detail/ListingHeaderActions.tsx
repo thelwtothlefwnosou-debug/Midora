@@ -7,7 +7,7 @@ import { ListingReportButton } from "@/components/listings/ListingReportButton";
 import { cn } from "@/lib/utils";
 
 const textActionClass =
-  "inline-flex items-center gap-2 text-sm font-semibold text-charcoal underline decoration-charcoal underline-offset-[3px] transition-colors hover:text-charcoal/80";
+  "inline-flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-sm font-medium text-charcoal/70 transition-colors hover:bg-charcoal/[0.04] hover:text-charcoal";
 
 const iconCircleClass =
   "inline-flex h-10 w-10 items-center justify-center rounded-full border border-charcoal/15 bg-white text-charcoal transition-colors hover:border-charcoal/25 hover:bg-charcoal/[0.02]";
@@ -51,7 +51,7 @@ export function ListingHeaderActions({
       <FavoriteButton
         listingId={listingId}
         initialFavorited={isFavorited}
-        variant="underline"
+        variant="label"
       />
 
       <div className="relative" ref={menuRef}>

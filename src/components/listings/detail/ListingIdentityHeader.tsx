@@ -61,11 +61,11 @@ export function ListingIdentityHeader({
           </span>
           <h1 className="listing-page-title mt-3">{listing.title}</h1>
           <p className="listing-meta mt-2 flex items-center gap-2">
-            <MapPin className="h-4 w-4 shrink-0 text-gold" aria-hidden />
-            {listing.area}, {listing.city}
+            <MapPin className="h-3.5 w-3.5 shrink-0 text-gold/80" aria-hidden />
+            {listing.area}, {listing.city}, Ελλάδα
           </p>
           {metadata && (
-            <p className="mt-2 text-sm text-charcoal/70">{metadata}</p>
+            <p className="mt-2 text-sm text-charcoal/60">{metadata}</p>
           )}
         </div>
 

@@ -485,6 +485,53 @@ body {
 /* Premium listing detail typography */
 .listing-detail {
   color: var(--charcoal);
+  --listing-header-height: 4.25rem;
+}
+
+.listing-main-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 360px;
+  column-gap: 72px;
+  align-items: start;
+}
+
+.listing-left-column {
+  min-width: 0;
+}
+
+.listing-right-column {
+  /* Stretch to full row height so sticky has room to travel with left content */
+  align-self: stretch;
+  position: relative;
+  min-width: 0;
+}
+
+.sticky-inquiry-card {
+  position: sticky;
+  top: 6rem;
+  z-index: 20;
+  max-height: calc(100vh - 7.5rem);
+  overflow-y: auto;
+}
+
+@media (max-width: 899px) {
+  .listing-main-layout {
+    display: block;
+  }
+
+  .listing-right-column {
+    display: none;
+  }
+
+  .mobile-inquiry-card {
+    display: block;
+  }
+}
+
+@media (min-width: 900px) {
+  .mobile-inquiry-card {
+    display: none;
+  }
 }
 
 .listing-section {
@@ -529,12 +576,28 @@ body {
 }
 
 .listing-page-title {
-  font-family: var(--font-playfair), Georgia, serif;
-  font-size: clamp(1.75rem, 4vw, 2.5rem);
-  font-weight: 600;
-  letter-spacing: -0.03em;
-  line-height: 1.15;
+  font-family: var(--font-inter), system-ui, sans-serif;
+  font-size: clamp(1.375rem, 2.5vw, 2rem);
+  font-weight: 650;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
   color: var(--charcoal);
+  max-width: 42rem;
+}
+
+.listing-summary-headline {
+  font-family: var(--font-inter), system-ui, sans-serif;
+  font-size: clamp(1.125rem, 1.8vw, 1.375rem);
+  font-weight: 600;
+  line-height: 1.35;
+  color: var(--charcoal);
+  max-width: 42rem;
+}
+
+.listing-summary-meta {
+  font-size: 0.9375rem;
+  line-height: 1.45;
+  color: color-mix(in srgb, var(--charcoal) 62%, transparent);
 }
 
 .listing-body {
@@ -544,9 +607,9 @@ body {
 }
 
 .listing-meta {
-  font-size: 0.9375rem;
-  line-height: 1.5;
-  color: var(--muted);
+  font-size: 0.875rem;
+  line-height: 1.45;
+  color: color-mix(in srgb, var(--muted) 92%, transparent);
   letter-spacing: 0.01em;
 }
 
@@ -794,6 +857,19 @@ body {
   .home-hero-search-fields {
     grid-template-columns: minmax(0, 1.15fr) repeat(4, minmax(0, 1fr));
   }
+
+  .home-hero-search-fields--short {
+    grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr) minmax(0, 0.9fr);
+  }
+
+  .home-hero-search-fields--monthly {
+    grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr) minmax(0, 0.95fr) minmax(0, 0.85fr);
+  }
+}
+
+.listings-search-segment--active {
+  background: color-mix(in srgb, var(--sand) 28%, white);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--gold) 35%, transparent);
 }
 
 .home-hero-search-cell {
@@ -945,31 +1021,81 @@ body {
 }
 
 .price-marker-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 2.75rem;
   background: #ffffff;
-  color: #222222;
+  color: #1a1a1a;
   font-weight: 700;
-  font-size: 14px;
+  font-size: 13px;
   line-height: 1.2;
   padding: 7px 12px;
   border-radius: 999px;
-  border: 1px solid rgba(34, 34, 34, 0.1);
+  border: 1px solid rgba(26, 26, 26, 0.12);
   box-shadow:
-    0 2px 6px rgba(0, 0, 0, 0.14),
-    0 1px 2px rgba(0, 0, 0, 0.08);
+    0 2px 6px rgba(0, 0, 0, 0.12),
+    0 1px 2px rgba(0, 0, 0, 0.06);
   white-space: nowrap;
-  font-family: system-ui, -apple-system, sans-serif;
+  font-family: inherit;
   letter-spacing: -0.01em;
-  transition: transform 0.15s ease, background 0.15s ease, color 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+  transition:
+    transform 0.15s ease,
+    background 0.15s ease,
+    color 0.15s ease,
+    box-shadow 0.15s ease,
+    border-color 0.15s ease;
 }
 
 .price-marker-pill--active {
-  background: var(--gold);
+  background: #1a1a1a;
   color: #ffffff;
-  border-color: var(--gold-dark);
+  border-color: #1a1a1a;
   box-shadow:
-    0 3px 10px rgba(185, 140, 90, 0.45),
-    0 1px 3px rgba(0, 0, 0, 0.12);
-  transform: scale(1.06);
+    0 4px 12px rgba(0, 0, 0, 0.28),
+    0 2px 4px rgba(0, 0, 0, 0.14);
+  transform: scale(1.04);
+}
+
+.midora-map-controls {
+  position: absolute;
+  right: 12px;
+  bottom: 12px;
+  z-index: 12;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.midora-map-control-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  border: 1px solid rgba(26, 26, 26, 0.1);
+  background: #ffffff;
+  color: #1a1a1a;
+  box-shadow: 0 2px 8px rgba(26, 26, 26, 0.12);
+  cursor: pointer;
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.midora-map-control-btn:hover {
+  border-color: rgba(26, 26, 26, 0.18);
+  box-shadow: 0 3px 10px rgba(26, 26, 26, 0.16);
+}
+
+.midora-map-control-btn:active {
+  transform: scale(0.97);
+}
+
+.property-area-map-label {
+  font-family: inherit;
 }
 
 .midora-map-cluster-wrap {
@@ -1082,6 +1208,11 @@ body {
   pointer-events: auto;
 }
 
+.midora-map-container .maplibregl-ctrl-bottom-right,
+.midora-map-container .maplibregl-ctrl-top-right {
+  display: none;
+}
+
 .midora-map-container .maplibregl-ctrl-attrib {
   font-size: 10px;
   background: rgba(255, 255, 255, 0.82);
@@ -1103,6 +1234,13 @@ body {
   width: 48px;
   height: 48px;
   transform: translate(-50%, -100%);
+}
+
+/* Detail page map: pin tip sits on the geo point (exact location only) */
+.approx-location-marker--area-map {
+  width: 22px;
+  height: 22px;
+  transform: none;
 }
 
 .approx-location-marker__radius {

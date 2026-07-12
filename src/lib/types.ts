@@ -35,6 +35,93 @@ export type PropertyLeadWithListing = PropertyLead & {
     | null;
 };
 
+export type CohostPermissionLevel =
+  | "full_access"
+  | "messages_availability"
+  | "messages_only";
+
+export type CohostStatus = "pending" | "accepted" | "declined" | "removed";
+
+export type ListingCohost = {
+  id: string;
+  listing_id: string;
+  owner_user_id: string;
+  cohost_user_id: string | null;
+  invited_email: string;
+  invited_name: string | null;
+  invite_token: string;
+  invite_message: string | null;
+  status: CohostStatus;
+  permission_level: CohostPermissionLevel;
+  can_manage_listing: boolean;
+  can_manage_photos: boolean;
+  can_manage_availability: boolean;
+  can_manage_pricing: boolean;
+  can_manage_messages: boolean;
+  can_view_stats: boolean;
+  can_manage_cohosts: boolean;
+  last_active_at: string | null;
+  created_at: string;
+  accepted_at: string | null;
+  declined_at: string | null;
+  removed_at: string | null;
+};
+
+export type ListingCohostWithProfile = ListingCohost & {
+  profile: Pick<
+    Profile,
+    | "id"
+    | "full_name"
+    | "display_name"
+    | "email"
+    | "phone"
+    | "avatar_path"
+    | "show_profile_photo_public"
+    | "public_slug"
+    | "public_profile_enabled"
+  > | null;
+};
+
+export type ContactNumberVisibility = "private" | "after_inquiry" | "public";
+
+export type ListingContactNumber = {
+  id: string;
+  listing_id: string;
+  user_id: string;
+  role: "owner" | "cohost";
+  label: string | null;
+  phone_number: string;
+  visibility: ContactNumberVisibility;
+  is_primary: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
+export type ListingAuditActorRole = "owner" | "cohost" | "admin" | "system";
+
+export type ListingAuditLog = {
+  id: string;
+  listing_id: string;
+  actor_user_id: string;
+  actor_role: ListingAuditActorRole;
+  action: string;
+  target_type: string | null;
+  target_id: string | null;
+  metadata: Record<string, unknown>;
+  created_at: string;
+};
+
+export type PropertyLeadReply = {
+  id: string;
+  lead_id: string;
+  listing_id: string;
+  sender_user_id: string;
+  sender_role: "owner" | "cohost" | "guest";
+  sender_display_name: string;
+  body: string;
+  created_at: string;
+};
+
 export type Profile = {
   id: string;
   full_name: string;
@@ -69,6 +156,10 @@ export type Profile = {
   business_name?: string | null;
   business_title?: string | null;
   created_at: string;
+  public_slug?: string | null;
+  public_profile_enabled?: boolean | null;
+  show_owned_listings_on_profile?: boolean | null;
+  show_cohosted_listings_on_profile?: boolean | null;
 };
 
 export type ListingStatus = "pending" | "approved" | "rejected" | "expired";
@@ -290,10 +381,13 @@ export type ListingWithImages = Listing & {
   listing_images: ListingImage[];
   profiles?: Pick<
     Profile,
+    | "id"
     | "full_name"
     | "display_name"
     | "bio"
     | "advertiser_type"
+    | "business_name"
+    | "business_title"
     | "communication_languages"
     | "phone"
     | "allow_phone_contact"
@@ -308,6 +402,8 @@ export type ListingWithImages = Listing & {
     | "avatar_path"
     | "avatar_status"
     | "show_profile_photo_public"
+    | "public_slug"
+    | "public_profile_enabled"
   > & {
     created_at?: string;
     avatar_url?: string | null;
@@ -320,6 +416,7 @@ export type ListingPublicDetail = ListingWithImages & {
   amenities: ListingAmenityRow[];
   price_rules: ListingPriceRule[];
   advertiser_active_listings?: number;
+  external_links?: import("@/lib/listing-external-links").ListingExternalLink[];
 };
 
 export type ListingSort =
@@ -377,6 +474,7 @@ export type ListingFilters = {
   excludeUnavailableForPeriod?: boolean;
   contactAvailabilityOnly?: boolean;
   hasHeating?: boolean;
+  amenityKeys?: string[];
   sort?: ListingSort;
   /** Internal: skip minimum-stay night filter when measuring empty-state cause */
   skipMinimumStayFilter?: boolean;

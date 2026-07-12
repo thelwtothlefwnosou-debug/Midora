@@ -98,6 +98,7 @@ function DayCell({
     showPrices && day.inMonth && isCustomPrice ? isCustomPrice(day.dateKey) : false;
   const ownerSelected =
     mode === "owner" && (selectionRole === "start" || selectionRole === "end");
+  const charcoalSelection = mode === "owner" || mode === "interest";
 
   const content = (
     <span
@@ -119,7 +120,7 @@ function DayCell({
           !selectionRole &&
           !tooEarlyForMinStay &&
           "text-charcoal",
-        ownerSelected
+        ownerSelected || (charcoalSelection && (selectionRole === "start" || selectionRole === "end"))
           ? "rounded-full bg-charcoal font-semibold text-white shadow-sm"
           : selectionRole === "start" || selectionRole === "end"
             ? "rounded-full bg-gold font-semibold text-white shadow-sm"
@@ -163,15 +164,15 @@ function DayCell({
     priceCellSize === "large" && "min-h-[3.5rem] border-b border-r border-border/40",
     !day.inMonth && "pointer-events-none",
     selectionRole === "middle" &&
-      (mode === "owner"
+      (charcoalSelection
         ? "bg-charcoal/12 before:absolute before:inset-y-1.5 before:left-0 before:right-0 before:-z-0 before:bg-charcoal/12"
         : "bg-gold/18 before:absolute before:inset-y-1.5 before:left-0 before:right-0 before:-z-0 before:bg-gold/18"),
     selectionRole === "start" &&
-      (mode === "owner"
+      (charcoalSelection
         ? "bg-charcoal/12 before:absolute before:inset-y-1.5 before:left-1/2 before:right-0 before:-z-0 before:rounded-l-full before:bg-charcoal/12"
         : "bg-gold/18 before:absolute before:inset-y-1.5 before:left-1/2 before:right-0 before:-z-0 before:rounded-l-full before:bg-gold/18"),
     selectionRole === "end" &&
-      (mode === "owner"
+      (charcoalSelection
         ? "bg-charcoal/12 before:absolute before:inset-y-1.5 before:left-0 before:right-1/2 before:-z-0 before:rounded-r-full before:bg-charcoal/12"
         : "bg-gold/18 before:absolute before:inset-y-1.5 before:left-0 before:right-1/2 before:-z-0 before:rounded-r-full before:bg-gold/18"),
     unavailable && day.inMonth && !past && !selectionRole && "bg-charcoal/8",

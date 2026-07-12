@@ -6,12 +6,14 @@ type PublicPageLayoutProps = {
   children: React.ReactNode;
   className?: string;
   narrow?: boolean;
+  wide?: boolean;
 };
 
 export function PublicPageLayout({
   children,
   className,
   narrow,
+  wide,
 }: PublicPageLayoutProps) {
   return (
     <>
@@ -25,7 +27,7 @@ export function PublicPageLayout({
         <div
           className={cn(
             "mx-auto px-6",
-            narrow ? "max-w-3xl" : "max-w-5xl"
+            narrow ? "max-w-3xl" : wide ? "max-w-6xl" : "max-w-5xl"
           )}
         >
           {children}

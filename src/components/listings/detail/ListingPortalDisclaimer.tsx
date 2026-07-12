@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils";
 /** Configurable portal disclaimer — replace text via env or CMS when legal copy is approved. */
 export const LISTING_INQUIRY_DISCLAIMER =
   process.env.NEXT_PUBLIC_LISTING_INQUIRY_DISCLAIMER ??
-  "Η Midora δεν συμμετέχει στη συμφωνία μεταξύ ενδιαφερόμενου και ιδιοκτήτη.";
+  "Η διαθεσιμότητα και η τελική συμφωνία επιβεβαιώνονται από τον ιδιοκτήτη.";
 
 export function ListingPortalDisclaimer({ className }: { className?: string }) {
   return (

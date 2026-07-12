@@ -2,6 +2,8 @@ import type { ListingWithImages } from "@/lib/types";
 import type { ListingDisplayStatus } from "@/lib/listing-status";
 import type { OwnerListingStatusKey } from "@/lib/dashboard-listings";
 import type { RentalType } from "@/lib/rental-types";
+import type { ListingAccessContext } from "@/lib/listing-access";
+import type { CohostPermissionFlags } from "@/lib/listing-cohost-permissions";
 
 export type ListingSwitcherItem = {
   id: string;
@@ -11,6 +13,7 @@ export type ListingSwitcherItem = {
   statusKey: OwnerListingStatusKey;
   statusLabel: string;
   rentalType: RentalType;
+  isCohost?: boolean;
 };
 
 export type ListingWorkspaceContext = {
@@ -20,4 +23,6 @@ export type ListingWorkspaceContext = {
   ownerStatusLabel: string;
   rentalType: RentalType;
   photoCount: number;
+  access: ListingAccessContext;
+  permissions: CohostPermissionFlags;
 };

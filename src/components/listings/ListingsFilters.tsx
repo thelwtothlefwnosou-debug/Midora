@@ -6,7 +6,12 @@ import { useState } from "react";
 import { Search, SlidersHorizontal } from "lucide-react";
 import type { User } from "@supabase/supabase-js";
 import { LocationSearchField } from "@/components/search/LocationSearchField";
-import { RentalTypeSearchFields } from "@/components/search/RentalTypeSearchFields";
+import {
+  GuidedSearchFields,
+  EMPTY_GUIDED_SEARCH,
+  guidedStateFromDefaults,
+  type GuidedSearchState,
+} from "@/components/search/GuidedSearchFields";
 import { ListingsFilterModal } from "@/components/listings/filters/ListingsFilterModal";
 import { ListingsSearchNav } from "@/components/listings/ListingsSearchNav";
 import { RentalModeToggle } from "@/components/listings/RentalModeToggle";
@@ -32,6 +37,10 @@ import {
 import type { PriceHistogramBucket } from "@/lib/listing-price-histogram";
 import { compareDateKeys, isPastDateInAthens, isPastMonthInAthens } from "@/lib/dates-athens";
 import type { RentalType } from "@/lib/rental-types";
+import {
+  type ActiveSearchField,
+  getPartialDateRangeMessage,
+} from "@/lib/guided-search";
 import { cn } from "@/lib/utils";
 
 export type ListingsFilterValues = {
@@ -67,6 +76,7 @@ export type ListingsFilterValues = {
   parking?: string;
   pets?: string;
   heating?: string;
+  amenities?: string;
   sort?: string;
 };
 
@@ -123,6 +133,13 @@ export function ListingsFilters({
     lat: number;
     lng: number;
   } | null>(null);
+  const [guidedState, setGuidedState] = useState<GuidedSearchState>(() =>
+    guidedStateFromDefaults(defaults)
+  );
+  const [activeSearchField, setActiveSearchField] = useState<ActiveSearchField>(null);
+  const [datePickerOpen, setDatePickerOpen] = useState(false);
+  const [guestPickerOpen, setGuestPickerOpen] = useState(false);
+  const [partialDateHint, setPartialDateHint] = useState<string | null>(null);
 
   const defaultsSyncKey = useMemo(() => JSON.stringify(defaults), [defaults]);
 
@@ -133,6 +150,11 @@ export function ListingsFilters({
     modeFieldCache.current = createModeFieldCache(defaults);
     setSelectedLocation(null);
     setNearbyCoords(null);
+    setGuidedState(guidedStateFromDefaults(defaults));
+    setActiveSearchField(null);
+    setDatePickerOpen(false);
+    setGuestPickerOpen(false);
+    setPartialDateHint(null);
   }, [defaultsSyncKey]);
 
   useEffect(() => {
@@ -216,8 +238,12 @@ export function ListingsFilters({
       if (startMonth && !isPastMonthInAthens(startMonth)) {
         p.set("startMonth", startMonth);
       }
-      const duration = parseInt(durationMonths || "2", 10);
-      p.set("durationMonths", String(Math.max(2, duration)));
+      if (durationMonths) {
+        const duration = parseInt(durationMonths, 10);
+        if (Number.isFinite(duration) && duration >= 2) {
+          p.set("durationMonths", String(duration));
+        }
+      }
     }
   }
 
@@ -292,23 +318,6 @@ export function ListingsFilters({
     return p;
   }
 
-  function handleSearchFieldChange(
-    patch: Partial<{
-      interestFrom?: string;
-      interestTo?: string;
-      startMonth?: string;
-      durationMonths?: string;
-      guests?: string;
-    }>,
-    options?: { autoSearch?: boolean }
-  ) {
-    const next = { ...values, ...patch };
-    setValues(next);
-    if (options?.autoSearch) {
-      navigateWithValues(next);
-    }
-  }
-
   function navigateWithValues(
     nextValues: ListingsFilterValues,
     rentalOverride?: RentalType,
@@ -326,7 +335,8 @@ export function ListingsFilters({
 
   function applyLocationSelection(
     loc: SearchLocation,
-    nearby?: { lat: number; lng: number } | null
+    nearby?: { lat: number; lng: number } | null,
+    options?: { navigate?: boolean }
   ) {
     const next: ListingsFilterValues = {
       ...values,
@@ -348,10 +358,42 @@ export function ListingsFilters({
     setSelectedLocation(loc.kind === "nearby" ? null : loc);
     setNearbyCoords(nearby ?? null);
     setValues(next);
-    navigateWithValues(next, rentalType, {
-      location: loc.kind === "nearby" ? null : loc,
-      nearby: nearby ?? null,
-    });
+
+    if (options?.navigate) {
+      navigateWithValues(next, rentalType, {
+        location: loc.kind === "nearby" ? null : loc,
+        nearby: nearby ?? null,
+      });
+      return;
+    }
+
+    openDatesAfterLocation();
+  }
+
+  function clearSearchFields() {
+    const cleared: ListingsFilterValues = {
+      ...values,
+      city: undefined,
+      area: undefined,
+      district: undefined,
+      nearby: undefined,
+      polygon: undefined,
+      bounds: undefined,
+      autoMap: undefined,
+      interestFrom: undefined,
+      interestTo: undefined,
+      startMonth: undefined,
+      durationMonths: undefined,
+      guests: undefined,
+    };
+    setSelectedLocation(null);
+    setNearbyCoords(null);
+    setValues(cleared);
+    setGuidedState(EMPTY_GUIDED_SEARCH);
+    setActiveSearchField(null);
+    setDatePickerOpen(false);
+    setGuestPickerOpen(false);
+    setPartialDateHint(null);
   }
 
   const buildPreviewQuery = useCallback(
@@ -362,8 +404,70 @@ export function ListingsFilters({
     [rentalType, values, selectedLocation, nearbyCoords]
   );
 
+  function patchGuidedState(patch: Partial<GuidedSearchState>) {
+    setGuidedState((prev) => {
+      const next = { ...prev, ...patch };
+      const valuePatch: Partial<ListingsFilterValues> = {};
+      if (patch.dateRange !== undefined) {
+        valuePatch.interestFrom = next.dateRange?.start ?? "";
+        valuePatch.interestTo = next.dateRange?.end ?? "";
+        setPartialDateHint(null);
+      }
+      if (patch.hasGuestSelection !== undefined || patch.guestCounts !== undefined) {
+        const total =
+          next.hasGuestSelection && next.guestCounts
+            ? next.guestCounts.adults + next.guestCounts.children
+            : 0;
+        valuePatch.guests = total > 0 ? String(total) : "";
+      }
+      if (patch.startMonth !== undefined) valuePatch.startMonth = next.startMonth;
+      if (patch.durationMonths !== undefined) {
+        valuePatch.durationMonths = next.durationMonths;
+      }
+      if (Object.keys(valuePatch).length) {
+        setValues((v) => ({ ...v, ...valuePatch }));
+      }
+      return next;
+    });
+  }
+
+  function openDatesAfterLocation() {
+    if (rentalType === "short_term") {
+      setActiveSearchField("dates");
+      setDatePickerOpen(true);
+      return;
+    }
+    const monthInput = formRef.current?.querySelector(
+      'input[name="startMonth"]'
+    ) as HTMLInputElement | null;
+    monthInput?.focus();
+    try {
+      monthInput?.showPicker?.();
+    } catch {
+      /* unsupported */
+    }
+  }
+
   function applyFilters(e?: React.FormEvent) {
     e?.preventDefault();
+    setPartialDateHint(null);
+
+    if (rentalType === "short_term") {
+      const hint = getPartialDateRangeMessage(
+        guidedState.dateRange?.start,
+        guidedState.dateRange?.end
+      );
+      if (hint) {
+        setPartialDateHint(hint);
+        setActiveSearchField("dates");
+        setDatePickerOpen(true);
+        return;
+      }
+    }
+
+    setActiveSearchField(null);
+    setDatePickerOpen(false);
+    setGuestPickerOpen(false);
     navigateWithValues(values);
   }
 
@@ -387,6 +491,11 @@ export function ListingsFilters({
     );
     setRentalType(next);
     setValues(nextValues);
+    setGuidedState(EMPTY_GUIDED_SEARCH);
+    setActiveSearchField(null);
+    setDatePickerOpen(false);
+    setGuestPickerOpen(false);
+    setPartialDateHint(null);
     navigateWithValues(nextValues, next);
   }
 
@@ -432,6 +541,7 @@ export function ListingsFilters({
               defaultValue={defaults.city}
               mapAreaActive={Boolean(values.polygon || defaults.polygon)}
               onClearMapArea={clearMapArea}
+              onFocus={() => setActiveSearchField("location")}
               onValueChange={(v) =>
                 setValues((prev) => ({
                   ...prev,
@@ -450,22 +560,36 @@ export function ListingsFilters({
                 applyLocationSelection(NEARBY_LOCATION, coords);
               }}
               onDrawSearch={handleDrawSearch}
-              className="relative z-[60] min-w-0 flex-[1.05]"
+              className={cn(
+                "relative z-[60] min-w-0 flex-[1.05]",
+                activeSearchField === "location" && "listings-search-segment--active"
+              )}
             />
 
-            <RentalTypeSearchFields
+            <GuidedSearchFields
               rentalType={rentalType}
               variant="search"
+              state={guidedState}
+              onStateChange={patchGuidedState}
+              partialDateHint={partialDateHint}
               defaults={rentalDefaults}
-              searchValues={{
-                interestFrom: values.interestFrom,
-                interestTo: values.interestTo,
-                startMonth: values.startMonth,
-                durationMonths: values.durationMonths,
-                guests: values.guests,
+              guidedFlow={{
+                activeField: activeSearchField,
+                onActiveFieldChange: setActiveSearchField,
+                datePickerOpen,
+                onDatePickerOpenChange: setDatePickerOpen,
+                guestPickerOpen,
+                onGuestPickerOpenChange: setGuestPickerOpen,
               }}
-              onSearchFieldChange={handleSearchFieldChange}
             />
+
+            <button
+              type="button"
+              onClick={clearSearchFields}
+              className="listings-search-dock__clear hidden text-sm font-medium text-muted hover:text-charcoal lg:inline-flex"
+            >
+              Καθαρισμός
+            </button>
 
             <button
               type="button"

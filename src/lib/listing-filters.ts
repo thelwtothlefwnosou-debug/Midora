@@ -18,6 +18,7 @@ import { resolveLocation } from "@/lib/locations/search-server";
 import { estimateBathrooms } from "@/lib/listing-filter-helpers";
 import { resolveMinimumStayNights } from "@/lib/listing-rental-modes";
 import { stayNightsBetween } from "@/lib/availability-calendar";
+import { parseAmenityFilterParam } from "@/lib/search-amenity-filters";
 import { isSearchQualityListing } from "@/lib/search-listing-quality";
 
 function normalize(s: string) {
@@ -416,6 +417,7 @@ function buildListingFilters(
     petsAllowed: params.pets === "true" ? true : undefined,
     cleaningIncluded: params.cleaning === "true" ? true : undefined,
     hasHeating: params.heating === "true" ? true : undefined,
+    amenityKeys: parseAmenityFilterParam(params.amenities),
     sort: (params.sort as ListingFilters["sort"]) || "recommended",
   };
 

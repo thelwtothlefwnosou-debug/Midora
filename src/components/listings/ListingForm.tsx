@@ -295,61 +295,6 @@ export function ListingForm({
       </div>
 
       <div className="flex flex-wrap gap-6">
-        <h3 className="w-full font-display text-sm font-semibold text-charcoal">Παροχές</h3>
-        <label className="flex items-center gap-2 text-sm text-charcoal/70">
-          <input
-            type="checkbox"
-            name="furnished"
-            defaultChecked={listing?.furnished ?? true}
-            className="accent-gold"
-          />
-          Επιπλωμένο
-        </label>
-        <label className="flex items-center gap-2 text-sm text-charcoal/70">
-          <input
-            type="checkbox"
-            name="utilities_included"
-            defaultChecked={listing?.utilities_included}
-            className="accent-gold"
-          />
-          Όλα περιλαμβάνονται
-        </label>
-        <label className="flex items-center gap-2 text-sm text-charcoal/70">
-          <input
-            type="checkbox"
-            name="has_balcony"
-            defaultChecked={listing?.has_balcony}
-            className="accent-gold"
-          />
-          Μπαλκόνι
-        </label>
-        <label className="flex items-center gap-2 text-sm text-charcoal/70">
-          <input
-            type="checkbox"
-            name="has_elevator"
-            defaultChecked={listing?.has_elevator}
-            className="accent-gold"
-          />
-          Ασανσέρ
-        </label>
-        <label className="flex items-center gap-2 text-sm text-charcoal/70">
-          <input
-            type="checkbox"
-            name="has_parking"
-            defaultChecked={listing?.has_parking}
-            className="accent-gold"
-          />
-          Πάρκινγκ
-        </label>
-        <label className="flex items-center gap-2 text-sm text-charcoal/70">
-          <input
-            type="checkbox"
-            name="pets_allowed"
-            defaultChecked={listing?.pets_allowed}
-            className="accent-gold"
-          />
-          Κατοικίδια επιτρέπονται
-        </label>
         <label className="flex items-center gap-2 text-sm text-charcoal/70">
           <input
             type="checkbox"

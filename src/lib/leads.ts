@@ -22,28 +22,67 @@ export function mapLeadError(error: { message?: string; code?: string }): string
   return error.message ?? "Δεν ήταν δυνατή η αποστολή. Δοκίμασε ξανά.";
 }
 
-export async function getOwnerLeads(
-  ownerId: string
+export async function getAccessibleLeads(
+  userId: string
 ): Promise<PropertyLeadWithListing[]> {
   const supabase = await createClient();
   if (!supabase) return [];
 
-  const { data, error } = await supabase
+  const { data: owned, error: ownedError } = await supabase
     .from("property_leads")
     .select(
       "*, listings(id, title, city, area, slug, listing_images(url, media_type, is_cover, sort_order))"
     )
-    .eq("owner_id", ownerId)
+    .eq("owner_id", userId)
     .order("created_at", { ascending: false })
     .limit(200);
 
-  if (error) {
-    if (isLeadsTableMissingError(error)) return [];
-    console.error("[leads] getOwnerLeads:", error.message);
-    return [];
+  if (ownedError && !isLeadsTableMissingError(ownedError)) {
+    console.error("[leads] getAccessibleLeads owned:", ownedError.message);
   }
 
-  return (data ?? []) as PropertyLeadWithListing[];
+  const { data: cohostMemberships } = await supabase
+    .from("listing_cohosts")
+    .select("listing_id")
+    .eq("cohost_user_id", userId)
+    .eq("status", "accepted")
+    .eq("can_manage_messages", true);
+
+  const cohostListingIds = (cohostMemberships ?? []).map((m) => m.listing_id as string);
+
+  let cohostLeads: PropertyLeadWithListing[] = [];
+  if (cohostListingIds.length) {
+    const { data: cohostData, error: cohostError } = await supabase
+      .from("property_leads")
+      .select(
+        "*, listings(id, title, city, area, slug, listing_images(url, media_type, is_cover, sort_order))"
+      )
+      .in("listing_id", cohostListingIds)
+      .order("created_at", { ascending: false })
+      .limit(200);
+
+    if (cohostError && !isLeadsTableMissingError(cohostError)) {
+      console.error("[leads] getAccessibleLeads cohost:", cohostError.message);
+    } else {
+      cohostLeads = (cohostData ?? []) as PropertyLeadWithListing[];
+    }
+  }
+
+  const merged = new Map<string, PropertyLeadWithListing>();
+  for (const lead of [...(owned ?? []), ...cohostLeads] as PropertyLeadWithListing[]) {
+    merged.set(lead.id, lead);
+  }
+
+  return [...merged.values()].sort(
+    (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+  );
+}
+
+/** @deprecated Use getAccessibleLeads */
+export async function getOwnerLeads(
+  ownerId: string
+): Promise<PropertyLeadWithListing[]> {
+  return getAccessibleLeads(ownerId);
 }
 
 export async function countNewOwnerLeads(ownerId: string): Promise<number> {

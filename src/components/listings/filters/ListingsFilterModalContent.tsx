@@ -13,6 +13,19 @@ import type { RentalType } from "@/lib/rental-types";
 import type { ListingsFilterValues } from "@/components/listings/ListingsFilters";
 import type { PriceHistogramBucket } from "@/lib/listing-price-histogram";
 import {
+  amenityLabel,
+  popularFilterAmenities,
+} from "@/lib/amenities-catalog";
+import {
+  parseAmenityFilterParam,
+  serializeAmenityFilterParam,
+  amenityKeySetsBills,
+  amenityKeySetsClimate,
+  amenityKeySetsFurnished,
+  amenityKeySetsParking,
+  amenityKeySetsPets,
+} from "@/lib/search-amenity-filters";
+import {
   FilterModalSection,
   FilterStepperRow,
 } from "@/components/listings/filters/FilterModalSection";
@@ -49,6 +62,36 @@ type AmenityRow = {
   shortOnly?: boolean;
 };
 
+function selectedAmenityKeys(values: ListingsFilterValues): Set<string> {
+  return new Set(parseAmenityFilterParam(values.amenities));
+}
+
+function syncLegacyAmenityBools(
+  keys: Set<string>,
+  setBoolField: (name: string, checked: boolean) => void
+) {
+  setBoolField(
+    "parking",
+    [...keys].some((key) => amenityKeySetsParking(key))
+  );
+  setBoolField(
+    "furnished",
+    [...keys].some((key) => amenityKeySetsFurnished(key))
+  );
+  setBoolField(
+    "bills",
+    [...keys].some((key) => amenityKeySetsBills(key))
+  );
+  setBoolField(
+    "pets",
+    [...keys].some((key) => amenityKeySetsPets(key))
+  );
+  setBoolField(
+    "heating",
+    [...keys].some((key) => amenityKeySetsClimate(key))
+  );
+}
+
 const AMENITIES: AmenityRow[] = [
   { key: "heating", label: "Θέρμανση / κλιματισμός" },
   { key: "parking", label: "Δωρεάν στάθμευση" },
@@ -71,7 +114,8 @@ function activeChipCount(values: ListingsFilterValues, isShort: boolean): number
     values.bills === "true" ||
     values.parking === "true" ||
     values.pets === "true" ||
-    values.heating === "true"
+    values.heating === "true" ||
+    values.amenities?.trim()
   ) {
     n++;
   }
@@ -114,6 +158,13 @@ function buildActiveChips(
   if (values.type) {
     const t = PROPERTY_TYPES.find((p) => p.value === values.type);
     chips.push({ key: "type", label: t?.label ?? values.type, clear: () => {} });
+  }
+  for (const key of selectedAmenityKeys(values)) {
+    chips.push({
+      key: `amenity-${key}`,
+      label: amenityLabel(key),
+      clear: () => {},
+    });
   }
   for (const a of AMENITIES) {
     if (isShort && a.monthlyOnly) continue;
@@ -193,11 +244,24 @@ export function ListingsFilterModalContent({
 
   const quickFilters = isMonthly ? MONTHLY_QUICK.slice(0, 4) : [];
 
-  const amenityActiveCount = AMENITIES.filter((a) => {
-    if (isShort && a.monthlyOnly) return false;
-    if (isMonthly && a.shortOnly) return false;
-    return draft[a.key] === "true";
-  }).length;
+  const popularAmenities = popularFilterAmenities(isShort ? "short_term" : "monthly");
+  const selectedKeys = selectedAmenityKeys(draft);
+
+  const amenityActiveCount =
+    selectedKeys.size +
+    AMENITIES.filter((a) => {
+      if (isShort && a.monthlyOnly) return false;
+      if (isMonthly && a.shortOnly) return false;
+      return draft[a.key] === "true";
+    }).length;
+
+  function togglePopularAmenity(key: string) {
+    const next = new Set(selectedKeys);
+    if (next.has(key)) next.delete(key);
+    else next.add(key);
+    setField("amenities", serializeAmenityFilterParam(next));
+    syncLegacyAmenityBools(next, setBoolField);
+  }
 
   const typeActiveCount = draft.type ? 1 : 0;
   const roomsActiveCount =
@@ -311,29 +375,29 @@ export function ListingsFilterModalContent({
       </FilterModalSection>
 
       <FilterModalSection
-        title="Βασικές παροχές"
+        title="Δημοφιλείς παροχές"
         defaultOpen
         activeCount={amenityActiveCount}
       >
-        <div className="grid gap-1 sm:grid-cols-2">
-          {AMENITIES.filter((a) => {
-            if (isShort && a.monthlyOnly) return false;
-            if (isMonthly && a.shortOnly) return false;
-            return true;
-          }).map((a) => (
-            <label
-              key={a.key}
-              className="flex min-h-11 cursor-pointer items-center gap-3 rounded-xl px-1 py-2 hover:bg-sand/40"
-            >
-              <input
-                type="checkbox"
-                checked={draft[a.key] === "true"}
-                onChange={(e) => setBoolField(a.key, e.target.checked)}
-                className="h-[18px] w-[18px] rounded border-charcoal/20 text-gold accent-gold focus:ring-gold/30"
-              />
-              <span className="text-sm text-charcoal">{a.label}</span>
-            </label>
-          ))}
+        <div className="grid gap-2 sm:grid-cols-2">
+          {popularAmenities.map((def) => {
+            const active = selectedKeys.has(def.key);
+            return (
+              <button
+                key={def.key}
+                type="button"
+                onClick={() => togglePopularAmenity(def.key)}
+                className={cn(
+                  "flex min-h-11 items-center rounded-xl border px-3 py-2.5 text-left text-sm transition-colors",
+                  active
+                    ? "border-charcoal bg-charcoal text-white"
+                    : "border-charcoal/12 bg-white text-charcoal hover:border-gold/30"
+                )}
+              >
+                {def.label}
+              </button>
+            );
+          })}
         </div>
       </FilterModalSection>
 

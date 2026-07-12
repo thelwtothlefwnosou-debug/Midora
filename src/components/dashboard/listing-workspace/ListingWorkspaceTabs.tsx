@@ -2,37 +2,40 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import {
-  LISTING_WORKSPACE_TABS,
-  resolveListingWorkspaceTab,
-} from "@/lib/listing-workspace-nav";
+import { resolveListingWorkspaceTab } from "@/lib/listing-workspace-nav";
+import { visibleWorkspaceTabs } from "@/lib/listing-workspace-tab-visibility";
+import type { CohostPermissionFlags } from "@/lib/listing-cohost-permissions";
+import type { ListingAccessRole } from "@/lib/listing-access";
 import { cn } from "@/lib/utils";
 
 type Props = {
   listingId: string;
+  role: ListingAccessRole;
+  permissions: CohostPermissionFlags;
 };
 
-export function ListingWorkspaceTabs({ listingId }: Props) {
+export function ListingWorkspaceTabs({ listingId, role, permissions }: Props) {
   const pathname = usePathname() ?? "";
   const active = resolveListingWorkspaceTab(pathname, listingId);
+  const tabs = visibleWorkspaceTabs(role, permissions);
 
   return (
     <nav
-      className="sticky top-0 z-20 -mx-3 mb-6 border-b border-border bg-cream/95 px-3 backdrop-blur-sm sm:-mx-5 sm:px-5"
+      className="sticky top-0 z-20 -mx-3 mb-5 border-b border-border bg-cream/95 px-3 backdrop-blur-sm sm:-mx-5 sm:px-5"
       aria-label="Διαχείριση αγγελίας"
     >
-      <div className="flex gap-1 overflow-x-auto pb-px [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-        {LISTING_WORKSPACE_TABS.map((tab) => {
+      <div className="flex gap-0.5 overflow-x-auto pb-px [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        {tabs.map((tab) => {
           const isActive = tab.id === active;
           return (
             <Link
               key={tab.id}
               href={tab.href(listingId)}
               className={cn(
-                "shrink-0 border-b-2 px-3 py-3 text-sm font-medium transition-colors",
+                "shrink-0 border-b-2 px-3 py-2.5 text-[13px] font-medium transition-colors",
                 isActive
-                  ? "border-gold text-charcoal"
-                  : "border-transparent text-muted hover:border-charcoal/15 hover:text-charcoal"
+                  ? "border-charcoal text-charcoal"
+                  : "border-transparent text-muted hover:border-charcoal/20 hover:text-charcoal"
               )}
             >
               {tab.label}

@@ -1,7 +1,7 @@
 import type { Listing } from "@/lib/types";
 
-/** Days after subscription start before organic boost begins. */
-const ORGANIC_START_DAYS = 2;
+/** Day index when organic boost begins (0 = from first day live). */
+const ORGANIC_START_DAYS = 0;
 /** Base simulated views per day after warm-up (plus small daily variation). */
 const ORGANIC_DAILY_BASE = 5;
 /** Matches listing subscription length (renew / checkout). */

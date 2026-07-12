@@ -13,7 +13,10 @@ import Map, { type MapRef, type ViewStateChangeEvent } from "react-map-gl/maplib
 import "maplibre-gl/dist/maplibre-gl.css";
 import { MIDORA_MAP_MAX_ZOOM, MIDORA_MAP_MIN_ZOOM, MIDORA_MAP_STYLE } from "@/lib/map-config";
 import { MapErrorState } from "@/components/map/MapErrorState";
+import { MidoraMapControls } from "@/components/map/MidoraMapControls";
 import { cn } from "@/lib/utils";
+
+export type ScrollZoomMode = "full" | "cooperative" | false;
 
 type ViewState = {
   longitude: number;
@@ -27,16 +30,24 @@ type Props = {
   height?: string;
   className?: string;
   flush?: boolean;
+  /** @deprecated Prefer scrollZoomMode */
   scrollZoom?: boolean;
+  scrollZoomMode?: ScrollZoomMode;
   dragPan?: boolean;
   doubleClickZoom?: boolean;
   touchZoomRotate?: boolean;
   boxZoom?: boolean;
+  keyboard?: boolean;
   maxZoom?: number;
   minZoom?: number;
+  showZoomControls?: boolean;
+  showRecenter?: boolean;
+  onRecenter?: () => void;
   onMoveStart?: (event: ViewStateChangeEvent) => void;
   onMoveEnd?: (event: ViewStateChangeEvent) => void;
   onLoad?: () => void;
+  onMapClick?: () => void;
+  showAttribution?: boolean;
   children?: ReactNode;
 };
 
@@ -74,18 +85,29 @@ export function MidoraMapCore({
   height = "100%",
   className,
   flush = false,
-  scrollZoom = true,
+  scrollZoom,
+  scrollZoomMode,
   dragPan = true,
   doubleClickZoom = true,
   touchZoomRotate = true,
   boxZoom = false,
+  keyboard = true,
   maxZoom = MIDORA_MAP_MAX_ZOOM,
   minZoom = MIDORA_MAP_MIN_ZOOM,
+  showZoomControls = false,
+  showRecenter = false,
+  onRecenter,
   onMoveStart,
   onMoveEnd,
   onLoad,
+  onMapClick,
+  showAttribution = true,
   children,
 }: Props) {
+  const resolvedScrollZoomMode: ScrollZoomMode =
+    scrollZoomMode ?? (scrollZoom === false ? false : scrollZoom === true ? "full" : "full");
+  const mapScrollZoom = resolvedScrollZoomMode !== false;
+  const cooperativeGestures = resolvedScrollZoomMode === "cooperative";
   const [loadError, setLoadError] = useState(false);
   const [retryKey, setRetryKey] = useState(0);
   const [mapReady, setMapReady] = useState(false);
@@ -121,7 +143,7 @@ export function MidoraMapCore({
 
   useEffect(() => {
     const shell = shellRef.current;
-    if (!shell || !scrollZoom) return;
+    if (!shell || resolvedScrollZoomMode !== "full") return;
 
     const stopWheelBubble = (event: WheelEvent) => {
       event.stopPropagation();
@@ -129,7 +151,7 @@ export function MidoraMapCore({
 
     shell.addEventListener("wheel", stopWheelBubble, { passive: false });
     return () => shell.removeEventListener("wheel", stopWheelBubble);
-  }, [mapReady, scrollZoom, retryKey]);
+  }, [mapReady, resolvedScrollZoomMode, retryKey]);
 
   if (loadError) {
     return (
@@ -165,22 +187,32 @@ export function MidoraMapCore({
             mapStyle={MIDORA_MAP_STYLE}
             initialViewState={initialViewState}
             style={{ width: "100%", height: "100%" }}
-            scrollZoom={scrollZoom}
+            scrollZoom={mapScrollZoom}
+            cooperativeGestures={cooperativeGestures}
             dragPan={dragPan}
             doubleClickZoom={doubleClickZoom}
             touchZoomRotate={touchZoomRotate}
             boxZoom={boxZoom}
+            keyboard={keyboard}
             maxZoom={maxZoom}
             minZoom={minZoom}
-            attributionControl={{ compact: true }}
+            attributionControl={showAttribution ? { compact: true } : false}
             onMoveStart={onMoveStart}
             onMoveEnd={onMoveEnd}
             onLoad={handleMapLoad}
+            onClick={onMapClick}
             onError={handleError}
           >
             {children}
           </Map>
         </div>
+        {showZoomControls && mapRef ? (
+          <MidoraMapControls
+            mapRef={mapRef}
+            showRecenter={showRecenter}
+            onRecenter={onRecenter}
+          />
+        ) : null}
       </MapErrorBoundary>
     </div>
   );

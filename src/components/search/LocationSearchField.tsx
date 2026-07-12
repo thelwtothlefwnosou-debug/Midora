@@ -20,6 +20,7 @@ type Props = {
   onClearMapArea?: () => void;
   focusSignal?: number;
   inputId?: string;
+  onFocus?: () => void;
 };
 
 export function LocationSearchField({
@@ -35,6 +36,7 @@ export function LocationSearchField({
   onClearMapArea,
   focusSignal,
   inputId,
+  onFocus,
 }: Props) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [drawOpen, setDrawOpen] = useState(false);
@@ -177,6 +179,7 @@ export function LocationSearchField({
           variant="embedded"
           defaultValue={defaultValue}
           placeholder={placeholder ?? "Αθήνα, Πάρος, Θεσσαλονίκη…"}
+          onFocus={onFocus}
           onValueChange={onValueChange}
           onSelect={(loc) => {
             onSelect?.(loc);
@@ -249,10 +252,11 @@ export function LocationSearchField({
             defaultValue={defaultValue}
             placeholder={
               isToolbar
-                ? (placeholder ?? "Πού θέλεις να μείνεις;")
+                ? (placeholder ?? "Πού;")
                 : (placeholder ?? "Πόλη ή περιοχή...")
             }
             className="w-full"
+            onFocus={onFocus}
             onValueChange={(v) => {
               setHasQuery(Boolean(v.trim()));
               if (v.trim()) setMenuOpen(false);

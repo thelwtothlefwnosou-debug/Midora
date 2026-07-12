@@ -5,15 +5,21 @@ import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { MapPin, Search } from "lucide-react";
 import { LocationSearchField } from "@/components/search/LocationSearchField";
+import { appendRentalSearchParams } from "@/components/search/RentalTypeSearchFields";
 import {
-  RentalTypeSearchFields,
-  appendRentalSearchParams,
-} from "@/components/search/RentalTypeSearchFields";
+  GuidedSearchFields,
+  EMPTY_GUIDED_SEARCH,
+  type GuidedSearchState,
+} from "@/components/search/GuidedSearchFields";
 import type { LatLng } from "@/lib/geo/polygon";
 import type { SearchLocation } from "@/lib/data/locations-shared";
 import { appendLocationToParams } from "@/lib/search-params";
 import { RENTAL_TYPE_SEARCH_TABS } from "@/lib/homepage-content";
 import type { RentalType } from "@/lib/rental-types";
+import {
+  type ActiveSearchField,
+  getPartialDateRangeMessage,
+} from "@/lib/guided-search";
 import { cn } from "@/lib/utils";
 
 const HERO_SUGGESTIONS = [
@@ -42,6 +48,35 @@ export function SearchBar() {
     lat: number;
     lng: number;
   } | null>(null);
+  const [guidedState, setGuidedState] = useState<GuidedSearchState>(EMPTY_GUIDED_SEARCH);
+  const [activeField, setActiveField] = useState<ActiveSearchField>(null);
+  const [datePickerOpen, setDatePickerOpen] = useState(false);
+  const [guestPickerOpen, setGuestPickerOpen] = useState(false);
+  const [partialDateHint, setPartialDateHint] = useState<string | null>(null);
+
+  function patchGuidedState(patch: Partial<GuidedSearchState>) {
+    setGuidedState((prev) => ({ ...prev, ...patch }));
+    if (patch.dateRange !== undefined) {
+      setPartialDateHint(null);
+    }
+  }
+
+  function openDatesAfterLocation() {
+    if (rentalType === "short_term") {
+      setActiveField("dates");
+      setDatePickerOpen(true);
+      return;
+    }
+    const monthInput = formRef.current?.querySelector(
+      'input[name="startMonth"]'
+    ) as HTMLInputElement | null;
+    monthInput?.focus();
+    try {
+      monthInput?.showPicker?.();
+    } catch {
+      /* unsupported */
+    }
+  }
 
   function navigate(extra?: {
     polygon?: LatLng[];
@@ -65,17 +100,56 @@ export function SearchBar() {
     const rt = (data.get("rentalType") as string) || rentalType;
     if (rt) params.set("rentalType", rt);
 
-    const propertyType = (data.get("propertyType") as string)?.trim();
-    if (propertyType) params.set("type", propertyType);
-
     appendRentalSearchParams(params, data, rt);
 
-    router.push(`/listings?${params.toString()}`);
+    router.push(params.toString() ? `/listings?${params.toString()}` : "/listings");
   }
 
   function handleSearch(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    setPartialDateHint(null);
+
+    if (rentalType === "short_term") {
+      const hint = getPartialDateRangeMessage(
+        guidedState.dateRange?.start,
+        guidedState.dateRange?.end
+      );
+      if (hint) {
+        setPartialDateHint(hint);
+        setActiveField("dates");
+        setDatePickerOpen(true);
+        return;
+      }
+    }
+
+    setActiveField(null);
+    setDatePickerOpen(false);
+    setGuestPickerOpen(false);
     navigate();
+  }
+
+  function clearAll() {
+    setSelectedLocation(null);
+    setNearbyCoords(null);
+    setGuidedState(EMPTY_GUIDED_SEARCH);
+    setActiveField(null);
+    setDatePickerOpen(false);
+    setGuestPickerOpen(false);
+    setPartialDateHint(null);
+    const input = document.getElementById(HERO_LOCATION_INPUT_ID) as HTMLInputElement | null;
+    if (input) {
+      input.value = "";
+      input.dispatchEvent(new Event("input", { bubbles: true }));
+    }
+  }
+
+  function handleRentalTypeChange(next: RentalType) {
+    setRentalType(next);
+    setGuidedState(EMPTY_GUIDED_SEARCH);
+    setActiveField(null);
+    setDatePickerOpen(false);
+    setGuestPickerOpen(false);
+    setPartialDateHint(null);
   }
 
   return (
@@ -94,7 +168,6 @@ export function SearchBar() {
         >
           <input type="hidden" name="rentalType" value={rentalType} />
 
-          {/* Row 1 — rental type tabs */}
           <div className="home-hero-search-tabs" role="tablist" aria-label="Τύπος μίσθωσης">
             {RENTAL_TYPE_SEARCH_TABS.map((tab) => {
               const active = rentalType === tab.value;
@@ -104,7 +177,7 @@ export function SearchBar() {
                   type="button"
                   role="tab"
                   aria-selected={active}
-                  onClick={() => setRentalType(tab.value)}
+                  onClick={() => handleRentalTypeChange(tab.value)}
                   className={cn(
                     "flex h-full min-h-[3.75rem] min-w-[8.5rem] shrink-0 flex-col justify-center rounded-xl border px-3 py-2 text-left transition-all sm:min-h-[4rem] sm:min-w-0",
                     active
@@ -123,13 +196,20 @@ export function SearchBar() {
             })}
           </div>
 
-          {/* Row 2 — location + filters in one grid row */}
-          <div className="home-hero-search-fields">
+          <div
+            className={cn(
+              "home-hero-search-fields",
+              rentalType === "short_term"
+                ? "home-hero-search-fields--short"
+                : "home-hero-search-fields--monthly"
+            )}
+          >
             <label
               htmlFor={HERO_LOCATION_INPUT_ID}
               className={cn(
                 "home-hero-search-cell home-search-field relative w-full cursor-text text-left transition-colors hover:bg-[#faf6ef]",
-                "focus-within:z-[1] focus-within:bg-[#f7f0e6] focus-within:ring-1 focus-within:ring-inset focus-within:ring-gold/55"
+                "focus-within:z-[1] focus-within:bg-[#f7f0e6] focus-within:ring-1 focus-within:ring-inset focus-within:ring-gold/55",
+                activeField === "location" && "z-[1] bg-[#f7f0e6] ring-1 ring-inset ring-gold/55"
               )}
             >
               <MapPin
@@ -137,9 +217,7 @@ export function SearchBar() {
                 strokeWidth={1.75}
               />
               <div className="flex min-w-0 flex-1 flex-col justify-center gap-1">
-                <span className="home-search-field-label pointer-events-none">
-                  Πού ψάχνεις;
-                </span>
+                <span className="home-search-field-label pointer-events-none">Πού;</span>
                 <div className="min-w-0">
                   <LocationSearchField
                     variant="embedded"
@@ -149,13 +227,16 @@ export function SearchBar() {
                         ? LOCATION_PLACEHOLDERS.short_term
                         : LOCATION_PLACEHOLDERS.monthly
                     }
+                    onFocus={() => setActiveField("location")}
                     onSelect={(loc) => {
                       setSelectedLocation(loc);
                       if (loc.kind !== "nearby") setNearbyCoords(null);
+                      openDatesAfterLocation();
                     }}
                     onNearbySelect={(coords) => {
                       setNearbyCoords(coords);
                       setSelectedLocation(null);
+                      openDatesAfterLocation();
                     }}
                     onDrawSearch={(polygon) => navigate({ polygon })}
                   />
@@ -163,13 +244,36 @@ export function SearchBar() {
               </div>
             </label>
 
-            <RentalTypeSearchFields rentalType={rentalType} showPropertyType />
+            <GuidedSearchFields
+              rentalType={rentalType}
+              variant="hero"
+              state={guidedState}
+              onStateChange={patchGuidedState}
+              partialDateHint={partialDateHint}
+              guidedFlow={{
+                activeField,
+                onActiveFieldChange: setActiveField,
+                datePickerOpen,
+                onDatePickerOpenChange: setDatePickerOpen,
+                guestPickerOpen,
+                onGuestPickerOpenChange: setGuestPickerOpen,
+              }}
+            />
           </div>
 
-          <button type="submit" className="home-btn-primary home-hero-search-submit mt-0.5">
-            <Search className="h-4 w-4" />
-            Αναζήτηση
-          </button>
+          <div className="flex flex-wrap items-center gap-2">
+            <button type="submit" className="home-btn-primary home-hero-search-submit min-w-0 flex-1">
+              <Search className="h-4 w-4" />
+              Αναζήτηση
+            </button>
+            <button
+              type="button"
+              onClick={clearAll}
+              className="shrink-0 rounded-xl border border-border px-4 py-2.5 text-sm font-medium text-muted transition-colors hover:border-gold/30 hover:text-charcoal"
+            >
+              Καθαρισμός
+            </button>
+          </div>
         </form>
       </div>
 

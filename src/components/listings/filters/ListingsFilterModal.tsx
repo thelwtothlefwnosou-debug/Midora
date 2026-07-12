@@ -6,6 +6,10 @@ import type { RentalType } from "@/lib/rental-types";
 import type { ListingsFilterValues } from "@/components/listings/ListingsFilters";
 import type { PriceHistogramBucket } from "@/lib/listing-price-histogram";
 import { draftFiltersMatchApplied } from "@/lib/filter-groups";
+import {
+  parseAmenityFilterParam,
+  serializeAmenityFilterParam,
+} from "@/lib/search-amenity-filters";
 import { ListingsFilterModalContent } from "@/components/listings/filters/ListingsFilterModalContent";
 import { cn } from "@/lib/utils";
 
@@ -123,7 +127,23 @@ export function ListingsFilterModal({
       case "minSqm":
         setDraftField("minSqm", "");
         break;
+      case "amenities":
+        setDraftField("amenities", "");
+        setDraftBoolField("parking", false);
+        setDraftBoolField("furnished", false);
+        setDraftBoolField("bills", false);
+        setDraftBoolField("pets", false);
+        setDraftBoolField("heating", false);
+        break;
       default:
+        if (key.startsWith("amenity-")) {
+          const amenityKey = key.slice("amenity-".length);
+          const next = new Set(
+            parseAmenityFilterParam(draft.amenities).filter((k) => k !== amenityKey)
+          );
+          setDraftField("amenities", serializeAmenityFilterParam(next));
+          break;
+        }
         setDraftBoolField(key, false);
     }
   }

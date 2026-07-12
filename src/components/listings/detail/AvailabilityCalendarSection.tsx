@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AvailabilityCalendarPanel } from "@/components/availability/AvailabilityCalendarGrid";
 import { OwnerPricePreview } from "@/components/dashboard/OwnerPricePreview";
 import { useListingInquiryDates } from "@/components/listings/detail/ListingInquiryDatesContext";
@@ -10,10 +10,9 @@ import { listingHasPublicCalendarData } from "@/lib/listing-public-calendar";
 import type { ListingUnavailablePeriod } from "@/lib/unavailable-periods";
 import {
   formatDateKeyDisplay,
-  normalizeDateRange,
   stayNightsBetween,
 } from "@/lib/availability-calendar";
-import { computeIndicativeStayPrice, makeWeekendDayChecker, resolveNightlyPrice } from "@/lib/listing-short-term-price";
+import { computeIndicativeStayPrice } from "@/lib/listing-short-term-price";
 import type { ListingPublicDetail } from "@/lib/types";
 
 type Props = {
@@ -21,13 +20,18 @@ type Props = {
   periods: ListingUnavailablePeriod[];
 };
 
+function monthFromDateKey(dateKey: string): Date {
+  const [y, m] = dateKey.split("-").map(Number);
+  return new Date(y, m - 1, 1);
+}
+
 export function AvailabilityCalendarSection({ listing, periods }: Props) {
   const { openInterest } = useListingInterest();
   const {
-    appliedRange,
-    setAppliedRange,
+    displayRange,
+    userSelectedRange,
+    setUserSelectedRange,
     minimumStayNights,
-    range,
     rangeMeetsMinStay,
     clearDates,
     guests,
@@ -35,31 +39,28 @@ export function AvailabilityCalendarSection({ listing, periods }: Props) {
 
   const hasCalendarData = listingHasPublicCalendarData(listing, periods);
   const priceRules = listing.price_rules ?? [];
+  const isProgrammaticSync = useRef(false);
+  const userChangedSelectionRef = useRef(false);
 
-  const priceForDate = useCallback(
-    (dateKey: string) =>
-      resolveNightlyPrice(listing, priceRules, periods, dateKey),
-    [listing, priceRules, periods]
-  );
+  const locationLabel =
+    listing.area_display_name ?? listing.area ?? listing.city_display_name ?? listing.city;
 
   const indicativePrice = useMemo(() => {
-    if (!range?.start || !range?.end || range.start === range.end) return null;
+    if (!displayRange?.start || !displayRange?.end || displayRange.start === displayRange.end) {
+      return null;
+    }
     return computeIndicativeStayPrice(
       listing,
       priceRules,
-      range.start,
-      range.end,
+      displayRange.start,
+      displayRange.end,
       guests,
       periods
     );
-  }, [range, listing, priceRules, guests, periods]);
-
-  const isWeekendDay = useMemo(
-    () => makeWeekendDayChecker(listing.weekend_days),
-    [listing.weekend_days]
-  );
+  }, [displayRange, listing, priceRules, guests, periods]);
 
   const [month, setMonth] = useState(() => {
+    if (displayRange?.start) return monthFromDateKey(displayRange.start);
     const d = new Date();
     return new Date(d.getFullYear(), d.getMonth(), 1);
   });
@@ -77,41 +78,79 @@ export function AvailabilityCalendarSection({ listing, periods }: Props) {
   });
 
   useEffect(() => {
-    if (!appliedRange?.start) {
+    if (!displayRange?.start) {
       clearSelection();
       return;
     }
-    if (appliedRange.start !== appliedRange.end) {
-      setRange(appliedRange.start, appliedRange.end);
+    if (displayRange.start !== displayRange.end) {
+      isProgrammaticSync.current = true;
+      setRange(displayRange.start, displayRange.end);
       return;
     }
-    setRange(appliedRange.start, null);
-  }, [appliedRange, clearSelection, setRange]);
+    isProgrammaticSync.current = true;
+    setRange(displayRange.start, null);
+  }, [displayRange, clearSelection, setRange]);
 
   useEffect(() => {
+    if (isProgrammaticSync.current) {
+      isProgrammaticSync.current = false;
+      return;
+    }
+    if (!userChangedSelectionRef.current) return;
+    userChangedSelectionRef.current = false;
     if (!selectionStart) return;
 
     if (selectionEnd && selectionStart !== selectionEnd) {
-      const { start, end } = normalizeDateRange(selectionStart, selectionEnd);
-      if (appliedRange?.start !== start || appliedRange?.end !== end) {
-        setAppliedRange({ start, end });
+      if (
+        userSelectedRange?.start !== selectionStart ||
+        userSelectedRange?.end !== selectionEnd
+      ) {
+        setUserSelectedRange({ start: selectionStart, end: selectionEnd });
       }
       return;
     }
 
-    if (!selectionEnd && appliedRange?.start !== selectionStart) {
-      setAppliedRange({ start: selectionStart, end: selectionStart });
+    if (!selectionEnd && userSelectedRange?.start !== selectionStart) {
+      setUserSelectedRange({ start: selectionStart, end: selectionStart });
     }
-  }, [appliedRange?.end, appliedRange?.start, selectionEnd, selectionStart, setAppliedRange]);
+  }, [
+    selectionEnd,
+    selectionStart,
+    setUserSelectedRange,
+    userSelectedRange?.end,
+    userSelectedRange?.start,
+  ]);
+
+  const handleUserDateClick = useCallback(
+    (dateKey: string) => {
+      userChangedSelectionRef.current = true;
+      handleDateClick(dateKey);
+    },
+    [handleDateClick]
+  );
 
   const handleClearDates = useCallback(() => {
     clearDates();
-    clearSelection();
-  }, [clearDates, clearSelection]);
+  }, [clearDates]);
+
+  const nights =
+    displayRange && displayRange.start !== displayRange.end
+      ? stayNightsBetween(displayRange.start, displayRange.end)
+      : null;
+
+  const calendarTitle =
+    displayRange && nights
+      ? `${locationLabel} – ${nights} ${nights === 1 ? "διανυκτέρευση" : "διανυκτερεύσεις"}`
+      : "Επίλεξε ημερομηνίες";
+
+  const calendarSubtitle =
+    displayRange && nights
+      ? `${formatDateKeyDisplay(displayRange.start)} – ${formatDateKeyDisplay(displayRange.end)}`
+      : null;
 
   return (
     <section id="availability" className="listing-section scroll-mt-32">
-      <h2 className="listing-section-title">Ενδεικτική διαθεσιμότητα</h2>
+      <h2 className="listing-section-title">Διαθεσιμότητα</h2>
       <p className="mt-2 max-w-2xl text-sm text-charcoal/65">
         {hasCalendarData
           ? "Επίλεξε ημερομηνίες και στείλε αίτημα στον ιδιοκτήτη. Η τελική διαθεσιμότητα και τιμή επιβεβαιώνονται από τον ιδιοκτήτη."
@@ -134,35 +173,26 @@ export function AvailabilityCalendarSection({ listing, periods }: Props) {
         </button>
       ) : (
         <>
-          {(range || selectionStart) && (
-            <div className="mt-4 flex flex-wrap items-center gap-3">
-              <p className="text-sm font-medium text-charcoal">
-                {range ? (
-                  <>
-                    {formatDateKeyDisplay(range.start)} – {formatDateKeyDisplay(range.end)}
-                    <span className="ml-2 font-normal text-muted">
-                      ({stayNightsBetween(range.start, range.end)}{" "}
-                      {stayNightsBetween(range.start, range.end) === 1 ? "νύχτα" : "νύχτες"})
-                    </span>
-                  </>
-                ) : (
-                  <>
-                    Άφιξη: {formatDateKeyDisplay(selectionStart!)}
-                    <span className="ml-2 font-normal text-muted">— επίλεξε αναχώρηση</span>
-                  </>
-                )}
-              </p>
+          <div className="mt-5">
+            <p className="font-display text-base font-semibold text-charcoal">{calendarTitle}</p>
+            {calendarSubtitle ? (
+              <p className="mt-1 text-sm text-muted">{calendarSubtitle}</p>
+            ) : null}
+          </div>
+
+          {(displayRange || selectionStart) && (
+            <div className="mt-3">
               <button
                 type="button"
                 onClick={handleClearDates}
                 className="text-sm font-medium text-gold-dark hover:underline"
               >
-                Καθαρισμός ημερομηνιών
+                Εκκαθάριση ημερομηνιών
               </button>
             </div>
           )}
 
-          {range && !rangeMeetsMinStay && minimumStayNights > 1 && (
+          {displayRange && !rangeMeetsMinStay && minimumStayNights > 1 && (
             <p className="mt-2 text-sm text-amber-800">
               Ελάχιστη διαμονή {minimumStayNights}{" "}
               {minimumStayNights === 1 ? "νύχτα" : "νύχτες"}.
@@ -188,14 +218,11 @@ export function AvailabilityCalendarSection({ listing, periods }: Props) {
               mode="interest"
               selectionStart={selectionStart}
               selectionEnd={selectionEnd}
-              onDateClick={handleDateClick}
+              onDateClick={handleUserDateClick}
               minimumStayNights={minimumStayNights}
-              showPrices
-              priceForDate={priceForDate}
-              isWeekendDay={isWeekendDay}
-              showLegend
               layout="responsive"
               compact
+              showLegend={false}
             />
           </div>
         </>
