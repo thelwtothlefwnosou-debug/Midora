@@ -163,7 +163,7 @@ export default async function ListingsPage({
     bounds: params.bounds,
     autoMap: params.autoMap,
     polygon: params.polygon,
-    rentalType: params.rentalType,
+    rentalType: params.rentalType ?? "short_term",
     interestFrom: params.start ?? params.interestFrom,
     interestTo: params.end ?? params.interestTo,
     startMonth: params.startMonth,

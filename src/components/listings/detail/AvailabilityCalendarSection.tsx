@@ -78,8 +78,11 @@ export function AvailabilityCalendarSection({ listing, periods }: Props) {
   });
 
   useEffect(() => {
+    // Keep in-progress check-out selection local — don't snap back to default preview.
+    if (selectionStart && !selectionEnd) return;
+
     if (!displayRange?.start) {
-      clearSelection();
+      if (!selectionStart) clearSelection();
       return;
     }
     if (displayRange.start !== displayRange.end) {
@@ -89,7 +92,7 @@ export function AvailabilityCalendarSection({ listing, periods }: Props) {
     }
     isProgrammaticSync.current = true;
     setRange(displayRange.start, null);
-  }, [displayRange, clearSelection, setRange]);
+  }, [clearSelection, displayRange, selectionEnd, selectionStart, setRange]);
 
   useEffect(() => {
     if (isProgrammaticSync.current) {
@@ -100,18 +103,16 @@ export function AvailabilityCalendarSection({ listing, periods }: Props) {
     userChangedSelectionRef.current = false;
     if (!selectionStart) return;
 
-    if (selectionEnd && selectionStart !== selectionEnd) {
-      if (
-        userSelectedRange?.start !== selectionStart ||
-        userSelectedRange?.end !== selectionEnd
-      ) {
-        setUserSelectedRange({ start: selectionStart, end: selectionEnd });
-      }
+    if (!selectionEnd || selectionStart === selectionEnd) {
+      setUserSelectedRange({ start: selectionStart, end: selectionStart });
       return;
     }
 
-    if (!selectionEnd && userSelectedRange?.start !== selectionStart) {
-      setUserSelectedRange({ start: selectionStart, end: selectionStart });
+    if (
+      userSelectedRange?.start !== selectionStart ||
+      userSelectedRange?.end !== selectionEnd
+    ) {
+      setUserSelectedRange({ start: selectionStart, end: selectionEnd });
     }
   }, [
     selectionEnd,
@@ -130,6 +131,7 @@ export function AvailabilityCalendarSection({ listing, periods }: Props) {
   );
 
   const handleClearDates = useCallback(() => {
+    userChangedSelectionRef.current = false;
     clearDates();
   }, [clearDates]);
 
@@ -222,7 +224,8 @@ export function AvailabilityCalendarSection({ listing, periods }: Props) {
               minimumStayNights={minimumStayNights}
               layout="responsive"
               compact
-              showLegend={false}
+              showLegend
+              unavailableDayStyle="premium-blocked"
             />
           </div>
         </>

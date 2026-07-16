@@ -14,6 +14,7 @@ import {
   stayNightsBetween,
 } from "@/lib/availability-calendar";
 import type { ListingUnavailablePeriod } from "@/lib/unavailable-periods";
+import { SearchFieldPopover } from "@/components/search/SearchFieldPopover";
 import { cn } from "@/lib/utils";
 
 export type DateRangeValue = {
@@ -45,6 +46,10 @@ type Props = {
   autoApplyOnComplete?: boolean;
   /** Close the picker after auto-apply (requires autoApplyOnComplete). */
   closeOnAutoApply?: boolean;
+  presentation?: "modal" | "popover";
+  anchorRef?: React.RefObject<HTMLElement | null>;
+  ignoreRefs?: React.RefObject<HTMLElement | null>[];
+  clearLabel?: string;
 };
 
 function useIsMobile(breakpoint = 768) {
@@ -79,6 +84,10 @@ export function InterestDateRangePicker({
   isWeekendDay,
   autoApplyOnComplete = false,
   closeOnAutoApply = false,
+  presentation = "modal",
+  anchorRef,
+  ignoreRefs,
+  clearLabel = "Καθαρισμός",
 }: Props) {
   const titleId = useId();
   const isMobile = useIsMobile();
@@ -127,15 +136,20 @@ export function InterestDateRangePicker({
   }, [focusField, open, syncFromValue, value]);
 
   useEffect(() => {
-    if (!open) return;
+    if (!open || presentation === "popover") return;
     const prev = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     return () => {
       document.body.style.overflow = prev;
     };
-  }, [open]);
+  }, [open, presentation]);
 
   const handleRequestClose = useCallback(() => {
+    if (presentation === "popover") {
+      onOpenChange(false);
+      return;
+    }
+
     const dirty =
       selectionStart !== (value?.start ?? null) ||
       selectionEnd !== (value?.end ?? null);
@@ -147,7 +161,7 @@ export function InterestDateRangePicker({
       if (!discard) return;
     }
     onOpenChange(false);
-  }, [onOpenChange, selectionEnd, selectionStart, value?.end, value?.start]);
+  }, [onOpenChange, presentation, selectionEnd, selectionStart, value?.end, value?.start]);
 
   useEffect(() => {
     if (!open) return;
@@ -164,6 +178,9 @@ export function InterestDateRangePicker({
   function handleClear() {
     clearSelection();
     setHoverDate(null);
+    if (presentation === "popover") {
+      onApply(null);
+    }
   }
 
   function handleApply() {
@@ -258,6 +275,90 @@ export function InterestDateRangePicker({
     );
   })();
 
+  const calendarBody = (
+    <>
+      {hoverMinStayHint}
+      <AvailabilityCalendarPanel
+        month={month}
+        onPrevMonth={() => setMonth((m) => addMonths(m, -1))}
+        onNextMonth={() => setMonth((m) => addMonths(m, 1))}
+        periods={periods}
+        mode="interest"
+        selectionStart={selectionStart}
+        selectionEnd={selectionEnd}
+        onDateClick={handleDateClick}
+        onDateHover={setHoverDate}
+        minimumStayNights={minimumStayNights}
+        showLegend={showLegend}
+        showPrices={showPrices}
+        priceForDate={priceForDate}
+        isWeekendDay={isWeekendDay}
+        layout={isMobile ? "single" : "dual"}
+      />
+    </>
+  );
+
+  const footerActions =
+    presentation === "popover" ? (
+      <div className="flex items-center justify-end border-t border-border/60 px-6 py-3">
+        <button
+          type="button"
+          onClick={handleClear}
+          className="rounded-lg px-3 py-2 text-sm font-medium text-charcoal underline-offset-2 transition-colors hover:bg-charcoal/5 hover:underline"
+        >
+          {clearLabel}
+        </button>
+      </div>
+    ) : (
+      <div className="flex flex-col gap-3 border-t border-border px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+        <div className="min-w-0 flex-1 space-y-2">
+          {summary}
+          {minStayWarning}
+        </div>
+        <div className="flex shrink-0 gap-2">
+          <button
+            type="button"
+            onClick={handleClear}
+            className="min-h-10 flex-1 rounded-xl border border-border px-4 text-sm font-medium text-charcoal transition-colors hover:bg-charcoal/5 sm:flex-none"
+          >
+            {clearLabel}
+          </button>
+          {!autoApplyOnComplete && (
+            <button
+              type="button"
+              onClick={handleApply}
+              disabled={!canApply}
+              className="min-h-10 flex-1 rounded-xl bg-gold px-5 text-sm font-semibold text-white transition-colors hover:bg-gold-dark disabled:cursor-not-allowed disabled:opacity-45 sm:flex-none"
+            >
+              {isMobile ? mobileApplyLabel : applyLabel}
+            </button>
+          )}
+        </div>
+      </div>
+    );
+
+  if (!open) return null;
+
+  if (presentation === "popover") {
+    return (
+      <SearchFieldPopover
+        open={open}
+        onOpenChange={onOpenChange}
+        anchorRef={anchorRef}
+        ignoreRefs={ignoreRefs}
+        placement="below-center"
+        title={title || undefined}
+        labelledBy={title ? titleId : undefined}
+        preferredWidth={820}
+        panelClassName="max-w-[min(820px,calc(100vw-48px))]"
+        scrim
+      >
+        <div className="px-6 py-4">{calendarBody}</div>
+        {footerActions}
+      </SearchFieldPopover>
+    );
+  }
+
   if (typeof document === "undefined") return null;
 
   return createPortal(
@@ -315,50 +416,11 @@ export function InterestDateRangePicker({
             </div>
 
             <div className="flex-1 overflow-y-auto overscroll-contain px-5 py-4 sm:px-6">
-              {hoverMinStayHint}
-              <AvailabilityCalendarPanel
-                month={month}
-                onPrevMonth={() => setMonth((m) => addMonths(m, -1))}
-                onNextMonth={() => setMonth((m) => addMonths(m, 1))}
-                periods={periods}
-                mode="interest"
-                selectionStart={selectionStart}
-                selectionEnd={selectionEnd}
-                onDateClick={handleDateClick}
-                onDateHover={setHoverDate}
-                minimumStayNights={minimumStayNights}
-                showLegend={showLegend}
-                showPrices={showPrices}
-                priceForDate={priceForDate}
-                isWeekendDay={isWeekendDay}
-                layout={isMobile ? "single" : "dual"}
-              />
+              {calendarBody}
             </div>
 
-            <div className="sticky bottom-0 z-10 border-t border-border bg-white px-5 py-4 sm:px-6">
-              <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                <div className="min-w-0 flex-1 space-y-2">
-                  {summary}
-                  {minStayWarning}
-                </div>
-                <div className="flex shrink-0 gap-2">
-                  <button
-                    type="button"
-                    onClick={handleClear}
-                    className="min-h-11 flex-1 rounded-xl border border-border px-4 text-sm font-medium text-charcoal transition-colors hover:bg-charcoal/5 sm:flex-none"
-                  >
-                    Καθαρισμός
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleApply}
-                    disabled={!canApply}
-                    className="min-h-11 flex-1 rounded-xl bg-gold px-5 text-sm font-semibold text-white transition-colors hover:bg-gold-dark disabled:cursor-not-allowed disabled:opacity-45 sm:flex-none"
-                  >
-                    {isMobile ? mobileApplyLabel : applyLabel}
-                  </button>
-                </div>
-              </div>
+            <div className="sticky bottom-0 z-10 border-t border-border bg-white">
+              {footerActions}
             </div>
           </motion.div>
         </div>

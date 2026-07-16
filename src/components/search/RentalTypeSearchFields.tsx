@@ -648,6 +648,9 @@ export function appendRentalSearchParams(
   const guests = (data.get("guests") as string)?.trim();
   if (guests) params.set("guests", guests);
 
+  const pets = (data.get("pets") as string)?.trim();
+  if (pets && pets !== "0") params.set("pets", pets);
+
   const propertyType = (data.get("propertyType") as string)?.trim();
   if (propertyType) params.set("type", propertyType);
 

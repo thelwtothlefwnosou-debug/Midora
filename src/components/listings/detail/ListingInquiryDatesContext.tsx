@@ -2,9 +2,11 @@
 
 import {
   createContext,
+  useCallback,
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from "react";
@@ -15,6 +17,8 @@ import {
   normalizeDateRange,
 } from "@/lib/availability-calendar";
 import { getDefaultFiveNightRange } from "@/lib/listing-default-stay-range";
+import { useListingSearchUrlSync } from "@/hooks/useListingSearchUrlSync";
+import { parseDateRangeFromSearchParams } from "@/lib/midora-search-state";
 import type { ListingPublicDetail } from "@/lib/types";
 import { resolveMinimumStayNights } from "@/lib/listing-rental-modes";
 import type { ListingUnavailablePeriod } from "@/lib/unavailable-periods";
@@ -57,12 +61,25 @@ export function ListingInquiryDatesProvider({
   children: ReactNode;
 }) {
   const searchParams = useSearchParams();
-  const [userSelectedRange, setUserSelectedRange] = useState<DateRangeValue>(null);
+  const { syncDateRange, syncGuests } = useListingSearchUrlSync();
+  const userTouchedDatesRef = useRef(false);
+  const guestsInitializedRef = useRef(false);
+
+  const [userSelectedRange, setUserSelectedRangeState] = useState<DateRangeValue>(() =>
+    parseDateRangeFromSearchParams(searchParams)
+  );
   const minimumStayNights = resolveMinimumStayNights(listing);
   const maxGuests = listing.max_guests ?? 16;
-  const [guests, setGuests] = useState(
-    Math.min(listing.max_guests ?? 2, listing.included_guests ?? 2) || 2
-  );
+  const [guests, setGuestsState] = useState(() => {
+    const guestsRaw = searchParams.get("guests")?.trim();
+    if (guestsRaw) {
+      const parsed = parseInt(guestsRaw, 10);
+      if (Number.isFinite(parsed) && parsed >= 1) {
+        return Math.min(parsed, maxGuests);
+      }
+    }
+    return Math.min(listing.max_guests ?? 2, listing.included_guests ?? 2) || 2;
+  });
 
   const defaultPreviewRange = useMemo(
     () =>
@@ -77,28 +94,39 @@ export function ListingInquiryDatesProvider({
   );
 
   useEffect(() => {
-    const from =
-      searchParams.get("interestFrom")?.trim() ||
-      searchParams.get("start")?.trim() ||
-      searchParams.get("checkIn")?.trim() ||
-      "";
-    const to =
-      searchParams.get("interestTo")?.trim() ||
-      searchParams.get("end")?.trim() ||
-      searchParams.get("checkOut")?.trim() ||
-      "";
-    const guestsRaw = searchParams.get("guests")?.trim();
+    if (userTouchedDatesRef.current) return;
+    const parsed = parseDateRangeFromSearchParams(searchParams);
+    setUserSelectedRangeState(parsed);
+  }, [searchParams]);
 
-    if (from && to) {
-      setUserSelectedRange({ start: from, end: to });
-    }
-    if (guestsRaw) {
-      const parsed = parseInt(guestsRaw, 10);
-      if (Number.isFinite(parsed) && parsed >= 1) {
-        setGuests(Math.min(parsed, maxGuests));
-      }
+  useEffect(() => {
+    const guestsRaw = searchParams.get("guests")?.trim();
+    if (!guestsRaw) return;
+    const parsed = parseInt(guestsRaw, 10);
+    if (!Number.isFinite(parsed) || parsed < 1) return;
+    if (!guestsInitializedRef.current) {
+      guestsInitializedRef.current = true;
+      setGuestsState(Math.min(parsed, maxGuests));
     }
   }, [maxGuests, searchParams]);
+
+  const setUserSelectedRange = useCallback(
+    (v: DateRangeValue) => {
+      userTouchedDatesRef.current = true;
+      setUserSelectedRangeState(v);
+      syncDateRange(v);
+    },
+    [syncDateRange]
+  );
+
+  const setGuests = useCallback(
+    (n: number) => {
+      const clamped = Math.max(1, Math.min(n, maxGuests));
+      setGuestsState(clamped);
+      syncGuests(clamped);
+    },
+    [maxGuests, syncGuests]
+  );
 
   const userRange = useMemo(() => {
     if (!userSelectedRange?.start || !userSelectedRange.end) return null;
@@ -106,8 +134,11 @@ export function ListingInquiryDatesProvider({
     return normalizeDateRange(userSelectedRange.start, userSelectedRange.end);
   }, [userSelectedRange]);
 
+  const hasUserDateInteraction = userSelectedRange != null;
+
   const displayRange = useMemo(() => {
     if (userRange) return userRange;
+    if (hasUserDateInteraction) return null;
     if (defaultPreviewRange) {
       return {
         start: defaultPreviewRange.checkIn,
@@ -115,13 +146,15 @@ export function ListingInquiryDatesProvider({
       };
     }
     return null;
-  }, [defaultPreviewRange, userRange]);
+  }, [defaultPreviewRange, hasUserDateInteraction, userRange]);
 
   const displayRangeSource: DisplayRangeSource = useMemo(() => {
     if (userRange) return "user";
-    if (defaultPreviewRange && displayRange) return "default-preview";
+    if (!hasUserDateInteraction && defaultPreviewRange && displayRange) {
+      return "default-preview";
+    }
     return null;
-  }, [defaultPreviewRange, displayRange, userRange]);
+  }, [defaultPreviewRange, displayRange, hasUserDateInteraction, userRange]);
 
   const pendingCheckIn =
     userSelectedRange?.start && userSelectedRange.start === userSelectedRange.end
@@ -132,9 +165,11 @@ export function ListingInquiryDatesProvider({
     displayRange != null &&
     meetsMinimumStayNights(displayRange.start, displayRange.end, minimumStayNights);
 
-  function clearDates() {
-    setUserSelectedRange(null);
-  }
+  const clearDates = useCallback(() => {
+    userTouchedDatesRef.current = true;
+    setUserSelectedRangeState(null);
+    syncDateRange(null);
+  }, [syncDateRange]);
 
   return (
     <ListingInquiryDatesContext.Provider

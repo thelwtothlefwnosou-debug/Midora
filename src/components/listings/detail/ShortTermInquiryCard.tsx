@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { ChevronDown } from "lucide-react";
-import { InterestDateRangePicker } from "@/components/availability/InterestDateRangePicker";
+import { InterestDateRangePicker, type DateRangeFocusField } from "@/components/availability/InterestDateRangePicker";
 import { ListingContactCard } from "@/components/listings/ListingContactCard";
 import { ListingPortalDisclaimer } from "@/components/listings/detail/ListingPortalDisclaimer";
 import { useListingInquiryDates } from "@/components/listings/detail/ListingInquiryDatesContext";
@@ -50,6 +50,7 @@ export function ShortTermInquiryCard({
     maxGuests,
   } = useListingInquiryDates();
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [pickerFocus, setPickerFocus] = useState<DateRangeFocusField>("start");
   const [contactOpen, setContactOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
 
@@ -74,9 +75,12 @@ export function ShortTermInquiryCard({
     );
   }, [displayRange, listing, priceRules, guests, periods]);
 
-  const pickerValue =
-    userSelectedRange ??
-    (displayRange ? { start: displayRange.start, end: displayRange.end } : null);
+  const pickerValue = userSelectedRange;
+
+  function openDatePicker(field: DateRangeFocusField) {
+    setPickerFocus(field);
+    setPickerOpen(true);
+  }
 
   const guestLabel = `${guests} ${guests === 1 ? "άτομο" : "άτομα"}`;
   const hasDisplayPrice = Boolean(displayRange && rangeMeetsMinStay && displayPrice);
@@ -165,7 +169,7 @@ export function ShortTermInquiryCard({
       <div className="mt-5 grid gap-3 sm:grid-cols-2">
         <button
           type="button"
-          onClick={() => setPickerOpen(true)}
+          onClick={() => openDatePicker("start")}
           className="flex min-h-12 flex-col justify-center rounded-xl border border-charcoal/12 bg-white px-3.5 py-2 text-left transition-colors hover:border-gold/35"
         >
           <span className="text-[11px] font-medium text-muted">Άφιξη</span>
@@ -177,7 +181,7 @@ export function ShortTermInquiryCard({
         </button>
         <button
           type="button"
-          onClick={() => setPickerOpen(true)}
+          onClick={() => openDatePicker("end")}
           className="flex min-h-12 flex-col justify-center rounded-xl border border-charcoal/12 bg-white px-3.5 py-2 text-left transition-colors hover:border-gold/35"
         >
           <span className="text-[11px] font-medium text-muted">Αναχώρηση</span>
@@ -249,7 +253,7 @@ export function ShortTermInquiryCard({
       <div className="mx-auto flex max-w-6xl items-center gap-3 pb-[env(safe-area-inset-bottom)]">
         <button
           type="button"
-          onClick={() => setPickerOpen(true)}
+          onClick={() => openDatePicker("start")}
           className="min-w-0 flex-1 text-left"
         >
           <p className="listing-price-display text-lg">
@@ -297,6 +301,7 @@ export function ShortTermInquiryCard({
         onOpenChange={setPickerOpen}
         value={pickerValue}
         onApply={setUserSelectedRange}
+        focusField={pickerFocus}
         periods={periods}
         minimumStayNights={minimumStayNights}
         listingId={listing.id}

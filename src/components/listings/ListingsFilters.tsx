@@ -41,6 +41,8 @@ import {
   type ActiveSearchField,
   getPartialDateRangeMessage,
 } from "@/lib/guided-search";
+import { HelpAssistantTrigger } from "@/components/assistant/HelpAssistantContext";
+import { saveLastSearchState } from "@/lib/midora-search-state";
 import { cn } from "@/lib/utils";
 
 export type ListingsFilterValues = {
@@ -89,7 +91,7 @@ type Props = {
 function resolveInitialRentalType(defaults: ListingsFilterValues): RentalType {
   const rt = defaults.rentalType as RentalType;
   if (rt === "short_term" || rt === "monthly") return rt;
-  return "monthly";
+  return "short_term";
 }
 
 const DEFAULT_PRICE_HISTOGRAM = {
@@ -196,7 +198,10 @@ export function ListingsFilters({
     startMonth: defaults.startMonth,
     durationMonths: defaults.durationMonths,
     guests: defaults.guests,
+    pets: defaults.pets,
   };
+
+  const searchShellRef = useRef<HTMLDivElement>(null);
 
   function pickFormField(formData: FormData | null | undefined, name: string, fallback?: string) {
     if (formData) {
@@ -214,6 +219,9 @@ export function ListingsFilters({
   ) {
     const guests = pickFormField(formData, "guests", v.guests);
     if (guests) p.set("guests", guests);
+
+    const pets = pickFormField(formData, "pets", v.pets);
+    if (pets && pets !== "0") p.set("pets", pets);
 
     const propertyType = pickFormField(formData, "propertyType", v.type);
     if (propertyType) p.set("type", propertyType);
@@ -328,7 +336,12 @@ export function ListingsFilters({
   ) {
     const fd = formRef.current ? new FormData(formRef.current) : null;
     const p = buildParams(nextValues, fd, rentalOverride, locationOverride);
-    router.push(p.toString() ? `/listings?${p.toString()}` : "/listings", {
+    if (!p.has("rentalType")) {
+      p.set("rentalType", rentalOverride ?? rentalType);
+    }
+    const qs = p.toString();
+    saveLastSearchState(p);
+    router.push(qs ? `/listings?${qs}` : `/listings?rentalType=${rentalOverride ?? rentalType}`, {
       scroll: false,
     });
   }
@@ -367,7 +380,9 @@ export function ListingsFilters({
       return;
     }
 
-    openDatesAfterLocation();
+    setActiveSearchField(null);
+    setDatePickerOpen(false);
+    setGuestPickerOpen(false);
   }
 
   function clearSearchFields() {
@@ -385,6 +400,7 @@ export function ListingsFilters({
       startMonth: undefined,
       durationMonths: undefined,
       guests: undefined,
+      pets: undefined,
     };
     setSelectedLocation(null);
     setNearbyCoords(null);
@@ -419,6 +435,10 @@ export function ListingsFilters({
             ? next.guestCounts.adults + next.guestCounts.children
             : 0;
         valuePatch.guests = total > 0 ? String(total) : "";
+        valuePatch.pets =
+          next.hasGuestSelection && next.guestCounts && next.guestCounts.pets > 0
+            ? String(next.guestCounts.pets)
+            : "";
       }
       if (patch.startMonth !== undefined) valuePatch.startMonth = next.startMonth;
       if (patch.durationMonths !== undefined) {
@@ -431,25 +451,7 @@ export function ListingsFilters({
     });
   }
 
-  function openDatesAfterLocation() {
-    if (rentalType === "short_term") {
-      setActiveSearchField("dates");
-      setDatePickerOpen(true);
-      return;
-    }
-    const monthInput = formRef.current?.querySelector(
-      'input[name="startMonth"]'
-    ) as HTMLInputElement | null;
-    monthInput?.focus();
-    try {
-      monthInput?.showPicker?.();
-    } catch {
-      /* unsupported */
-    }
-  }
-
-  function applyFilters(e?: React.FormEvent) {
-    e?.preventDefault();
+  function submitSearch() {
     setPartialDateHint(null);
 
     if (rentalType === "short_term") {
@@ -459,7 +461,7 @@ export function ListingsFilters({
       );
       if (hint) {
         setPartialDateHint(hint);
-        setActiveSearchField("dates");
+        setActiveSearchField("checkOut");
         setDatePickerOpen(true);
         return;
       }
@@ -469,6 +471,10 @@ export function ListingsFilters({
     setDatePickerOpen(false);
     setGuestPickerOpen(false);
     navigateWithValues(values);
+  }
+  function applyFilters(e?: React.FormEvent) {
+    e?.preventDefault();
+    submitSearch();
   }
 
   function applyDraftFilters() {
@@ -512,7 +518,9 @@ export function ListingsFilters({
     setSelectedLocation(null);
     setNearbyCoords(null);
     setValues(next);
-    router.push(`/listings?${buildParams(next).toString()}`);
+    const p = buildParams(next);
+    saveLastSearchState(p);
+    router.push(`/listings?${p.toString()}`);
   }
 
   function clearMapArea() {
@@ -532,8 +540,14 @@ export function ListingsFilters({
         </div>
 
         {/* Row 2 — unified search dock */}
-        <div className="listings-search-header__search px-4 pb-4 pt-1 lg:px-[18px]">
-          <div className="listings-search-dock">
+        <div className="listings-search-header__search relative overflow-visible px-4 pb-4 pt-1 lg:px-[18px]">
+          <div
+            ref={searchShellRef}
+            className={cn(
+              "listings-search-dock relative overflow-visible",
+              (datePickerOpen || guestPickerOpen) && "listings-search-dock--popover-open"
+            )}
+          >
             <RentalModeToggle value={rentalType} onChange={handleRentalTypeChange} />
 
             <LocationSearchField
@@ -541,7 +555,11 @@ export function ListingsFilters({
               defaultValue={defaults.city}
               mapAreaActive={Boolean(values.polygon || defaults.polygon)}
               onClearMapArea={clearMapArea}
-              onFocus={() => setActiveSearchField("location")}
+              onFocus={() => {
+                setActiveSearchField("location");
+                setDatePickerOpen(false);
+                setGuestPickerOpen(false);
+              }}
               onValueChange={(v) =>
                 setValues((prev) => ({
                   ...prev,
@@ -580,6 +598,7 @@ export function ListingsFilters({
                 onDatePickerOpenChange: setDatePickerOpen,
                 guestPickerOpen,
                 onGuestPickerOpenChange: setGuestPickerOpen,
+                searchShellRef,
               }}
             />
 
@@ -590,6 +609,12 @@ export function ListingsFilters({
             >
               Καθαρισμός
             </button>
+
+            <HelpAssistantTrigger
+              label="Βοήθεια αναζήτησης"
+              seedQuestion="Πώς βάζω ημερομηνίες στην αναζήτηση;"
+              className="hidden text-sm font-medium text-muted hover:text-gold-dark lg:inline-flex"
+            />
 
             <button
               type="button"

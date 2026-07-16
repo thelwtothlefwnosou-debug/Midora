@@ -2,6 +2,7 @@
 
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import {
+  formatDateKeyDisplay,
   formatMonthYear,
   getCalendarDays,
   getSelectionRole,
@@ -16,6 +17,8 @@ import type { ListingUnavailablePeriod } from "@/lib/unavailable-periods";
 import { cn } from "@/lib/utils";
 
 export type CalendarMode = "owner" | "interest" | "display";
+
+export type UnavailableDayStyle = "default" | "premium-blocked";
 
 type Props = {
   month: Date;
@@ -38,7 +41,20 @@ type Props = {
   compact?: boolean;
   showLegend?: boolean;
   layout?: "responsive" | "dual" | "single";
+  /** Premium blocked styling for public listing availability calendar only. */
+  unavailableDayStyle?: UnavailableDayStyle;
 };
+
+function unavailableDayAriaLabel(
+  dateKey: string,
+  reason: "past" | "blocked" | "min-stay"
+): string {
+  const formatted = formatDateKeyDisplay(dateKey);
+  if (reason === "past") {
+    return `${formatted}, παρελθούσα ημερομηνία, μη διαθέσιμη`;
+  }
+  return `${formatted}, μη διαθέσιμη`;
+}
 
 function DayCell({
   day,
@@ -55,6 +71,7 @@ function DayCell({
   showPrices,
   priceCellSize = "default",
   compact,
+  unavailableDayStyle = "default",
 }: {
   day: CalendarDay;
   mode: CalendarMode;
@@ -70,6 +87,7 @@ function DayCell({
   showPrices?: boolean;
   priceCellSize?: "default" | "large";
   compact?: boolean;
+  unavailableDayStyle?: UnavailableDayStyle;
 }) {
   const unavailable = isDateUnavailable(day.dateKey, periods);
   const past = isPastDate(day.dateKey);
@@ -82,9 +100,21 @@ function DayCell({
   const tooEarlyForMinStay =
     Boolean(selectionStart && !selectionEnd && minimumStayNights && minimumStayNights > 1) &&
     isBeforeMinimumStayEnd(selectionStart!, day.dateKey, minimumStayNights!);
+  const usePremiumBlocked = unavailableDayStyle === "premium-blocked";
+  const premiumBlocked =
+    usePremiumBlocked &&
+    day.inMonth &&
+    !selectionRole &&
+    (past || unavailable || tooEarlyForMinStay);
   const disabled = !day.inMonth || past || mode === "display";
   const interactive =
-    (mode === "owner" || mode === "interest") && day.inMonth && !past && !disabled && onDateClick;
+    (mode === "owner" || mode === "interest") &&
+    day.inMonth &&
+    !disabled &&
+    onDateClick &&
+    (usePremiumBlocked
+      ? !past && !unavailable && !tooEarlyForMinStay
+      : !past);
 
   const sizeClass =
     priceCellSize === "large"
@@ -103,43 +133,53 @@ function DayCell({
   const content = (
     <span
       className={cn(
-        "relative z-10 flex flex-col items-center justify-center font-medium transition-all duration-150",
+        "calendar-day__number relative z-10 flex flex-col items-center justify-center font-medium transition-all duration-150",
         sizeClass,
-        !day.inMonth && "text-transparent",
-        day.inMonth && past && "text-muted/35",
-        day.inMonth && unavailable && !past && !selectionRole && "text-muted",
-        day.inMonth &&
+        premiumBlocked && "calendar-day__number--blocked text-muted/40",
+        !premiumBlocked && !day.inMonth && "text-transparent",
+        !premiumBlocked && day.inMonth && past && "text-muted/35",
+        !premiumBlocked && day.inMonth && unavailable && !past && !selectionRole && "text-muted",
+        !premiumBlocked &&
+          day.inMonth &&
           !unavailable &&
           !past &&
           !selectionRole &&
           tooEarlyForMinStay &&
           "text-muted/50",
-        day.inMonth &&
+        !premiumBlocked &&
+          day.inMonth &&
           !unavailable &&
           !past &&
           !selectionRole &&
           !tooEarlyForMinStay &&
           "text-charcoal",
-        ownerSelected || (charcoalSelection && (selectionRole === "start" || selectionRole === "end"))
-          ? "rounded-full bg-charcoal font-semibold text-white shadow-sm"
-          : selectionRole === "start" || selectionRole === "end"
-            ? "rounded-full bg-gold font-semibold text-white shadow-sm"
-            : selectionRole === "middle"
-              ? "rounded-none font-semibold text-charcoal"
-              : today && day.inMonth && !selectionRole
-                ? "rounded-full font-semibold text-charcoal ring-2 ring-gold/45 ring-offset-1"
-                : "rounded-full"
+        selectionRole === "start" || selectionRole === "end"
+          ? ownerSelected || charcoalSelection
+            ? "rounded-full bg-charcoal font-semibold text-white shadow-sm"
+            : "rounded-full bg-gold font-semibold text-white shadow-sm"
+          : selectionRole === "middle"
+            ? "rounded-none font-semibold text-charcoal"
+            : !premiumBlocked && today && day.inMonth && !selectionRole
+              ? "rounded-full font-semibold text-charcoal ring-2 ring-gold/45 ring-offset-1"
+              : !premiumBlocked
+                ? "rounded-full"
+                : undefined
       )}
     >
       {customPrice && !selectionRole && !unavailable && day.inMonth && !past && (
         <span className="absolute top-1 right-1.5 h-1.5 w-1.5 rounded-full bg-gold" aria-hidden />
       )}
       <span>{day.inMonth ? day.date.getDate() : ""}</span>
-      {unavailable && day.inMonth && !past && !selectionRole && priceCellSize === "large" ? (
+      {!premiumBlocked &&
+      unavailable &&
+      day.inMonth &&
+      !past &&
+      !selectionRole &&
+      priceCellSize === "large" ? (
         <span className="mt-0.5 text-[9px] font-normal leading-none text-muted">
           Μη διαθέσιμο
         </span>
-      ) : nightPrice != null && day.inMonth && !past ? (
+      ) : nightPrice != null && day.inMonth && !past && !premiumBlocked ? (
         <span
           className={cn(
             "mt-0.5 font-medium leading-none",
@@ -161,30 +201,58 @@ function DayCell({
 
   const cellClass = cn(
     "relative flex items-center justify-center",
+    premiumBlocked && "calendar-day--unavailable cursor-not-allowed",
     priceCellSize === "large" && "min-h-[3.5rem] border-b border-r border-border/40",
     !day.inMonth && "pointer-events-none",
-    selectionRole === "middle" &&
+    !premiumBlocked &&
+      selectionRole === "middle" &&
       (charcoalSelection
         ? "bg-charcoal/12 before:absolute before:inset-y-1.5 before:left-0 before:right-0 before:-z-0 before:bg-charcoal/12"
         : "bg-gold/18 before:absolute before:inset-y-1.5 before:left-0 before:right-0 before:-z-0 before:bg-gold/18"),
-    selectionRole === "start" &&
+    !premiumBlocked &&
+      selectionRole === "start" &&
       (charcoalSelection
         ? "bg-charcoal/12 before:absolute before:inset-y-1.5 before:left-1/2 before:right-0 before:-z-0 before:rounded-l-full before:bg-charcoal/12"
         : "bg-gold/18 before:absolute before:inset-y-1.5 before:left-1/2 before:right-0 before:-z-0 before:rounded-l-full before:bg-gold/18"),
-    selectionRole === "end" &&
+    !premiumBlocked &&
+      selectionRole === "end" &&
       (charcoalSelection
         ? "bg-charcoal/12 before:absolute before:inset-y-1.5 before:left-0 before:right-1/2 before:-z-0 before:rounded-r-full before:bg-charcoal/12"
         : "bg-gold/18 before:absolute before:inset-y-1.5 before:left-0 before:right-1/2 before:-z-0 before:rounded-r-full before:bg-gold/18"),
-    unavailable && day.inMonth && !past && !selectionRole && "bg-charcoal/8",
-    weekend && day.inMonth && !past && !unavailable && !selectionRole && "bg-gold/6",
-    tooEarlyForMinStay && day.inMonth && !past && !unavailable && "bg-sand/50",
-    past && day.inMonth && "opacity-45",
+    !premiumBlocked && unavailable && day.inMonth && !past && !selectionRole && "bg-charcoal/8",
+    !premiumBlocked &&
+      weekend &&
+      day.inMonth &&
+      !past &&
+      !unavailable &&
+      !selectionRole &&
+      "bg-gold/6",
+    !premiumBlocked && tooEarlyForMinStay && day.inMonth && !past && !unavailable && "bg-sand/50",
+    !premiumBlocked && past && day.inMonth && "opacity-45",
     interactive && "cursor-pointer hover:bg-gold/8"
   );
 
   if (!interactive) {
+    const blockedReason = premiumBlocked
+      ? past
+        ? "past"
+        : unavailable
+          ? "blocked"
+          : "min-stay"
+      : null;
+
     return (
-      <div className={cellClass} aria-hidden={!day.inMonth}>
+      <div
+        className={cellClass}
+        aria-hidden={!day.inMonth && !premiumBlocked}
+        role={premiumBlocked ? "gridcell" : undefined}
+        aria-disabled={premiumBlocked ? true : undefined}
+        aria-label={
+          premiumBlocked && blockedReason
+            ? unavailableDayAriaLabel(day.dateKey, blockedReason)
+            : undefined
+        }
+      >
         {content}
       </div>
     );
@@ -197,7 +265,7 @@ function DayCell({
       onMouseEnter={() => onDateHover?.(day.dateKey)}
       onMouseLeave={() => onDateHover?.(null)}
       className={cellClass}
-      aria-label={`${day.dateKey}${unavailable ? ", μη διαθέσιμο" : ""}${past ? ", παρελθόν" : ""}${tooEarlyForMinStay ? ", πριν την ελάχιστη διαμονή" : ""}`}
+      aria-label={`${formatDateKeyDisplay(day.dateKey)}${unavailable ? ", μη διαθέσιμο" : ""}${past ? ", παρελθόν" : ""}${tooEarlyForMinStay ? ", πριν την ελάχιστη διαμονή" : ""}`}
     >
       {content}
     </button>
@@ -219,6 +287,7 @@ function MonthGrid({
   showPrices,
   priceCellSize,
   compact,
+  unavailableDayStyle,
 }: Omit<Props, "onPrevMonth" | "onNextMonth" | "className" | "hideHeader">) {
   const days = getCalendarDays(month);
   return (
@@ -248,13 +317,40 @@ function MonthGrid({
           showPrices={showPrices}
           priceCellSize={priceCellSize}
           compact={compact}
+          unavailableDayStyle={unavailableDayStyle}
         />
       ))}
     </div>
   );
 }
 
-function CalendarLegend({ mode }: { mode: CalendarMode }) {
+function CalendarLegend({
+  mode,
+  unavailableDayStyle = "default",
+}: {
+  mode: CalendarMode;
+  unavailableDayStyle?: UnavailableDayStyle;
+}) {
+  if (unavailableDayStyle === "premium-blocked") {
+    return (
+      <div className="mt-4 space-y-2 border-t border-border pt-4 text-xs text-muted">
+        <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
+          <span className="flex items-center gap-2">
+            <span className="h-3.5 w-3.5 rounded-full bg-charcoal" />
+            Επιλεγμένες ημερομηνίες
+          </span>
+          <span className="flex items-center gap-2">
+            <span className="calendar-day-legend-sample relative flex h-3.5 w-3.5 items-center justify-center text-[10px] text-muted/40">
+              0
+            </span>
+            Μη διαθέσιμες ημερομηνίες
+          </span>
+        </div>
+        <p>Στις μη διαθέσιμες περιλαμβάνονται και οι ημερομηνίες στο παρελθόν.</p>
+      </div>
+    );
+  }
+
   return (
     <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-2 border-t border-border pt-4 text-xs text-muted">
       <span className="flex items-center gap-2">
@@ -305,6 +401,7 @@ export function AvailabilityCalendarGrid({
   hideHeader = false,
   compact = false,
   showLegend = true,
+  unavailableDayStyle = "default",
 }: Props) {
   return (
     <div className={cn("select-none", className)}>
@@ -347,9 +444,12 @@ export function AvailabilityCalendarGrid({
         showPrices={showPrices}
         priceCellSize={priceCellSize}
         compact={compact}
+        unavailableDayStyle={unavailableDayStyle}
       />
 
-      {showLegend && <CalendarLegend mode={mode} />}
+      {showLegend && (
+        <CalendarLegend mode={mode} unavailableDayStyle={unavailableDayStyle} />
+      )}
     </div>
   );
 }
@@ -377,6 +477,7 @@ export function AvailabilityCalendarPanel({
   layout = "responsive",
   hideNav = false,
   compact = false,
+  unavailableDayStyle = "default",
 }: Omit<Props, "hideHeader"> & { title?: string; hideNav?: boolean }) {
   const nextMonth = new Date(month.getFullYear(), month.getMonth() + 1, 1);
   const showDual = layout === "dual" || (layout === "responsive");
@@ -446,6 +547,7 @@ export function AvailabilityCalendarPanel({
               showPrices={showPrices}
               priceCellSize={priceCellSize}
               compact={compact}
+              unavailableDayStyle={unavailableDayStyle}
             />
           </div>
           <div>
@@ -467,6 +569,7 @@ export function AvailabilityCalendarPanel({
               showPrices={showPrices}
               priceCellSize={priceCellSize}
               compact={compact}
+              unavailableDayStyle={unavailableDayStyle}
             />
           </div>
         </div>
@@ -491,10 +594,13 @@ export function AvailabilityCalendarPanel({
           showPrices={showPrices}
           priceCellSize={priceCellSize}
           compact={showSingleOnly}
+          unavailableDayStyle={unavailableDayStyle}
         />
       </div>
 
-      {showLegend && <CalendarLegend mode={mode} />}
+      {showLegend && (
+        <CalendarLegend mode={mode} unavailableDayStyle={unavailableDayStyle} />
+      )}
     </div>
   );
 }

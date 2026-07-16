@@ -241,18 +241,3 @@ export function getDateDisabledReason(
   if (isDateUnavailable(dateKey, periods)) return "unavailable";
   return null;
 }
-
-export type CalendarSelectionDebug = {
-  listingId?: string;
-  currentDate: string;
-  selectedStart: string | null;
-  selectedEnd: string | null;
-  minimumStayNights?: number;
-  unavailablePeriods: Pick<ListingUnavailablePeriod, "start_date" | "end_date">[];
-  disabledReason?: string | null;
-};
-
-export function logCalendarSelectionDebug(payload: CalendarSelectionDebug): void {
-  if (process.env.NODE_ENV !== "development") return;
-  console.error("CALENDAR_SELECTION_DEBUG", payload);
-}

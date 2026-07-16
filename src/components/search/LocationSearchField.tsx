@@ -132,7 +132,7 @@ export function LocationSearchField({
         >
           {variant === "toolbar" ? (
             <div className="flex min-w-0 flex-1 flex-col justify-center gap-0.5">
-              <span className="listings-search-segment__label">Προορισμός</span>
+              <span className="listings-search-segment__label">Πού</span>
               <div className="flex min-w-0 items-center gap-2">
                 <PenLine className="h-4 w-4 shrink-0 text-teal" aria-hidden />
                 <span className="listings-search-segment__value text-teal">
@@ -240,7 +240,7 @@ export function LocationSearchField({
           onFocusCapture={() => !hasQuery && setMenuOpen(true)}
         >
           {isToolbar && (
-            <span className="listings-search-segment__label">Προορισμός</span>
+            <span className="listings-search-segment__label">Πού</span>
           )}
           {!isToolbar && variant === "compact" && (
             <span className="text-[9px] font-medium tracking-wide text-muted uppercase">
@@ -252,7 +252,7 @@ export function LocationSearchField({
             defaultValue={defaultValue}
             placeholder={
               isToolbar
-                ? (placeholder ?? "Πού;")
+                ? (placeholder ?? "Προσθήκη προορισμού")
                 : (placeholder ?? "Πόλη ή περιοχή...")
             }
             className="w-full"

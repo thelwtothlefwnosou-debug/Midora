@@ -414,7 +414,11 @@ function buildListingFilters(
     guests: params.guests ? parseInt(params.guests, 10) : undefined,
     minSqm: params.minSqm ? parseInt(params.minSqm, 10) : undefined,
     hasParking: params.parking === "true" ? true : undefined,
-    petsAllowed: params.pets === "true" ? true : undefined,
+    petsAllowed: (() => {
+      const raw = params.pets?.trim();
+      if (!raw || raw === "0" || raw === "false") return undefined;
+      return true;
+    })(),
     cleaningIncluded: params.cleaning === "true" ? true : undefined,
     hasHeating: params.heating === "true" ? true : undefined,
     amenityKeys: parseAmenityFilterParam(params.amenities),

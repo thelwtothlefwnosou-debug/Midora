@@ -4,7 +4,6 @@ import { useCallback, useState } from "react";
 import {
   getDateDisabledReason,
   isRangeSelectable,
-  logCalendarSelectionDebug,
   normalizeDateRange,
 } from "@/lib/availability-calendar";
 import type { ListingUnavailablePeriod } from "@/lib/unavailable-periods";
@@ -19,8 +18,8 @@ type Options = {
 
 export function useDateRangeSelection({
   periods = [],
-  listingId,
-  minimumStayNights,
+  listingId: _listingId,
+  minimumStayNights: _minimumStayNights,
 }: Options = {}) {
   const [selectionStart, setSelectionStart] = useState<string | null>(null);
   const [selectionEnd, setSelectionEnd] = useState<string | null>(null);
@@ -52,47 +51,20 @@ export function useDateRangeSelection({
     (dateKey: string) => {
       const disabledReason = getDateDisabledReason(dateKey, periods);
       if (disabledReason) {
-        logCalendarSelectionDebug({
-          listingId,
-          currentDate: dateKey,
-          selectedStart: selectionStart,
-          selectedEnd: selectionEnd,
-          minimumStayNights,
-          unavailablePeriods: periods,
-          disabledReason,
-        });
         return;
       }
 
       if (!selectionStart || (selectionStart && selectionEnd)) {
         setSelectionStart(dateKey);
         setSelectionEnd(null);
-        logCalendarSelectionDebug({
-          listingId,
-          currentDate: dateKey,
-          selectedStart: dateKey,
-          selectedEnd: null,
-          minimumStayNights,
-          unavailablePeriods: periods,
-          disabledReason: null,
-        });
         return;
       }
 
       const { start, end } = normalizeDateRange(selectionStart, dateKey);
       setSelectionStart(start);
       setSelectionEnd(end);
-      logCalendarSelectionDebug({
-        listingId,
-        currentDate: dateKey,
-        selectedStart: start,
-        selectedEnd: end,
-        minimumStayNights,
-        unavailablePeriods: periods,
-        disabledReason: null,
-      });
     },
-    [listingId, minimumStayNights, periods, selectionEnd, selectionStart]
+    [periods, selectionEnd, selectionStart]
   );
 
   const resolvedRange =

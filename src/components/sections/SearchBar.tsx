@@ -19,7 +19,9 @@ import type { RentalType } from "@/lib/rental-types";
 import {
   type ActiveSearchField,
   getPartialDateRangeMessage,
+  SEARCH_LOCATION_PLACEHOLDER,
 } from "@/lib/guided-search";
+import { saveLastSearchState } from "@/lib/midora-search-state";
 import { cn } from "@/lib/utils";
 
 const HERO_SUGGESTIONS = [
@@ -33,8 +35,8 @@ const HERO_SUGGESTIONS = [
 ] as const;
 
 const LOCATION_PLACEHOLDERS: Record<"short_term" | "monthly", string> = {
-  short_term: "Αθήνα, Πάρος, Θεσσαλονίκη…",
-  monthly: "Αθήνα, Πάτρα, Ηράκλειο…",
+  short_term: SEARCH_LOCATION_PLACEHOLDER,
+  monthly: SEARCH_LOCATION_PLACEHOLDER,
 };
 
 const HERO_LOCATION_INPUT_ID = "hero-search-location";
@@ -42,6 +44,8 @@ const HERO_LOCATION_INPUT_ID = "hero-search-location";
 export function SearchBar() {
   const router = useRouter();
   const formRef = useRef<HTMLFormElement>(null);
+  const heroSearchShellRef = useRef<HTMLDivElement>(null);
+  const heroSearchActionsRef = useRef<HTMLDivElement>(null);
   const [rentalType, setRentalType] = useState<RentalType>("short_term");
   const [selectedLocation, setSelectedLocation] = useState<SearchLocation | null>(null);
   const [nearbyCoords, setNearbyCoords] = useState<{
@@ -61,21 +65,32 @@ export function SearchBar() {
     }
   }
 
-  function openDatesAfterLocation() {
+  function commitLocationSelection() {
+    setActiveField(null);
+    setDatePickerOpen(false);
+    setGuestPickerOpen(false);
+  }
+
+  function submitSearch() {
+    setPartialDateHint(null);
+
     if (rentalType === "short_term") {
-      setActiveField("dates");
-      setDatePickerOpen(true);
-      return;
+      const hint = getPartialDateRangeMessage(
+        guidedState.dateRange?.start,
+        guidedState.dateRange?.end
+      );
+      if (hint) {
+        setPartialDateHint(hint);
+        setActiveField("checkOut");
+        setDatePickerOpen(true);
+        return;
+      }
     }
-    const monthInput = formRef.current?.querySelector(
-      'input[name="startMonth"]'
-    ) as HTMLInputElement | null;
-    monthInput?.focus();
-    try {
-      monthInput?.showPicker?.();
-    } catch {
-      /* unsupported */
-    }
+
+    setActiveField(null);
+    setDatePickerOpen(false);
+    setGuestPickerOpen(false);
+    navigate();
   }
 
   function navigate(extra?: {
@@ -102,30 +117,17 @@ export function SearchBar() {
 
     appendRentalSearchParams(params, data, rt);
 
-    router.push(params.toString() ? `/listings?${params.toString()}` : "/listings");
+    if (!params.has("rentalType") && rt) {
+      params.set("rentalType", rt);
+    }
+    const qs = params.toString();
+    saveLastSearchState(params);
+    router.push(qs ? `/listings?${qs}` : `/listings?rentalType=${rt || rentalType}`);
   }
 
   function handleSearch(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    setPartialDateHint(null);
-
-    if (rentalType === "short_term") {
-      const hint = getPartialDateRangeMessage(
-        guidedState.dateRange?.start,
-        guidedState.dateRange?.end
-      );
-      if (hint) {
-        setPartialDateHint(hint);
-        setActiveField("dates");
-        setDatePickerOpen(true);
-        return;
-      }
-    }
-
-    setActiveField(null);
-    setDatePickerOpen(false);
-    setGuestPickerOpen(false);
-    navigate();
+    submitSearch();
   }
 
   function clearAll() {
@@ -157,7 +159,8 @@ export function SearchBar() {
       <div
         className={cn(
           "rounded-2xl border border-border bg-white/97 p-2.5 shadow-[0_8px_32px_-12px_rgba(26,26,26,0.14)] backdrop-blur-md sm:p-3.5",
-          "ring-1 ring-white/60"
+          "ring-1 ring-white/60",
+          (datePickerOpen || guestPickerOpen) && "search-shell--popover-open"
         )}
       >
         <form
@@ -197,11 +200,13 @@ export function SearchBar() {
           </div>
 
           <div
+            ref={heroSearchShellRef}
             className={cn(
-              "home-hero-search-fields",
+              "home-hero-search-fields relative",
               rentalType === "short_term"
                 ? "home-hero-search-fields--short"
-                : "home-hero-search-fields--monthly"
+                : "home-hero-search-fields--monthly",
+              (datePickerOpen || guestPickerOpen) && "home-hero-search-fields--active"
             )}
           >
             <label
@@ -217,7 +222,7 @@ export function SearchBar() {
                 strokeWidth={1.75}
               />
               <div className="flex min-w-0 flex-1 flex-col justify-center gap-1">
-                <span className="home-search-field-label pointer-events-none">Πού;</span>
+                <span className="home-search-field-label pointer-events-none">Πού</span>
                 <div className="min-w-0">
                   <LocationSearchField
                     variant="embedded"
@@ -227,16 +232,20 @@ export function SearchBar() {
                         ? LOCATION_PLACEHOLDERS.short_term
                         : LOCATION_PLACEHOLDERS.monthly
                     }
-                    onFocus={() => setActiveField("location")}
+                    onFocus={() => {
+                      setActiveField("location");
+                      setDatePickerOpen(false);
+                      setGuestPickerOpen(false);
+                    }}
                     onSelect={(loc) => {
                       setSelectedLocation(loc);
                       if (loc.kind !== "nearby") setNearbyCoords(null);
-                      openDatesAfterLocation();
+                      commitLocationSelection();
                     }}
                     onNearbySelect={(coords) => {
                       setNearbyCoords(coords);
                       setSelectedLocation(null);
-                      openDatesAfterLocation();
+                      commitLocationSelection();
                     }}
                     onDrawSearch={(polygon) => navigate({ polygon })}
                   />
@@ -257,11 +266,13 @@ export function SearchBar() {
                 onDatePickerOpenChange: setDatePickerOpen,
                 guestPickerOpen,
                 onGuestPickerOpenChange: setGuestPickerOpen,
+                searchShellRef: heroSearchShellRef,
+                ignoreRefs: [heroSearchActionsRef],
               }}
             />
           </div>
 
-          <div className="flex flex-wrap items-center gap-2">
+          <div ref={heroSearchActionsRef} className="flex flex-wrap items-center gap-2">
             <button type="submit" className="home-btn-primary home-hero-search-submit min-w-0 flex-1">
               <Search className="h-4 w-4" />
               Αναζήτηση

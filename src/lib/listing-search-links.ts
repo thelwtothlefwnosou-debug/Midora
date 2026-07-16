@@ -1,5 +1,7 @@
 import { stayNightsBetween } from "@/lib/availability-calendar";
+import { copySearchParams } from "@/lib/midora-search-state";
 import { formatListingPrice, listingRentalType } from "@/lib/rental-types";
+import { getListingPublicId } from "@/lib/utils";
 import {
   computeDefaultIndicativeStayPrice,
   computeIndicativeStayPrice,
@@ -12,37 +14,16 @@ import {
 import type { Listing, ListingPriceRule } from "@/lib/types";
 import type { ListingUnavailablePeriod } from "@/lib/unavailable-periods";
 
-const STAY_QUERY_KEYS = [
-  "rentalType",
-  "interestFrom",
-  "interestTo",
-  "start",
-  "end",
-  "startMonth",
-  "durationMonths",
-  "guests",
-] as const;
-
-/** Preserve search dates / duration when opening a listing from results. */
+/** Preserve search context when opening a listing from results. */
 export function buildListingDetailHref(
   listing: { id: string; slug?: string | null },
   searchParams?: URLSearchParams | string | null
 ): string {
-  const base = `/listings/${listing.id}`;
+  const base = `/listings/${getListingPublicId(listing)}`;
 
   if (!searchParams) return base;
 
-  const source =
-    typeof searchParams === "string"
-      ? new URLSearchParams(searchParams)
-      : searchParams;
-
-  const next = new URLSearchParams();
-  for (const key of STAY_QUERY_KEYS) {
-    const value = source.get(key)?.trim();
-    if (value) next.set(key, value);
-  }
-
+  const next = copySearchParams(searchParams);
   const qs = next.toString();
   return qs ? `${base}?${qs}` : base;
 }

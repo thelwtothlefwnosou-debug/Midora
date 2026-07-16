@@ -1,25 +1,31 @@
 "use client";
 
-import { useId, useState } from "react";
+import { useId, useRef } from "react";
 import { Calendar, Clock, Users } from "lucide-react";
 import {
   InterestDateRangePicker,
+  type DateRangeFocusField,
   type DateRangeValue,
 } from "@/components/availability/InterestDateRangePicker";
 import {
+  EMPTY_GUEST_COUNTS,
   GuestPicker,
-  formatGuestTileLabel,
   guestCountsToSearchTotal,
+  parseGuestSearchParam,
   type GuestCounts,
 } from "@/components/search/GuestPicker";
 import { SearchInteractiveTile, HeroSearchField } from "@/components/search/SearchInteractiveTile";
 import { MID_TERM_DURATION_OPTIONS } from "@/lib/search-interest-dates";
 import {
   type ActiveSearchField,
-  SEARCH_DATE_ANYTIME_LABEL,
-  SEARCH_GUESTS_LABEL,
-  formatSearchDateLabel,
   isCompleteDateRange,
+  SEARCH_DATE_PLACEHOLDER,
+  SEARCH_GUESTS_EMPTY_LABEL,
+  SEARCH_GUESTS_FIELD_LABEL,
+  formatGuestSearchLabel,
+  formatSearchCheckInLabel,
+  formatSearchCheckOutLabel,
+  petsCountToParam,
 } from "@/lib/guided-search";
 import { isPastMonthInAthens } from "@/lib/dates-athens";
 import { minSearchMonthValue } from "@/lib/search-date-validation";
@@ -39,7 +45,7 @@ export type GuidedSearchState = {
 
 export const EMPTY_GUIDED_SEARCH: GuidedSearchState = {
   dateRange: null,
-  guestCounts: { adults: 2, children: 0, infants: 0 },
+  guestCounts: { ...EMPTY_GUEST_COUNTS },
   hasGuestSelection: false,
   startMonth: "",
   durationMonths: "",
@@ -52,6 +58,10 @@ type GuidedFlowProps = {
   onDatePickerOpenChange: (open: boolean) => void;
   guestPickerOpen: boolean;
   onGuestPickerOpenChange: (open: boolean) => void;
+  /** Anchor popovers below the search bar (hero + listings page). */
+  searchShellRef?: React.RefObject<HTMLElement | null>;
+  /** Keep popover open when clicking search actions outside the shell. */
+  ignoreRefs?: React.RefObject<HTMLElement | null>[];
 };
 
 type Props = {
@@ -67,8 +77,12 @@ type Props = {
     startMonth?: string;
     durationMonths?: string;
     guests?: string;
+    pets?: string;
   };
 };
+
+const searchFieldButtonClass =
+  "flex min-h-[22px] w-full items-center border-0 bg-transparent p-0 text-left text-[15px] leading-snug text-charcoal outline-none";
 
 function ShortTermGuidedFields({
   variant,
@@ -78,6 +92,9 @@ function ShortTermGuidedFields({
   partialDateHint,
 }: Omit<Props, "rentalType" | "defaults"> & { rentalType: "short_term" }) {
   const isSearch = variant === "search";
+  const checkInAnchorRef = useRef<HTMLDivElement>(null);
+  const checkOutAnchorRef = useRef<HTMLDivElement>(null);
+  const guestsAnchorRef = useRef<HTMLDivElement>(null);
   const {
     activeField,
     onActiveFieldChange,
@@ -85,24 +102,45 @@ function ShortTermGuidedFields({
     onDatePickerOpenChange,
     guestPickerOpen,
     onGuestPickerOpenChange,
+    searchShellRef,
+    ignoreRefs,
   } = guidedFlow;
 
-  const dateLabel = formatSearchDateLabel(state.dateRange);
-  const guestLabel = state.hasGuestSelection
-    ? formatGuestTileLabel(state.guestCounts)
-    : SEARCH_GUESTS_LABEL;
+  const datesSegmentActive =
+    datePickerOpen ||
+    activeField === "dates" ||
+    activeField === "checkIn" ||
+    activeField === "checkOut";
+
+  const checkInLabel = formatSearchCheckInLabel(state.dateRange);
+  const checkOutLabel = formatSearchCheckOutLabel(state.dateRange);
+  const guestLabel = formatGuestSearchLabel(state.guestCounts, state.hasGuestSelection);
+
+  const dateFocus: DateRangeFocusField =
+    activeField === "checkOut" ? "end" : "start";
+
+  function openDates(focus: DateRangeFocusField) {
+    onActiveFieldChange(focus === "end" ? "checkOut" : "dates");
+    onGuestPickerOpenChange(false);
+    onDatePickerOpenChange(true);
+  }
 
   function applyDateRange(next: DateRangeValue) {
     onStateChange({ dateRange: next });
     if (isCompleteDateRange(next)) {
+      onGuestPickerOpenChange(false);
       onDatePickerOpenChange(false);
-      onActiveFieldChange("guests");
-      onGuestPickerOpenChange(true);
+      onActiveFieldChange(null);
     }
   }
 
   function applyGuests(next: GuestCounts) {
-    onStateChange({ guestCounts: next, hasGuestSelection: true });
+    const hasSelection =
+      next.adults + next.children > 0 || next.infants > 0 || next.pets > 0;
+    onStateChange({
+      guestCounts: next,
+      hasGuestSelection: hasSelection,
+    });
     onGuestPickerOpenChange(false);
     onActiveFieldChange(null);
   }
@@ -120,8 +158,15 @@ function ShortTermGuidedFields({
             : ""
         }
       />
+      <input
+        type="hidden"
+        name="pets"
+        value={petsCountToParam(state.guestCounts, state.hasGuestSelection)}
+      />
     </>
   );
+
+  const popoverAnchor = searchShellRef ?? checkInAnchorRef;
 
   const datePicker = (
     <InterestDateRangePicker
@@ -132,14 +177,17 @@ function ShortTermGuidedFields({
       }}
       value={state.dateRange}
       onApply={applyDateRange}
-      focusField="start"
+      focusField={dateFocus}
       showLegend={false}
       showPrices={false}
       autoApplyOnComplete
       closeOnAutoApply
-      title="Πότε;"
-      subtitle="Οποιαδήποτε στιγμή ή επίλεξε περίοδο διαμονής"
-      applyLabel="Εφαρμογή"
+      title=""
+      subtitle=""
+      clearLabel="Εκκαθάριση ημερομηνιών"
+      presentation="popover"
+      anchorRef={popoverAnchor}
+      ignoreRefs={ignoreRefs}
     />
   );
 
@@ -152,126 +200,219 @@ function ShortTermGuidedFields({
       }}
       value={state.guestCounts}
       onApply={applyGuests}
-      showInfants={false}
+      showInfants
+      presentation="popover"
+      anchorRef={guestsAnchorRef}
+      ignoreRefs={ignoreRefs}
+      onClear={() =>
+        onStateChange({
+          guestCounts: { ...EMPTY_GUEST_COUNTS },
+          hasGuestSelection: false,
+        })
+      }
     />
   );
 
-  if (isSearch) {
-    return (
-      <>
-        {hiddenInputs}
-        <div className="flex min-w-0 flex-1 items-stretch">
-          <div
-            className={cn(
-              "listings-search-segment listings-search-segment--grow min-w-0 flex-1 sm:min-w-[9.5rem]",
+  const checkInSegment = (
+    <div
+      ref={checkInAnchorRef}
+      className={cn(
+        isSearch
+          ? cn(
+              "listings-search-segment min-w-0 flex-1 sm:min-w-[5.5rem]",
               "listings-search-segment--divided",
-              activeField === "dates" && "listings-search-segment--active"
+              datesSegmentActive && "listings-search-segment--active"
+            )
+          : cn(
+              "home-hero-search-cell home-search-field relative w-full text-left transition-colors hover:bg-[#faf6ef]",
+              datesSegmentActive &&
+                "z-[1] bg-[#f7f0e6] ring-1 ring-inset ring-gold/55"
+            )
+      )}
+    >
+      {isSearch ? (
+        <>
+          <span className="listings-search-segment__label">Άφιξη</span>
+          <button
+            type="button"
+            onClick={() => openDates("start")}
+            className={cn(
+              searchFieldButtonClass,
+              checkInLabel === SEARCH_DATE_PLACEHOLDER && "text-charcoal/45"
             )}
           >
-            <span className="listings-search-segment__label">Πότε;</span>
-            <button
-              type="button"
-              onClick={() => {
-                onActiveFieldChange("dates");
-                onDatePickerOpenChange(true);
-              }}
+            {checkInLabel}
+          </button>
+        </>
+      ) : (
+        <button
+          type="button"
+          onClick={() => openDates("start")}
+          className="flex h-full w-full items-center gap-3 px-4 py-3 text-left"
+        >
+          <Calendar
+            className="pointer-events-none h-[18px] w-[18px] shrink-0 text-gold/85"
+            strokeWidth={1.75}
+          />
+          <div className="pointer-events-none flex min-w-0 flex-1 flex-col justify-center gap-1">
+            <span className="home-search-field-label">Άφιξη</span>
+            <span
               className={cn(
-                "flex min-h-[22px] w-full items-center border-0 bg-transparent p-0 text-left text-[15px] leading-snug text-charcoal outline-none",
-                dateLabel === SEARCH_DATE_ANYTIME_LABEL && "text-charcoal/45"
+                "text-sm text-charcoal",
+                checkInLabel === SEARCH_DATE_PLACEHOLDER && "text-muted/55"
               )}
             >
-              {dateLabel}
-            </button>
-            {partialDateHint ? (
-              <p className="mt-0.5 text-[11px] leading-snug text-muted">{partialDateHint}</p>
-            ) : null}
+              {checkInLabel}
+            </span>
           </div>
+        </button>
+      )}
+    </div>
+  );
 
-          <div
-            className={cn(
-              "listings-search-segment min-w-0 shrink-0 sm:min-w-[6.5rem] sm:max-w-[8.5rem]",
+  const checkOutSegment = (
+    <div
+      ref={checkOutAnchorRef}
+      className={cn(
+        isSearch
+          ? cn(
+              "listings-search-segment min-w-0 flex-1 sm:min-w-[5.5rem]",
               "listings-search-segment--divided",
-              activeField === "guests" && "listings-search-segment--active"
+              datesSegmentActive && "listings-search-segment--active"
+            )
+          : cn(
+              "home-hero-search-cell home-search-field relative w-full text-left transition-colors hover:bg-[#faf6ef]",
+              datesSegmentActive &&
+                "z-[1] bg-[#f7f0e6] ring-1 ring-inset ring-gold/55"
+            )
+      )}
+    >
+      {isSearch ? (
+        <>
+          <span className="listings-search-segment__label">Αναχώρηση</span>
+          <button
+            type="button"
+            onClick={() => openDates("end")}
+            className={cn(
+              searchFieldButtonClass,
+              checkOutLabel === SEARCH_DATE_PLACEHOLDER && "text-charcoal/45"
             )}
           >
-            <span className="listings-search-segment__label">{SEARCH_GUESTS_LABEL}</span>
-            <button
-              type="button"
-              onClick={() => {
-                onActiveFieldChange("guests");
-                onGuestPickerOpenChange(true);
-              }}
+            {checkOutLabel}
+          </button>
+          {partialDateHint ? (
+            <p className="mt-0.5 text-[11px] leading-snug text-muted">{partialDateHint}</p>
+          ) : null}
+        </>
+      ) : (
+        <button
+          type="button"
+          onClick={() => openDates("end")}
+          className="flex h-full w-full items-center gap-3 px-4 py-3 text-left"
+        >
+          <Calendar
+            className="pointer-events-none h-[18px] w-[18px] shrink-0 text-gold/85"
+            strokeWidth={1.75}
+          />
+          <div className="pointer-events-none flex min-w-0 flex-1 flex-col justify-center gap-1">
+            <span className="home-search-field-label">Αναχώρηση</span>
+            <span
               className={cn(
-                "flex min-h-[22px] w-full items-center border-0 bg-transparent p-0 text-left text-[15px] leading-snug text-charcoal outline-none",
-                !state.hasGuestSelection && "text-charcoal/45"
+                "text-sm text-charcoal",
+                checkOutLabel === SEARCH_DATE_PLACEHOLDER && "text-muted/55"
+              )}
+            >
+              {checkOutLabel}
+            </span>
+          </div>
+        </button>
+      )}
+    </div>
+  );
+
+  const guestsSegment = (
+    <div
+      ref={guestsAnchorRef}
+      className={cn(
+        isSearch
+          ? cn(
+              "listings-search-segment min-w-0 shrink-0 sm:min-w-[6.5rem] sm:max-w-[9rem]",
+              "listings-search-segment--divided",
+              activeField === "guests" && "listings-search-segment--active"
+            )
+          : cn(
+              "home-hero-search-cell home-search-field relative w-full text-left transition-colors hover:bg-[#faf6ef]",
+              activeField === "guests" && "z-[1] bg-[#f7f0e6] ring-1 ring-inset ring-gold/55"
+            )
+      )}
+    >
+      {isSearch ? (
+        <>
+          <span className="listings-search-segment__label">{SEARCH_GUESTS_FIELD_LABEL}</span>
+          <button
+            type="button"
+            onClick={() => {
+              onActiveFieldChange("guests");
+              onDatePickerOpenChange(false);
+              onGuestPickerOpenChange(true);
+            }}
+            className={cn(
+              searchFieldButtonClass,
+              guestLabel === SEARCH_GUESTS_EMPTY_LABEL && "text-charcoal/45"
+            )}
+          >
+            {guestLabel}
+          </button>
+        </>
+      ) : (
+        <button
+          type="button"
+          onClick={() => {
+            onActiveFieldChange("guests");
+            onDatePickerOpenChange(false);
+            onGuestPickerOpenChange(true);
+          }}
+          className="flex h-full w-full items-center gap-3 px-4 py-3 text-left"
+        >
+          <Users
+            className="pointer-events-none h-[18px] w-[18px] shrink-0 text-gold/85"
+            strokeWidth={1.75}
+          />
+          <div className="pointer-events-none flex min-w-0 flex-1 flex-col justify-center gap-1">
+            <span className="home-search-field-label">{SEARCH_GUESTS_FIELD_LABEL}</span>
+            <span
+              className={cn(
+                "text-sm text-charcoal",
+                guestLabel === SEARCH_GUESTS_EMPTY_LABEL && "text-muted/55"
               )}
             >
               {guestLabel}
-            </button>
+            </span>
           </div>
-        </div>
-        {datePicker}
-        {guestPicker}
-      </>
-    );
-  }
+        </button>
+      )}
+    </div>
+  );
 
   return (
     <>
       {hiddenInputs}
-
-      <SearchInteractiveTile
-        active={activeField === "dates"}
-        onClick={() => {
-          onActiveFieldChange("dates");
-          onDatePickerOpenChange(true);
-        }}
-      >
-        <Calendar
-          className="pointer-events-none h-[18px] w-[18px] shrink-0 text-gold/85"
-          strokeWidth={1.75}
-        />
-        <div className="pointer-events-none flex min-w-0 flex-1 flex-col justify-center gap-1">
-          <span className="home-search-field-label">Πότε;</span>
-          <span
-            className={cn(
-              "w-full min-w-0 bg-transparent text-left text-sm text-charcoal outline-none",
-              dateLabel === SEARCH_DATE_ANYTIME_LABEL && "text-muted/55"
-            )}
-          >
-            {dateLabel}
-          </span>
+      {isSearch ? (
+        <div className="flex min-w-0 flex-1 items-stretch">
+          {checkInSegment}
+          {checkOutSegment}
+          {guestsSegment}
         </div>
-      </SearchInteractiveTile>
-
-      <SearchInteractiveTile
-        active={activeField === "guests"}
-        onClick={() => {
-          onActiveFieldChange("guests");
-          onGuestPickerOpenChange(true);
-        }}
-      >
-        <Users
-          className="pointer-events-none h-[18px] w-[18px] shrink-0 text-gold/85"
-          strokeWidth={1.75}
-        />
-        <div className="pointer-events-none flex min-w-0 flex-1 flex-col justify-center gap-1">
-          <span className="home-search-field-label">{SEARCH_GUESTS_LABEL}</span>
-          <span
-            className={cn(
-              "w-full min-w-0 bg-transparent text-left text-sm text-charcoal outline-none",
-              !state.hasGuestSelection && "text-muted/55"
-            )}
-          >
-            {guestLabel}
-          </span>
-        </div>
-      </SearchInteractiveTile>
-
-      {partialDateHint ? (
+      ) : (
+        <>
+          {checkInSegment}
+          {checkOutSegment}
+          {guestsSegment}
+        </>
+      )}
+      {!isSearch && partialDateHint ? (
         <p className="col-span-full px-3 py-1 text-xs text-muted">{partialDateHint}</p>
       ) : null}
-
       {datePicker}
       {guestPicker}
     </>
@@ -288,6 +429,7 @@ function MonthlyGuidedFields({
   const isSearch = variant === "search";
   const startMonthId = useId();
   const durationId = useId();
+  const guestsAnchorRef = useRef<HTMLDivElement>(null);
   const minMonth = minSearchMonthValue();
   const { activeField, onActiveFieldChange, guestPickerOpen, onGuestPickerOpenChange } =
     guidedFlow;
@@ -295,12 +437,15 @@ function MonthlyGuidedFields({
   const safeMonth =
     state.startMonth && !isPastMonthInAthens(state.startMonth) ? state.startMonth : "";
 
-  const guestLabel = state.hasGuestSelection
-    ? formatGuestTileLabel(state.guestCounts)
-    : SEARCH_GUESTS_LABEL;
+  const guestLabel = formatGuestSearchLabel(state.guestCounts, state.hasGuestSelection);
 
   function applyGuests(next: GuestCounts) {
-    onStateChange({ guestCounts: next, hasGuestSelection: true });
+    const hasSelection =
+      next.adults + next.children > 0 || next.infants > 0 || next.pets > 0;
+    onStateChange({
+      guestCounts: next,
+      hasGuestSelection: hasSelection,
+    });
     onGuestPickerOpenChange(false);
     onActiveFieldChange(null);
   }
@@ -312,18 +457,18 @@ function MonthlyGuidedFields({
         "listings-search-segment--divided"
       )}
     >
-      <span className="listings-search-segment__label">Μήνας έναρξης</span>
+      <span className="listings-search-segment__label">Έναρξη</span>
       <input
         type="month"
         name="startMonth"
         value={safeMonth}
         min={minMonth}
         onChange={(e) => onStateChange({ startMonth: e.target.value })}
-        className="flex min-h-[22px] w-full items-center border-0 bg-transparent p-0 text-left text-[15px] leading-snug text-charcoal outline-none"
+        className={searchFieldButtonClass}
       />
     </div>
   ) : (
-    <HeroSearchField icon={Calendar} label="Μήνας έναρξης" fieldId={startMonthId} openPicker>
+    <HeroSearchField icon={Calendar} label="Έναρξη" fieldId={startMonthId} openPicker>
       <input
         id={startMonthId}
         type="month"
@@ -379,13 +524,14 @@ function MonthlyGuidedFields({
 
   const guestsField = isSearch ? (
     <div
+      ref={guestsAnchorRef}
       className={cn(
-        "listings-search-segment min-w-0 shrink-0 sm:min-w-[6.5rem] sm:max-w-[8.5rem]",
+        "listings-search-segment min-w-0 shrink-0 sm:min-w-[6.5rem] sm:max-w-[9rem]",
         "listings-search-segment--divided",
         activeField === "guests" && "listings-search-segment--active"
       )}
     >
-      <span className="listings-search-segment__label">{SEARCH_GUESTS_LABEL}</span>
+      <span className="listings-search-segment__label">Άτομα</span>
       <button
         type="button"
         onClick={() => {
@@ -393,8 +539,8 @@ function MonthlyGuidedFields({
           onGuestPickerOpenChange(true);
         }}
         className={cn(
-          "flex min-h-[22px] w-full items-center border-0 bg-transparent p-0 text-left text-[15px] leading-snug text-charcoal outline-none",
-          !state.hasGuestSelection && "text-charcoal/45"
+          searchFieldButtonClass,
+          guestLabel === SEARCH_GUESTS_EMPTY_LABEL && "text-charcoal/45"
         )}
       >
         {guestLabel}
@@ -413,11 +559,11 @@ function MonthlyGuidedFields({
         strokeWidth={1.75}
       />
       <div className="pointer-events-none flex min-w-0 flex-1 flex-col justify-center gap-1">
-        <span className="home-search-field-label">{SEARCH_GUESTS_LABEL}</span>
+        <span className="home-search-field-label">Άτομα</span>
         <span
           className={cn(
             heroInputClass,
-            !state.hasGuestSelection && "text-muted/55"
+            guestLabel === SEARCH_GUESTS_EMPTY_LABEL && "text-muted/55"
           )}
         >
           {guestLabel}
@@ -437,9 +583,24 @@ function MonthlyGuidedFields({
             : ""
         }
       />
-      {monthField}
-      {durationField}
-      {guestsField}
+      <input
+        type="hidden"
+        name="pets"
+        value={petsCountToParam(state.guestCounts, state.hasGuestSelection)}
+      />
+      {isSearch ? (
+        <div className="flex min-w-0 flex-1 items-stretch">
+          {monthField}
+          {durationField}
+          {guestsField}
+        </div>
+      ) : (
+        <>
+          {monthField}
+          {durationField}
+          {guestsField}
+        </>
+      )}
       <GuestPicker
         open={guestPickerOpen}
         onOpenChange={(open) => {
@@ -448,7 +609,15 @@ function MonthlyGuidedFields({
         }}
         value={state.guestCounts}
         onApply={applyGuests}
-        showInfants={false}
+        showInfants
+        presentation="popover"
+        anchorRef={guestsAnchorRef}
+        onClear={() =>
+          onStateChange({
+            guestCounts: { ...EMPTY_GUEST_COUNTS },
+            hasGuestSelection: false,
+          })
+        }
       />
     </>
   );
@@ -467,15 +636,15 @@ export function GuidedSearchFields(props: Props) {
 export function guidedStateFromDefaults(defaults?: Props["defaults"]): GuidedSearchState {
   const from = defaults?.interestFrom?.trim();
   const to = defaults?.interestTo?.trim();
-  const guestsRaw = defaults?.guests?.trim();
-  const guestsNum = guestsRaw ? parseInt(guestsRaw, 10) : 0;
+  const { counts, hasSelection } = parseGuestSearchParam(
+    defaults?.guests,
+    defaults?.pets
+  );
 
   return {
     dateRange: from && to && from !== to ? { start: from, end: to } : null,
-    guestCounts: guestsNum > 0
-      ? { adults: guestsNum, children: 0, infants: 0 }
-      : { adults: 2, children: 0, infants: 0 },
-    hasGuestSelection: guestsNum > 0,
+    guestCounts: counts,
+    hasGuestSelection: hasSelection,
     startMonth: defaults?.startMonth?.trim() ?? "",
     durationMonths: defaults?.durationMonths?.trim() ?? "",
   };
