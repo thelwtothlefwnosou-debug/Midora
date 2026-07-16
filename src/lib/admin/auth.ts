@@ -22,7 +22,8 @@ export async function promoteAdminFromEmail(userId: string, email: string | null
   if (!isAdminEmail(email)) return;
   const db = createServiceClient();
   if (!db) return;
-  await db.from("profiles").update({ role: "admin", email: email ?? null }).eq("id", userId);
+  // Only promote role. Do not write profiles.email — column may be absent / is not the source of truth (auth.users).
+  await db.from("profiles").update({ role: "admin" }).eq("id", userId);
 }
 
 export async function isAdmin(userId: string): Promise<boolean> {

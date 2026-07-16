@@ -3,27 +3,44 @@ import Image from "next/image";
 import { Home } from "lucide-react";
 import { COHOST_PERMISSION_LEVEL_LABELS } from "@/lib/listing-cohost-permissions";
 import { getCohostManagedListings } from "@/lib/listing-cohosts-db";
+import { pickListingCoverPhotoUrl } from "@/lib/listing-media";
+import { getListingPublicId } from "@/lib/utils";
 import { profileDisplayName } from "@/lib/profile-display";
+import type { ListingCohost, ListingWithImages, Profile } from "@/lib/types";
 
-export async function CohostManagedListingsSection({ userId }: { userId: string }) {
-  const items = await getCohostManagedListings(userId);
+export type CohostManagedListingItem = {
+  cohost: ListingCohost;
+  listing: ListingWithImages;
+  ownerProfile: Pick<Profile, "id" | "full_name" | "display_name"> | null;
+};
+
+type Props = {
+  userId: string;
+  items?: CohostManagedListingItem[];
+  prominent?: boolean;
+};
+
+export async function CohostManagedListingsSection({
+  userId,
+  items: itemsProp,
+  prominent = false,
+}: Props) {
+  const items = itemsProp ?? (await getCohostManagedListings(userId));
   if (!items.length) return null;
 
   return (
-    <section className="mt-10">
+    <section className={prominent ? "mb-8" : "mt-10"}>
       <h2 className="font-display text-lg font-semibold text-charcoal">
         Αγγελίες που διαχειρίζομαι
       </h2>
       <p className="mt-1 text-sm text-muted">
-        Ακίνητα όπου είσαι συνοικοδεσπότης με ενεργή πρόσκληση.
+        {prominent
+          ? "Εδώ εμφανίζονται τα ακίνητα όπου είσαι συνοικοδεσπότης — πάτα μία για να δεις την αγγελία."
+          : "Ακίνητα όπου είσαι συνοικοδεσπότης με ενεργή πρόσκληση."}
       </p>
       <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {items.map(({ cohost, listing, ownerProfile }) => {
-          const images = listing.listing_images ?? [];
-          const cover =
-            images
-              .filter((i) => i.media_type !== "video")
-              .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))[0]?.url ?? null;
+          const cover = pickListingCoverPhotoUrl(listing);
           const location = [
             listing.area_display_name || listing.area,
             listing.city_display_name || listing.city,
@@ -35,7 +52,7 @@ export async function CohostManagedListingsSection({ userId }: { userId: string 
           return (
             <Link
               key={cohost.id}
-              href={`/dashboard/listings/${listing.id}`}
+              href={`/listings/${getListingPublicId(listing)}`}
               className="overflow-hidden rounded-2xl border border-border bg-white shadow-soft transition-shadow hover:shadow-md"
             >
               <div className="relative h-36 bg-sand">

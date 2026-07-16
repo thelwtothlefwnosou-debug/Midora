@@ -1,6 +1,6 @@
 /** Safe internal path after login — never bounce back to homepage or auth screens. */
 export function safePostAuthPath(path: string | null | undefined): string {
-  const value = path?.trim() || "/dashboard";
+  const value = path?.trim() || "/dashboard/profile";
   if (!value.startsWith("/") || value.startsWith("//")) return "/dashboard";
   if (
     value === "/" ||

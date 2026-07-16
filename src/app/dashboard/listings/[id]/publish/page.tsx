@@ -1,5 +1,6 @@
 import { ListingPublishPanel } from "@/components/dashboard/listing-workspace/ListingPublishPanel";
 import { requireDashboardContext } from "@/lib/dashboard-context";
+import { getOwnerListingExternalLinks } from "@/lib/listing-external-links-db";
 import { loadListingWorkspace } from "@/lib/listing-workspace-server";
 import { formatOwnerListingDate } from "@/lib/dashboard-listings";
 import { getListingPublicId } from "@/lib/utils";
@@ -15,6 +16,8 @@ export default async function ListingPublishPage({
   const { listing, ownerStatusKey, ownerStatusLabel } = ctx;
   const isFree = process.env.NEXT_PUBLIC_FREE_LISTINGS === "true";
   const publicId = getListingPublicId(listing);
+  const externalLinks = await getOwnerListingExternalLinks(id, profile.id);
+  const publicExternalLinkCount = externalLinks.filter((l) => l.is_public).length;
 
   return (
     <ListingPublishPanel
@@ -25,6 +28,8 @@ export default async function ListingPublishPage({
       expiresLabel={formatOwnerListingDate(listing.expires_at)}
       publishedLabel={formatOwnerListingDate(listing.published_at)}
       isFree={isFree}
+      externalLinkCount={externalLinks.length}
+      publicExternalLinkCount={publicExternalLinkCount}
     />
   );
 }

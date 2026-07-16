@@ -1,6 +1,7 @@
 import "server-only";
 
 import { createClient } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/service";
 import { PUBLIC_COHOST_PROFILE_SELECT } from "@/lib/profile-contact-select";
 import type { ListingCohost, ListingCohostWithProfile, ListingWithImages, Profile } from "@/lib/types";
 import { MAX_COHOSTS_PER_LISTING } from "@/lib/listing-cohost-permissions";
@@ -83,7 +84,8 @@ export async function getAcceptedPublicCohosts(
 
   if (!userIds.length) return [];
 
-  const { data: profileRows } = await supabase
+  const profileClient = createServiceClient() ?? supabase;
+  const { data: profileRows } = await profileClient
     .from("profiles")
     .select(PUBLIC_COHOST_PROFILE_SELECT)
     .in("id", userIds);
@@ -112,19 +114,71 @@ export async function getCohostManagedListings(
 
   const { data: memberships, error } = await supabase
     .from("listing_cohosts")
-    .select(
-      "*, listings(id, title, area, city, area_display_name, city_display_name, user_id, listing_images(url, media_type, sort_order))"
-    )
+    .select("*")
     .eq("cohost_user_id", userId)
     .eq("status", "accepted")
     .order("accepted_at", { ascending: false });
 
   if (error || !memberships?.length) return [];
 
+  const listingIds = memberships
+    .map((m) => m.listing_id)
+    .filter((id): id is string => Boolean(id));
+  if (!listingIds.length) return [];
+
+  const listingSelect =
+    "id, slug, title, area, city, area_display_name, city_display_name, user_id";
+
+  async function loadListingRows(
+    client: NonNullable<ReturnType<typeof createServiceClient>> | Awaited<ReturnType<typeof createClient>>
+  ) {
+    const { data, error } = await client!
+      .from("listings")
+      .select(listingSelect)
+      .in("id", listingIds);
+    if (error || !data?.length) return null;
+    return data as ListingWithImages[];
+  }
+
+  let listingRows = await loadListingRows(supabase);
+  if (!listingRows?.length) {
+    const service = createServiceClient();
+    if (service) listingRows = await loadListingRows(service);
+  }
+  if (!listingRows?.length) return [];
+
+  const service = createServiceClient() ?? supabase;
+  const { data: imageRows } = await service
+    .from("listing_images")
+    .select("listing_id, url, is_cover, media_type, sort_order")
+    .in("listing_id", listingIds);
+
+  const imagesByListing = new Map<string, ListingWithImages["listing_images"]>();
+  for (const row of imageRows ?? []) {
+    const listingId = row.listing_id as string;
+    const bucket = imagesByListing.get(listingId) ?? [];
+    bucket.push({
+      url: row.url as string,
+      is_cover: Boolean(row.is_cover),
+      media_type: ((row.media_type as "image" | "video") ?? "image") as "image" | "video",
+      sort_order: typeof row.sort_order === "number" ? row.sort_order : 0,
+    } as ListingWithImages["listing_images"][number]);
+    imagesByListing.set(listingId, bucket);
+  }
+
+  listingRows = listingRows.map((listing) => ({
+    ...listing,
+    listing_images: imagesByListing.get(listing.id) ?? [],
+  }));
+
+  const listingMap = new Map(
+    (listingRows as ListingWithImages[]).map((listing) => [listing.id, listing])
+  );
+
   const ownerIds = [
     ...new Set(
-      memberships
-        .map((m) => (m.listings as { user_id?: string } | null)?.user_id)
+      listingRows
+        .map((l) => l.user_id)
         .filter((id): id is string => Boolean(id))
     ),
   ];
@@ -140,15 +194,16 @@ export async function getCohostManagedListings(
   const ownerMap = new Map(ownerProfiles.map((p) => [p.id, p]));
 
   return memberships
-    .filter((m) => m.listings)
     .map((m) => {
-      const listing = m.listings as unknown as ListingWithImages;
+      const listing = listingMap.get(m.listing_id);
+      if (!listing) return null;
       return {
         cohost: m as ListingCohost,
         listing,
         ownerProfile: ownerMap.get(listing.user_id) ?? null,
       };
-    });
+    })
+    .filter((item): item is NonNullable<typeof item> => item !== null);
 }
 
 export async function getCohostInviteByToken(

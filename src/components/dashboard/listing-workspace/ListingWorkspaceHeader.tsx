@@ -4,6 +4,7 @@ import { ArrowLeft, ImageIcon } from "lucide-react";
 import { DashboardListingStatusBadge } from "@/components/dashboard/DashboardListingStatusBadge";
 import { ListingViewButton } from "@/components/dashboard/ListingViewButton";
 import { OwnerListingsNavLink } from "@/components/dashboard/OwnerListingsNavLink";
+import { HelpAssistantTrigger } from "@/components/assistant/HelpAssistantContext";
 import { ListingWorkspaceSwitcher } from "@/components/dashboard/listing-workspace/ListingWorkspaceSwitcher";
 import type { ListingWorkspaceContext, ListingSwitcherItem } from "@/lib/listing-workspace-types";
 import { ownerListingStatusHelper } from "@/lib/dashboard-listings";
@@ -97,6 +98,11 @@ export function ListingWorkspaceHeader({ ctx, switcherItems }: Props) {
             >
               Επεξεργασία
             </Link>
+            <HelpAssistantTrigger
+              label="Βοήθεια για αυτή την αγγελία"
+              seedQuestion="Πώς ανεβάζω φωτογραφίες;"
+              className="hidden min-h-8 items-center text-xs font-medium text-muted hover:text-gold-dark sm:inline-flex"
+            />
           </div>
         </div>
       </div>

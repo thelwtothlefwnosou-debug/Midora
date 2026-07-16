@@ -14,6 +14,8 @@ type Props = {
   expiresLabel: string | null;
   publishedLabel: string | null;
   isFree: boolean;
+  externalLinkCount?: number;
+  publicExternalLinkCount?: number;
 };
 
 const STATUS_COPY: Partial<Record<OwnerListingStatusKey, string>> = {
@@ -34,6 +36,8 @@ export function ListingPublishPanel({
   expiresLabel,
   publishedLabel,
   isFree,
+  externalLinkCount = 0,
+  publicExternalLinkCount = 0,
 }: Props) {
   const [copied, setCopied] = useState(false);
   const publicUrl =
@@ -144,6 +148,24 @@ export function ListingPublishPanel({
           Προσφορά launch — η προβολή αγγελίας είναι δωρεάν.
         </p>
       )}
+
+      <div className="rounded-xl border border-border bg-white p-4 shadow-soft">
+        <h3 className="text-sm font-semibold text-charcoal">Αξιοπιστία αγγελίας</h3>
+        <p className="mt-2 text-sm text-muted">
+          Μπορείς προαιρετικά να προσθέσεις σύνδεσμο από άλλη πλατφόρμα όπου υπάρχει το ακίνητο.
+        </p>
+        {externalLinkCount > 0 && (
+          <p className="mt-2 text-xs text-muted">
+            {externalLinkCount} αποθηκευμένοι σύνδεσμοι · {publicExternalLinkCount} δημόσιοι
+          </p>
+        )}
+        <Link
+          href={`/dashboard/listings/${listingId}/edit#external-links`}
+          className="mt-3 inline-flex min-h-9 items-center rounded-xl border border-border px-4 text-sm font-medium text-charcoal hover:border-gold/30 hover:bg-sand"
+        >
+          Προσθήκη συνδέσμου
+        </Link>
+      </div>
     </div>
   );
 }

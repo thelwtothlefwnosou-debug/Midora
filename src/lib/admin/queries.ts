@@ -123,9 +123,11 @@ export async function getAdminRecentListings(limit = 8) {
 export async function getAdminRecentUsers(limit = 8) {
   const db = await adminDb();
   if (!db) return [];
+  // profiles.email is not guaranteed in all DBs (admin control-room migration may be pending).
+  // Do not select it — auth email lives on auth.users, not a required public profiles column.
   const { data } = await db
     .from("profiles")
-    .select("id, full_name, email, role, created_at")
+    .select("id, full_name, role, created_at")
     .order("created_at", { ascending: false })
     .limit(limit);
   return data ?? [];
@@ -321,15 +323,14 @@ function applyAdminListingFilters(
   if (filters?.search?.trim()) {
     const q = filters.search.trim().toLowerCase();
     result = result.filter((l) => {
-      const owner = l.profiles as { full_name?: string; email?: string } | null;
+      const owner = l.profiles as { full_name?: string } | null;
       return (
         l.title?.toLowerCase().includes(q) ||
         l.city?.toLowerCase().includes(q) ||
         l.area?.toLowerCase().includes(q) ||
         l.ama_number?.toLowerCase().includes(q) ||
         l.id.toLowerCase().includes(q) ||
-        owner?.full_name?.toLowerCase().includes(q) ||
-        owner?.email?.toLowerCase().includes(q)
+        owner?.full_name?.toLowerCase().includes(q)
       );
     });
   }
@@ -346,7 +347,7 @@ export async function getAdminAllListings(
   let query = db
     .from("listings")
     .select(
-      "*, listing_images(id, url, sort_order, media_type, is_cover), profiles(id, full_name, phone, email, primary_phone_verified_at, avatar_path, avatar_status)"
+      "*, listing_images(id, url, sort_order, media_type, is_cover), profiles(id, full_name, phone, primary_phone_verified_at, avatar_path, avatar_status)"
     )
     .order("created_at", { ascending: false })
     .limit(300);
@@ -405,7 +406,7 @@ export async function getAdminActionCenterStats(): Promise<AdminActionCenterStat
     db
       .from("listings")
       .select(
-        "*, listing_images(id, url, sort_order, media_type, is_cover), profiles(id, full_name, phone, email, primary_phone_verified_at, avatar_path, avatar_status)"
+        "*, listing_images(id, url, sort_order, media_type, is_cover), profiles(id, full_name, phone, primary_phone_verified_at, avatar_path, avatar_status)"
       )
       .order("created_at", { ascending: false })
       .limit(500),
@@ -500,7 +501,7 @@ export async function getAdminPriorityQueue(limit = 10): Promise<PriorityListing
   const { data, error } = await db
     .from("listings")
     .select(
-      "*, listing_images(id, url, sort_order, media_type, is_cover), profiles(id, full_name, phone, email, primary_phone_verified_at, avatar_path, avatar_status)"
+      "*, listing_images(id, url, sort_order, media_type, is_cover), profiles(id, full_name, phone, primary_phone_verified_at, avatar_path, avatar_status)"
     )
     .or("status.eq.pending,approval_status.eq.pending_review,approval_status.eq.needs_changes")
     .order("updated_at", { ascending: false })
@@ -527,7 +528,7 @@ export async function getAdminAuditLogs(
 
   let query = db
     .from("admin_audit_logs")
-    .select("*, profiles:admin_user_id(full_name, email)")
+    .select("*, profiles:admin_user_id(full_name)")
     .order("created_at", { ascending: false })
     .limit(limit);
 
@@ -548,13 +549,12 @@ export async function getAdminAuditLogs(
   if (filters?.search?.trim()) {
     const q = filters.search.trim().toLowerCase();
     rows = rows.filter((log) => {
-      const admin = log.profiles as { full_name?: string; email?: string } | null;
+      const admin = log.profiles as { full_name?: string } | null;
       return (
         log.action?.toLowerCase().includes(q) ||
         log.entity_type?.toLowerCase().includes(q) ||
         log.entity_id?.toLowerCase().includes(q) ||
-        admin?.full_name?.toLowerCase().includes(q) ||
-        admin?.email?.toLowerCase().includes(q)
+        admin?.full_name?.toLowerCase().includes(q)
       );
     });
   }
@@ -603,7 +603,7 @@ export async function getAdminListingById(id: string) {
   if (listing.user_id) {
     const profileRes = await db
       .from("profiles")
-      .select("id, full_name, phone, email, role, created_at")
+      .select("id, full_name, phone, role, created_at")
       .eq("id", listing.user_id)
       .maybeSingle();
 
@@ -629,14 +629,15 @@ export async function getAdminListingById(id: string) {
 export async function getAdminListingOwnerStats(userId: string) {
   const db = await adminDb();
   if (!db) return { listingCount: 0, memberSince: null as string | null, email: null as string | null };
+  // Email is on auth.users — do not select profiles.email (schema drift / privacy).
   const [{ count }, { data: profile }] = await Promise.all([
     db.from("listings").select("id", { count: "exact", head: true }).eq("user_id", userId),
-    db.from("profiles").select("created_at, email").eq("id", userId).maybeSingle(),
+    db.from("profiles").select("created_at").eq("id", userId).maybeSingle(),
   ]);
   return {
     listingCount: count ?? 0,
     memberSince: profile?.created_at ?? null,
-    email: profile?.email ?? null,
+    email: null as string | null,
   };
 }
 
@@ -684,7 +685,7 @@ export async function getAdminUsers() {
   const { data: profiles } = await db
     .from("profiles")
     .select(
-      "id, full_name, email, phone, role, created_at, avatar_path, avatar_status, primary_phone_verified_at, account_status"
+      "id, full_name, phone, role, created_at, avatar_path, avatar_status, primary_phone_verified_at, account_status"
     )
     .order("created_at", { ascending: false })
     .limit(200);

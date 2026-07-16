@@ -7,6 +7,8 @@ import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { geocodeAddress } from "@/lib/listings";
 import { safePostAuthPath } from "@/lib/auth-redirect";
+import { bootstrapAuthProfile } from "@/lib/profile-bootstrap";
+import { resolveAuthProfileName } from "@/lib/auth-profile-name";
 import { normalizePhoneToE164, isValidGreekMobileE164 } from "@/lib/phone-e164";
 import { listingPhoneReadyForCalls } from "@/lib/listing-contact";
 import { randomUUID } from "crypto";
@@ -75,7 +77,7 @@ export async function signUp(formData: FormData) {
   const redirectTo = safePostAuthPath(
     (formData.get("redirect") as string) ||
       (formData.get("next") as string) ||
-      "/dashboard"
+      "/dashboard/profile"
   );
 
   const service = createServiceClient();
@@ -95,17 +97,20 @@ export async function signUp(formData: FormData) {
   if (error) return { error: translateAuthError(error.message) };
 
   if (data.user) {
+    await bootstrapAuthProfile(supabase, {
+      userId: data.user.id,
+      fullName,
+      phone,
+      email: data.user.email ?? null,
+    });
+
     const db = createServiceClient() ?? supabase;
-    await db.from("profiles").upsert(
-      {
-        id: data.user.id,
-        full_name: fullName,
-        phone,
-        referred_by: referrerId,
-        referral_code: generateReferralCodeFromId(data.user.id),
-      },
-      { onConflict: "id" }
-    );
+    if (referrerId) {
+      await db
+        .from("profiles")
+        .update({ referred_by: referrerId })
+        .eq("id", data.user.id);
+    }
   }
 
   if (!data.session) {
@@ -126,7 +131,7 @@ export async function completeProfile(formData: FormData) {
 
   const fullName = (formData.get("full_name") as string)?.trim();
   const phone = (formData.get("phone") as string)?.trim();
-  const redirectTo = safePostAuthPath((formData.get("redirect") as string) || "/dashboard");
+  const redirectTo = safePostAuthPath((formData.get("redirect") as string) || "/dashboard/profile");
 
   if (!fullName || !phone) {
     return { error: "Συμπλήρωσε όνομα και τηλέφωνο" };
@@ -153,6 +158,13 @@ export async function completeProfile(formData: FormData) {
       return { error: error.message };
     }
   }
+
+  await bootstrapAuthProfile(supabase, {
+    userId: user.id,
+    fullName,
+    phone,
+    email: user.email ?? null,
+  });
 
   await supabase.auth.updateUser({
     data: { full_name: fullName, phone },
@@ -237,7 +249,7 @@ export async function signIn(formData: FormData) {
     await promoteAdminFromEmail(user.id, user.email);
   }
 
-  const redirectTo = safePostAuthPath((formData.get("redirect") as string) || "/dashboard");
+  const redirectTo = safePostAuthPath((formData.get("redirect") as string) || "/dashboard/profile");
   redirect(redirectTo);
 }
 
@@ -324,22 +336,27 @@ function toListingSaveError(error: { message?: string } | null): string {
 
 async function ensureOwnerProfile(
   supabase: NonNullable<Awaited<ReturnType<typeof createClient>>>,
-  user: { id: string; user_metadata?: Record<string, unknown>; email?: string }
+  user: { id: string; user_metadata?: Record<string, unknown>; email?: string; identities?: { provider?: string; identity_data?: Record<string, unknown> }[] }
 ) {
-  const fullName =
-    (typeof user.user_metadata?.full_name === "string" && user.user_metadata.full_name) ||
-    "Χρήστης";
+  const fullName = resolveAuthProfileName({
+    email: user.email,
+    userMetadata: user.user_metadata,
+    identities: user.identities,
+  });
   const phone =
     (typeof user.user_metadata?.phone === "string" && user.user_metadata.phone) || "";
 
-  await supabase.from("profiles").upsert(
-    {
-      id: user.id,
-      full_name: fullName,
-      phone,
+  await bootstrapAuthProfile(supabase, {
+    userId: user.id,
+    fullName,
+    phone,
+    email: user.email ?? null,
+    auth: {
+      email: user.email,
+      userMetadata: user.user_metadata,
+      identities: user.identities,
     },
-    { onConflict: "id" }
-  );
+  });
 }
 
 
@@ -2095,6 +2112,7 @@ export async function saveListingExternalLink(
   }
 
   revalidatePath(`/dashboard/listings/${listingId}/edit`);
+  revalidatePath(`/dashboard/listings/${listingId}/publish`);
   revalidatePath(`/listings/${listingId}`);
   return { success: true, warning: validation.warning };
 }
@@ -2117,6 +2135,7 @@ export async function removeListingExternalLink(listingId: string, platform: str
   }
 
   revalidatePath(`/dashboard/listings/${listingId}/edit`);
+  revalidatePath(`/dashboard/listings/${listingId}/publish`);
   revalidatePath(`/listings/${listingId}`);
   return { success: true };
 }

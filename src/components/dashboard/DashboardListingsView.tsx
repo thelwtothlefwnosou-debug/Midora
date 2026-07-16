@@ -38,6 +38,7 @@ type Props = {
   newInquiries?: number;
   isFree: boolean;
   initialTab?: ListingFilterTab;
+  cohostManagedCount?: number;
 };
 
 export function DashboardListingsView({
@@ -45,6 +46,7 @@ export function DashboardListingsView({
   newInquiries = 0,
   isFree,
   initialTab = "all",
+  cohostManagedCount = 0,
 }: Props) {
   const [tab, setTab] = useState<ListingFilterTab>(initialTab);
   const [search, setSearch] = useState("");
@@ -80,13 +82,23 @@ export function DashboardListingsView({
   const compactToolbar = rows.length <= 2;
 
   if (rows.length === 0) {
+    const hasCohostListings = cohostManagedCount > 0;
     return (
       <DashboardEmptyState
         icon={Plus}
-        title="Δεν έχεις ανεβάσει ακόμη αγγελία"
-        text="Δημιούργησε την πρώτη σου αγγελία και ξεκίνα να προβάλλεις το ακίνητό σου."
-        actionLabel="Ανέβασε την πρώτη αγγελία"
+        title={
+          hasCohostListings
+            ? "Δεν έχεις δικές σου αγγελίες"
+            : "Δεν έχεις ανεβάσει ακόμη αγγελία"
+        }
+        text={
+          hasCohostListings
+            ? "Οι αγγελίες που διαχειρίζεσαι ως συνοικοδεσπότης εμφανίζονται παραπάνω. Μπορείς να ανεβάσεις και δική σου αγγελία όποτε θέλεις."
+            : "Δημιούργησε την πρώτη σου αγγελία και ξεκίνα να προβάλλεις το ακίνητό σου."
+        }
+        actionLabel={hasCohostListings ? "Ανέβασε αγγελία" : "Ανέβασε την πρώτη αγγελία"}
         actionHref={OWNER_LISTING_NEW_PATH}
+        compact={hasCohostListings}
       />
     );
   }

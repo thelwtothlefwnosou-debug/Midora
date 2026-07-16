@@ -14,7 +14,7 @@ export default function CompleteProfileForm({
   defaultPhone?: string;
 }) {
   const searchParams = useSearchParams();
-  const nextPath = searchParams.get("next") ?? "/dashboard";
+  const nextPath = searchParams.get("next") ?? "/dashboard/profile";
 
   const [state, formAction, pending] = useActionState(
     async (_prev: { error?: string } | null, formData: FormData) => {

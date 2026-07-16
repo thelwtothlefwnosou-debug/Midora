@@ -19,7 +19,7 @@ function mapOAuthError(message: string): string {
   return message;
 }
 
-function authRedirectUrl(next = "/dashboard") {
+function authRedirectUrl(next = "/dashboard/profile") {
   const safeNext = safePostAuthPath(next);
   const base =
     typeof window !== "undefined"
@@ -31,7 +31,7 @@ function authRedirectUrl(next = "/dashboard") {
 const facebookEnabled = process.env.NEXT_PUBLIC_OAUTH_FACEBOOK === "true";
 
 export function SocialAuthButtons({
-  redirectTo = "/dashboard",
+  redirectTo = "/dashboard/profile",
   disabled,
 }: {
   redirectTo?: string;

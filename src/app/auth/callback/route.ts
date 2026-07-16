@@ -1,8 +1,11 @@
-import { createClient } from "@/lib/supabase/server";
-import { createServiceClient } from "@/lib/supabase/service";
-import { promoteAdminFromEmail } from "@/lib/admin/auth";
-import { safePostAuthPath } from "@/lib/auth-redirect";
+import { createServerClient } from "@supabase/ssr";
+import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
+import { promoteAdminFromEmail } from "@/lib/admin/auth";
+import { resolveAuthProfileName } from "@/lib/auth-profile-name";
+import { safePostAuthPath } from "@/lib/auth-redirect";
+import { bootstrapAuthProfile } from "@/lib/profile-bootstrap";
+import { getSupabaseAnonKey, getSupabaseUrl } from "@/lib/supabase/config";
 
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);
@@ -13,15 +16,31 @@ export async function GET(request: Request) {
     return NextResponse.redirect(`${origin}/login?error=auth`);
   }
 
-  const supabase = await createClient();
-  if (!supabase) {
-    return NextResponse.redirect(`${origin}/login?error=config`);
-  }
+  const cookieStore = await cookies();
+  const pendingCookies: { name: string; value: string; options?: Record<string, unknown> }[] =
+    [];
+
+  const supabase = createServerClient(getSupabaseUrl(), getSupabaseAnonKey(), {
+    cookies: {
+      getAll() {
+        return cookieStore.getAll();
+      },
+      setAll(cookiesToSet) {
+        cookiesToSet.forEach(({ name, value, options }) => {
+          cookieStore.set(name, value, options);
+          pendingCookies.push({ name, value, options });
+        });
+      },
+    },
+  });
 
   const { error } = await supabase.auth.exchangeCodeForSession(code);
   if (error) {
+    console.error("[auth/callback] exchangeCodeForSession failed:", error.message);
     return NextResponse.redirect(`${origin}/login?error=auth`);
   }
+
+  let redirectPath = next;
 
   const {
     data: { user },
@@ -29,20 +48,25 @@ export async function GET(request: Request) {
 
   if (user) {
     const meta = user.user_metadata ?? {};
-    const fullName =
-      meta.full_name ?? meta.name ?? user.email?.split("@")[0] ?? "Χρήστης";
-    const phone = meta.phone ?? "";
+    const fullName = resolveAuthProfileName({
+      email: user.email,
+      userMetadata: meta,
+      identities: user.identities,
+    });
+    const phone = typeof meta.phone === "string" ? meta.phone : "";
 
-    const db = createServiceClient() ?? supabase;
-    await db.from("profiles").upsert(
-      {
-        id: user.id,
-        full_name: fullName,
-        phone,
-        email: user.email ?? null,
+    await bootstrapAuthProfile(supabase, {
+      userId: user.id,
+      fullName,
+      phone,
+      email: user.email ?? null,
+      displayName: typeof meta.display_name === "string" ? meta.display_name : null,
+      auth: {
+        email: user.email,
+        userMetadata: meta,
+        identities: user.identities,
       },
-      { onConflict: "id" }
-    );
+    });
 
     await promoteAdminFromEmail(user.id, user.email);
 
@@ -53,11 +77,14 @@ export async function GET(request: Request) {
       .single();
 
     if (!profile?.phone?.trim()) {
-      return NextResponse.redirect(
-        `${origin}/auth/complete-profile?next=${encodeURIComponent(next)}`
-      );
+      redirectPath = `/auth/complete-profile?next=${encodeURIComponent(next)}`;
     }
   }
 
-  return NextResponse.redirect(`${origin}${next}`);
+  const response = NextResponse.redirect(`${origin}${redirectPath}`);
+  pendingCookies.forEach(({ name, value, options }) => {
+    response.cookies.set(name, value, options);
+  });
+
+  return response;
 }

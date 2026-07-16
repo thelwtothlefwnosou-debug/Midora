@@ -1,8 +1,9 @@
 import { AccountShell } from "@/components/account/AccountShell";
-import { DashboardListingsView } from "@/components/dashboard/DashboardListingsView";
 import { CohostManagedListingsSection } from "@/components/dashboard/CohostManagedListingsSection";
+import { DashboardListingsView } from "@/components/dashboard/DashboardListingsView";
 import { requireDashboardContext } from "@/lib/dashboard-context";
 import { getUserListings } from "@/lib/listings";
+import { getCohostManagedListings } from "@/lib/listing-cohosts-db";
 import { getEffectiveListingStatus } from "@/lib/listing-status";
 import { countNewOwnerLeads, getOwnerLeadStatsByListingIds } from "@/lib/leads";
 import { attachStoredViewCounts } from "@/lib/listing-views-storage";
@@ -23,7 +24,11 @@ export default async function DashboardListingsPage({
 }) {
   const { profile, email } = await requireDashboardContext("/dashboard/listings");
   const { submitted, saved, status: statusFilter } = await searchParams;
-  const allListings = await attachStoredViewCounts(await getUserListings(profile.id));
+  const [allListings, cohostItems] = await Promise.all([
+    attachStoredViewCounts(await getUserListings(profile.id)),
+    getCohostManagedListings(profile.id),
+  ]);
+  const isCohostOnly = allListings.length === 0 && cohostItems.length > 0;
   const isFree = process.env.NEXT_PUBLIC_FREE_LISTINGS === "true";
   const listingIds = allListings.map((l) => l.id);
   const [leadStats, newInquiries] = await Promise.all([
@@ -59,14 +64,25 @@ export default async function DashboardListingsPage({
         </div>
       )}
 
+      {isCohostOnly && (
+        <CohostManagedListingsSection
+          userId={profile.id}
+          items={cohostItems}
+          prominent
+        />
+      )}
+
       <DashboardListingsView
         rows={rows}
         newInquiries={newInquiries}
         isFree={isFree}
         initialTab={mapLegacyStatusFilter(statusFilter)}
+        cohostManagedCount={cohostItems.length}
       />
 
-      <CohostManagedListingsSection userId={profile.id} />
+      {!isCohostOnly && (
+        <CohostManagedListingsSection userId={profile.id} items={cohostItems} />
+      )}
     </AccountShell>
   );
 }

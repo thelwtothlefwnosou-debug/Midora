@@ -32,7 +32,7 @@ const ERROR_MESSAGES: Record<string, string> = {
 
 export function AuthPanel({
   initialMode = "login",
-  redirectTo = "/dashboard",
+  redirectTo = "/dashboard/profile",
   errorCode,
   referralCode,
 }: AuthPanelProps) {

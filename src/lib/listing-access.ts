@@ -26,25 +26,6 @@ export async function resolveListingAccess(
   listingId: string,
   userId: string
 ): Promise<ListingAccessContext | null> {
-  const { data: listing } = await supabase
-    .from("listings")
-    .select("id, user_id")
-    .eq("id", listingId)
-    .maybeSingle();
-
-  if (!listing) return null;
-
-  if (listing.user_id === userId) {
-    return {
-      role: "owner",
-      listingId,
-      ownerUserId: listing.user_id,
-      permissions: OWNER_FULL_PERMISSIONS,
-      cohostId: null,
-      cohostRecord: null,
-    };
-  }
-
   const { data: cohost } = await supabase
     .from("listing_cohosts")
     .select("*")
@@ -53,23 +34,40 @@ export async function resolveListingAccess(
     .eq("status", "accepted")
     .maybeSingle();
 
-  if (!cohost) return null;
+  if (cohost) {
+    return {
+      role: "cohost",
+      listingId,
+      ownerUserId: cohost.owner_user_id,
+      permissions: {
+        can_manage_listing: cohost.can_manage_listing,
+        can_manage_photos: cohost.can_manage_photos,
+        can_manage_availability: cohost.can_manage_availability,
+        can_manage_pricing: cohost.can_manage_pricing,
+        can_manage_messages: cohost.can_manage_messages,
+        can_view_stats: cohost.can_view_stats,
+        can_manage_cohosts: cohost.can_manage_cohosts,
+      },
+      cohostId: cohost.id,
+      cohostRecord: cohost as ListingCohost,
+    };
+  }
+
+  const { data: listing } = await supabase
+    .from("listings")
+    .select("id, user_id")
+    .eq("id", listingId)
+    .maybeSingle();
+
+  if (!listing || listing.user_id !== userId) return null;
 
   return {
-    role: "cohost",
+    role: "owner",
     listingId,
     ownerUserId: listing.user_id,
-    permissions: {
-      can_manage_listing: cohost.can_manage_listing,
-      can_manage_photos: cohost.can_manage_photos,
-      can_manage_availability: cohost.can_manage_availability,
-      can_manage_pricing: cohost.can_manage_pricing,
-      can_manage_messages: cohost.can_manage_messages,
-      can_view_stats: cohost.can_view_stats,
-      can_manage_cohosts: cohost.can_manage_cohosts,
-    },
-    cohostId: cohost.id,
-    cohostRecord: cohost as ListingCohost,
+    permissions: OWNER_FULL_PERMISSIONS,
+    cohostId: null,
+    cohostRecord: null,
   };
 }
 

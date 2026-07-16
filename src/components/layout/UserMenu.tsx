@@ -14,9 +14,11 @@ import {
   LogOut,
   ChevronDown,
   Shield,
+  User as UserIcon,
 } from "lucide-react";
 import type { User } from "@supabase/supabase-js";
 import { createClient, isSupabaseConfigured } from "@/lib/supabase/client";
+import { resolveMenuDisplayName } from "@/lib/auth-profile-name";
 import { signOut } from "@/lib/actions";
 import { profileInitials } from "@/components/account/account-nav";
 import { cn } from "@/lib/utils";
@@ -25,6 +27,7 @@ import { BugReportMenuItem } from "@/components/feedback/BugReportMenuItem";
 
 const MENU_LINKS = [
   { href: "/dashboard", label: "Επισκόπηση", icon: LayoutDashboard },
+  { href: "/dashboard/profile", label: "Το προφίλ μου", icon: UserIcon },
   { href: "/dashboard/listings", label: "Οι αγγελίες μου", icon: Home },
   { href: OWNER_LISTING_NEW_PATH, label: "Νέα αγγελία", icon: Plus },
   { href: "/dashboard/requests", label: "Ενδιαφέροντα", icon: Inbox },
@@ -36,9 +39,15 @@ const MENU_LINKS = [
 const MENU_WIDTH = 288;
 
 export function UserMenu({ user, compact = false }: { user: User; compact?: boolean }) {
+  const authNameInput = {
+    email: user.email,
+    userMetadata: user.user_metadata,
+    identities: user.identities,
+  } as const;
+
   const [open, setOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
-  const [fullName, setFullName] = useState("");
+  const [fullName, setFullName] = useState(() => resolveMenuDisplayName({ auth: authNameInput }));
   const [isAdmin, setIsAdmin] = useState(false);
   const [menuStyle, setMenuStyle] = useState<React.CSSProperties>({ visibility: "hidden" });
   const ref = useRef<HTMLDivElement>(null);
@@ -54,14 +63,20 @@ export function UserMenu({ user, compact = false }: { user: User; compact?: bool
     const supabase = createClient();
     supabase
       .from("profiles")
-      .select("full_name, role")
+      .select("full_name, display_name, role")
       .eq("id", user.id)
       .maybeSingle()
       .then(({ data }) => {
-        if (data?.full_name) setFullName(data.full_name);
+        setFullName(
+          resolveMenuDisplayName({
+            profileFullName: data?.full_name,
+            profileDisplayName: data?.display_name,
+            auth: authNameInput,
+          })
+        );
         if (data?.role === "admin") setIsAdmin(true);
       });
-  }, [user.id]);
+  }, [user.email, user.id, user.identities, user.user_metadata]);
 
   useLayoutEffect(() => {
     if (!open || !buttonRef.current) {
@@ -130,7 +145,7 @@ export function UserMenu({ user, compact = false }: { user: User; compact?: bool
       role="menu"
     >
       <div className="border-b border-border px-4 py-3">
-        <p className="truncate font-semibold text-charcoal">{fullName || "Χρήστης Midora"}</p>
+        <p className="truncate font-semibold text-charcoal">{fullName}</p>
         <p className="truncate text-xs text-muted">{email}</p>
       </div>
 
@@ -208,7 +223,7 @@ export function UserMenu({ user, compact = false }: { user: User; compact?: bool
             compact ? "max-w-[88px] text-xs" : "max-w-[120px] text-sm"
           )}
         >
-          {fullName || "Λογαριασμός"}
+          {fullName}
         </span>
         <ChevronDown
           className={cn("h-4 w-4 text-muted transition-transform", open && "rotate-180")}

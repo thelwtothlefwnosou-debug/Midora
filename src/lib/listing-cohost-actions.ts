@@ -376,27 +376,34 @@ export async function acceptCohostInvite(token: string): Promise<ActionResult> {
   const listingTitle =
     (invite.listings as { title?: string } | null)?.title ?? "Αγγελία";
 
-  const { data: ownerProfile } = await auth.supabase
-    .from("profiles")
-    .select("email, full_name, display_name")
-    .eq("id", invite.owner_user_id)
-    .single();
-
   const cohostName = profileDisplayName({
     full_name: auth.user.user_metadata?.full_name ?? "",
     display_name: null,
   });
 
-  if (ownerProfile?.email) {
+  // Prefer auth.users email via service role — profiles.email is not a reliable column.
+  let ownerEmail: string | null = null;
+  try {
+    const { createServiceClient } = await import("@/lib/supabase/service");
+    const service = createServiceClient();
+    if (service) {
+      const { data: ownerUser } = await service.auth.admin.getUserById(invite.owner_user_id);
+      ownerEmail = ownerUser.user?.email?.trim() || null;
+    }
+  } catch {
+    ownerEmail = null;
+  }
+
+  if (ownerEmail) {
     await sendCohostAcceptedEmail({
-      to: ownerProfile.email,
+      to: ownerEmail,
       cohostName,
       listingTitle,
     });
   }
 
   revalidatePath("/dashboard/listings");
-  redirect(`/dashboard/listings/${invite.listing_id}`);
+  redirect("/dashboard/listings");
 }
 
 export async function declineCohostInvite(token: string): Promise<ActionResult> {
