@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { Playfair_Display, Inter, Cormorant_Garamond } from "next/font/google";
-import { AiAssistant } from "@/components/ai/AiAssistant";
+import { Suspense } from "react";
+import { HelpAssistantProvider } from "@/components/assistant/HelpAssistantContext";
+import { MidoraHelpWidget } from "@/components/ai/MidoraHelpWidget";
 import { ToastHost } from "@/components/ui/ToastHost";
 import { PendingFavoriteSync } from "@/components/favorites/PendingFavoriteSync";
 import { WebsiteJsonLd } from "@/components/seo/WebsiteJsonLd";
@@ -68,10 +70,14 @@ export default function RootLayout({
     <html lang="el" className={`${playfair.variable} ${inter.variable} ${cormorantBrand.variable} h-full`}>
       <body className="min-h-full overflow-x-hidden bg-white antialiased text-charcoal">
         <WebsiteJsonLd />
-        {children}
-        <ToastHost />
-        <PendingFavoriteSync />
-        <AiAssistant />
+        <HelpAssistantProvider>
+          {children}
+          <ToastHost />
+          <PendingFavoriteSync />
+          <Suspense fallback={null}>
+            <MidoraHelpWidget />
+          </Suspense>
+        </HelpAssistantProvider>
       </body>
     </html>
   );

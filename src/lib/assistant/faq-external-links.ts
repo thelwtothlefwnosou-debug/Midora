@@ -1,0 +1,138 @@
+import type { FaqItem } from "@/lib/assistant/faq-types";
+
+const R = ["/listings/", "/dashboard/listings/"] as const;
+
+export const FAQ_EXTERNAL_LINKS: FaqItem[] = [
+  {
+    id: "external-links-what",
+    question: "Τι είναι οι εξωτερικοί σύνδεσμοι;",
+    answer:
+      "Είναι links που ο ιδιοκτήτης προσθέτει από άλλες πλατφόρμες (π.χ. Airbnb, Booking, Vrbo) ώστε οι επισκέπτες να δουν ότι η αγγελία υπάρχει και αλλού. Δεν είναι κράτηση μέσω Midora.",
+    category: "external_links",
+    audience: "all",
+    relatedRoutes: [...R],
+    priority: 90,
+    quickSuggestion: false,
+    suggestionContexts: ["public_listing", "owner_listing_workspace"],
+    keywords: ["εξωτερικ", "external", "link"],
+  },
+  {
+    id: "external-links-add-airbnb-booking",
+    question: "Πού βάζω link από Airbnb ή Booking;",
+    answer:
+      "1. Άνοιξε την αγγελία → καρτέλα Καταχώριση (edit).\n2. Ενότητα «Σύνδεσμοι σε άλλες πλατφόρμες».\n3. Προσθήκη συνδέσμου → επικόλλησε URL → επίλεξε πλατφόρμα.\n4. Αποθήκευση.",
+    category: "external_links",
+    audience: "owner",
+    relatedRoutes: ["/dashboard/listings/"],
+    priority: 95,
+    quickSuggestion: false,
+    suggestionContexts: ["owner_listing_workspace"],
+    keywords: ["airbnb", "booking", "vrbo", "προσθεσ"],
+    actionLinks: [{ label: "Καταχώριση", href: "/dashboard/listings/{id}/edit#external-links" }],
+  },
+  {
+    id: "external-links-other-platform",
+    question: "Μπορώ να βάλω link από άλλη πλατφόρμα;",
+    answer:
+      "Ναι. Επίλεξε «Άλλη» πλατφόρμα, επικόλλησε το HTTPS URL και πρόσθεσε ετικέτα αν χρειάζεται. Το Midora δεν εισάγει δεδομένα — μόνο αποθηκεύει το link που επικολλάς.",
+    category: "external_links",
+    audience: "owner",
+    relatedRoutes: ["/dashboard/listings/"],
+    priority: 85,
+    quickSuggestion: false,
+    suggestionContexts: ["owner_listing_workspace"],
+    keywords: ["αλλη", "other", "platform"],
+  },
+  {
+    id: "external-links-where-shown",
+    question: "Πού εμφανίζεται ο εξωτερικός σύνδεσμος;",
+    answer:
+      "Μόνο αν τον έχεις ενεργοποιήσει για δημόσια εμφάνιση — χαμηλά στη δημόσια αγγελία, μετά τον ιδιοκτήτη. Ο επισκέπτης μπορεί να ανοίξει το link σε νέα καρτέλα.",
+    category: "external_links",
+    audience: "all",
+    relatedRoutes: ["/listings/"],
+    priority: 88,
+    quickSuggestion: true,
+    suggestionContexts: ["public_listing"],
+    keywords: ["που εμφανιζ", "public", "shown"],
+  },
+  {
+    id: "external-links-required",
+    question: "Είναι υποχρεωτικό να βάλω εξωτερικό σύνδεσμο;",
+    answer:
+      "Όχι. Οι εξωτερικοί σύνδεσμοι είναι προαιρετικοί. Η δημοσίευση αγγελίας δεν απαιτεί εξωτερικό link — βοηθούν στην αξιοπιστία, όχι ως υποχρεωτικό πεδίο.",
+    category: "external_links",
+    audience: "owner",
+    relatedRoutes: ["/dashboard/listings/"],
+    priority: 75,
+    quickSuggestion: false,
+    suggestionContexts: ["owner_listing_workspace"],
+    keywords: ["υποχρεωτικ", "required", "optional"],
+  },
+  {
+    id: "external-links-no-scraping",
+    question: "Το Midora παίρνει στοιχεία από Airbnb ή Booking;",
+    answer:
+      "Όχι. Το Midora δεν κάνει scraping, import φωτογραφιών, κριτικών ή περιγραφών από άλλες πλατφόρμες. Ο ιδιοκτήτης επικολλά μόνο το URL — τίποτα άλλο δεν αντιγράφεται αυτόματα.",
+    category: "external_links",
+    audience: "all",
+    relatedRoutes: [...R],
+    priority: 100,
+    quickSuggestion: false,
+    suggestionContexts: ["owner_listing_workspace"],
+    keywords: ["scraping", "import", "airbnb", "booking"],
+  },
+  {
+    id: "external-links-no-photo-copy",
+    question: "Αν βάλω link, αντιγράφονται οι φωτογραφίες;",
+    answer:
+      "Όχι. Οι φωτογραφίες, περιγραφές και κριτικές ΔΕΝ αντιγράφονται από εξωτερικό link. Ανέβασε φωτογραφίες και περιγραφή χειροκίνητα στο Midora.",
+    category: "external_links",
+    audience: "owner",
+    relatedRoutes: ["/dashboard/listings/"],
+    priority: 92,
+    quickSuggestion: false,
+    suggestionContexts: ["owner_listing_workspace", "owner_photos"],
+    keywords: ["φωτογραφ", "copy", "import"],
+  },
+  {
+    id: "external-links-visitor-open",
+    question: "Μπορεί ο επισκέπτης να ανοίξει το εξωτερικό link;",
+    answer:
+      "Ναι, αν ο σύνδεσμος είναι δημόσιος και ενεργός. Ανοίγει σε εξωτερική πλατφόρμα — δεν είναι πληρωμή ή κράτηση μέσω Midora.",
+    category: "external_links",
+    audience: "visitor",
+    relatedRoutes: ["/listings/"],
+    priority: 80,
+    quickSuggestion: false,
+    suggestionContexts: ["public_listing"],
+    keywords: ["ανοιγ", "open", "visitor"],
+  },
+  {
+    id: "external-links-why-optional",
+    question: "Γιατί ο σύνδεσμος είναι προαιρετικός;",
+    answer:
+      "Γιατί πολλοί ιδιοκτήτες διαχειρίζονται μόνο μέσω Midora. Ο εξωτερικός σύνδεσμος είναι επιπλέον σήμα εμπιστοσύνης, όχι απαίτηση.",
+    category: "external_links",
+    audience: "owner",
+    relatedRoutes: ["/dashboard/listings/"],
+    priority: 65,
+    quickSuggestion: false,
+    suggestionContexts: ["owner_listing_workspace"],
+    keywords: ["προαιρετικ", "optional", "γιατι"],
+  },
+  {
+    id: "external-links-tips",
+    question: "Τι πρέπει να προσέξω όταν βάζω εξωτερικό link;",
+    answer:
+      "1. Χρησιμοποίησε σωστό HTTPS URL.\n2. Βεβαιώσου ότι το link δείχνει την ίδια αγγελία.\n3. Ενεργοποίησε δημόσια εμφάνιση μόνο αν θέλεις.\n4. Μην περιμένεις auto-import — όλα τα στοιχεία τα συμπληρώνεις εσύ στο Midora.",
+    category: "external_links",
+    audience: "owner",
+    relatedRoutes: ["/dashboard/listings/"],
+    priority: 78,
+    quickSuggestion: false,
+    suggestionContexts: ["owner_listing_workspace"],
+    keywords: ["προσεξ", "tips", "url"],
+    actionLinks: [{ label: "Σύνδεσμοι", href: "/dashboard/listings/{id}/edit#external-links" }],
+  },
+];
