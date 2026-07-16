@@ -60,3 +60,5 @@ CURRENT_GIT_COMMIT.txt
 # local scratch / extraction artifacts (never commit)
 .cursor/video-frames/
 scripts/extracted-from-transcript/
+scripts/extract-transcript-files.mjs
+scripts/extract-transcript-files.py
