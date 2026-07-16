@@ -12,6 +12,9 @@
 
 # testing
 /coverage
+/test-results/
+/playwright-report/
+/blob-report/
 
 # next.js
 /.next/
@@ -53,3 +56,7 @@ next-env.d.ts
 
 # auto-generated after each git commit (see scripts/record-current-commit.ps1)
 CURRENT_GIT_COMMIT.txt
+
+# local scratch / extraction artifacts (never commit)
+.cursor/video-frames/
+scripts/extracted-from-transcript/

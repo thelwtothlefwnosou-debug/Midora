@@ -47,3 +47,27 @@ Always creates `pre-restore` snapshot first, then asks YES. Secrets (`.env*`, ke
 
 Code is in git/checkpoints. Database rows and uploaded photos need separate backup — `docs/DATA_BACKUP_PLAN.md`.
 <!-- END:safety-workflow -->
+
+<!-- BEGIN:qa-gate -->
+# Mandatory QA gate
+
+**Never say DONE / έτοιμο / fixed / completed without running QA first.**
+
+```powershell
+npm run qa:all          # doctor + preflight (typecheck, lint, build) + smoke
+npm run dev:restart:clean   # before user opens site (clears .next cache)
+```
+
+| Script | Purpose |
+|--------|---------|
+| `npm run qa:doctor` | Git state, canonical UI check, old UI regression |
+| `npm run qa:preflight` | `typecheck` + `lint:gate` + `build` (full `lint` reported separately) |
+| `npm run qa:smoke` | Playwright Chromium smoke on key routes |
+| `npm run qa:all` | All of the above in sequence |
+
+First-time smoke setup: `npm run qa:smoke:install` (Chromium).
+
+If any step fails: say **NOT DONE**, fix, re-run. Do not ask the user to open the browser until `qa:preflight` and `qa:smoke` pass.
+
+Full details: `docs/MIDORA_SOURCE_OF_TRUTH.md` and `.cursor/rules/qa-gate.mdc`.
+<!-- END:qa-gate -->

@@ -13,6 +13,8 @@ const MIGRATION_FILES = [
   "supabase/migrations/20250623140000_short_term_listing_experience.sql",
   "supabase/migrations/20250706120000_listing_bedroom_details.sql",
   "supabase/migrations/20250707120000_profile_public_fields.sql",
+  "supabase/migrations/20250622160000_exact_location_and_phone_verification.sql",
+  "supabase/migrations/20250628120000_profile_avatars_and_account_status.sql",
   "supabase/migrations/20250711120000_short_term_pricing_fields.sql",
   "supabase/migrations/20250711130000_listing_image_room_key.sql",
   "supabase/migrations/20250711140000_listing_image_caption.sql",
@@ -20,6 +22,7 @@ const MIGRATION_FILES = [
   "supabase/migrations/20250615130000_property_leads.sql",
   "supabase/migrations/20250712150000_listing_cohosts.sql",
   "supabase/migrations/20250712180000_profile_public_slug.sql",
+  "supabase/migrations/20250713010000_profile_public_read_rls.sql",
 ] as const;
 
 async function main() {

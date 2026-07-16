@@ -1,0 +1,68 @@
+---
+description: Mandatory QA gate before claiming work is ready
+alwaysApply: true
+---
+
+# Mandatory QA gate — do not say "ready" without QA
+
+Never respond with **DONE**, **έτοιμο**, **fixed**, **completed**, or **ready to test** unless QA has actually run and passed.
+
+## Required checks (in order when possible)
+
+1. `npm run qa:doctor` — git state + old UI regression
+2. `npm run typecheck` — TypeScript
+3. `npm run lint:gate` — ESLint on QA/smoke paths (hard gate in preflight)
+4. `npm run lint` — full ESLint (report PASS/FAIL; pre-existing debt may FAIL without blocking smoke)
+5. `npm run build` — production build (via `npm run qa:preflight`)
+5. `npm run qa:smoke` — Playwright browser smoke (key routes, no error overlay)
+6. `npm run dev:restart:clean` — before asking the user to open the site
+
+Shortcut: `npm run qa:all` runs doctor + preflight + smoke.
+
+## If any check fails
+
+- Say **NOT DONE**
+- Show what failed
+- Fix the cause
+- Re-run checks
+- Do **not** ask the user to open the browser until build + smoke pass
+
+## Required final response format
+
+```
+DONE / NOT DONE
+
+Changed:
+- ...
+
+Checks run:
+- npm run qa:doctor: PASS/FAIL/NOT RUN
+- npm run typecheck: PASS/FAIL/NOT RUN
+- npm run lint: PASS/FAIL/NOT RUN
+- npm run build: PASS/FAIL/NOT RUN
+- npm run qa:smoke: PASS/FAIL/NOT RUN
+- npm run qa:all: PASS/FAIL/NOT RUN
+
+Browser verification:
+- routes checked: ...
+- screenshots: test-results/midora-smoke/screenshots/
+
+Git:
+- branch: ...
+- latest commit: ...
+- uncommitted files: ...
+- checkpoint created: yes/no
+- commit created: yes/no
+```
+
+If a check was not run, write **NOT RUN** and why. Never fake PASS.
+
+## Regression protection
+
+- Do not restore old UI / deprecated routes without explicit user request
+- Run `npm run qa:doctor` before claiming owner/public UI work is complete
+- See `docs/MIDORA_SOURCE_OF_TRUTH.md` for active vs deprecated components
+
+## No destructive git
+
+Never without explicit approval: `git reset --hard`, `git clean -fd`, force push, bulk revert of owner dashboard.

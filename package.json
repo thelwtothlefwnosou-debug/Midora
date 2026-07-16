@@ -8,6 +8,14 @@
     "dev:open": "powershell -ExecutionPolicy Bypass -File scripts/dev-open.ps1",
     "dev:restart": "powershell -ExecutionPolicy Bypass -File scripts/dev-safe-restart.ps1",
     "dev:restart:clean": "powershell -ExecutionPolicy Bypass -File scripts/dev-safe-restart.ps1 -CleanCache",
+    "typecheck": "tsc --noEmit",
+    "clean": "powershell -ExecutionPolicy Bypass -File scripts/clean-next.ps1",
+    "qa:doctor": "node scripts/qa-doctor.mjs",
+    "qa:preflight": "powershell -ExecutionPolicy Bypass -File scripts/qa-preflight.ps1",
+    "qa:preflight:clean": "powershell -ExecutionPolicy Bypass -File scripts/qa-preflight.ps1 -Clean",
+    "qa:smoke": "playwright test tests/smoke/midora-smoke.spec.ts tests/smoke/assistant-help.spec.ts tests/smoke/search-date-picker.spec.ts",
+    "qa:smoke:install": "playwright install chromium",
+    "qa:all": "npm run qa:doctor && npm run qa:preflight && npm run qa:smoke",
     "checkpoint": "powershell -ExecutionPolicy Bypass -File scripts/checkpoint.ps1",
     "checkpoint:list": "powershell -ExecutionPolicy Bypass -File scripts/checkpoint.ps1 -List",
     "checkpoint:restore": "powershell -ExecutionPolicy Bypass -File scripts/checkpoint.ps1",
@@ -23,6 +31,7 @@
     "build": "node --max-old-space-size=8192 ./node_modules/next/dist/bin/next build",
     "start": "next start",
     "lint": "eslint",
+    "lint:gate": "eslint tests/smoke playwright.config.ts scripts/check-old-ui-regression.mjs scripts/qa-doctor.mjs",
     "db:check": "tsx scripts/check-supabase.ts",
     "db:check-connection": "tsx scripts/check-db-connection.ts",
     "db:check-migrations": "tsx scripts/check-migrations.ts",
@@ -86,6 +95,7 @@
     "tailwindcss": "^4",
     "tsx": "^4.22.4",
     "typescript": "^5",
-    "vercel": "^54.18.2"
+    "vercel": "^54.18.2",
+    "@playwright/test": "^1.52.0"
   }
 }
