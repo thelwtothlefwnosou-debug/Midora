@@ -377,21 +377,30 @@ export async function getApprovedListingsCount(): Promise<number> {
 }
 
 export async function getListingById(id: string): Promise<ListingWithImages | null> {
+  const trimmed = id.trim();
+  if (!trimmed) return null;
+
   const isUuid =
-    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(trimmed);
 
   if (isSupabaseConfigured()) {
-    const supabase = await createClient();
-    if (supabase) {
-      const columns = isUuid ? (["id", "slug"] as const) : (["slug", "id"] as const);
-      const selects = [LISTING_SELECT_MINIMAL, "*, listing_images(*)", LISTING_SELECT] as const;
+    const clients = [await createClient(), createServiceClient()].filter(
+      (client): client is NonNullable<typeof client> => Boolean(client)
+    );
 
+    const columns = isUuid ? (["id", "slug"] as const) : (["slug", "id"] as const);
+    const selects = [LISTING_SELECT_MINIMAL, "*, listing_images(*)", LISTING_SELECT] as const;
+
+    for (const supabase of clients) {
       for (const column of columns) {
         for (const select of selects) {
+          const lookupValue =
+            column === "slug" && !isUuid ? trimmed.toLowerCase() : trimmed;
+
           const { data, error } = await supabase
             .from("listings")
             .select(select)
-            .eq(column, id)
+            .eq(column, lookupValue)
             .maybeSingle();
 
           if (!error && data) {
@@ -403,23 +412,24 @@ export async function getListingById(id: string): Promise<ListingWithImages | nu
             !isMissingProfileContactColumn(error) &&
             !isMissingHiddenColumn(error)
           ) {
-            // Try the next select shape — do not abort the whole lookup.
             continue;
           }
         }
       }
     }
 
-    // Same listings appear in search — resolve detail via the approved list if direct lookup fails.
-    const approved = await fetchApprovedFromDb();
+    const approved = await fetchApprovedFromDb({ useServiceClient: true });
     if (approved) {
-      const match = approved.find((l) => l.id === id || l.slug === id);
+      const slugNeedle = trimmed.toLowerCase();
+      const match = approved.find(
+        (l) => l.id === trimmed || l.slug === trimmed || l.slug === slugNeedle
+      );
       if (match) return match;
     }
   }
 
   if (shouldUseSeedListings()) {
-    return getSeedListingById(id);
+    return getSeedListingById(trimmed);
   }
 
   return null;

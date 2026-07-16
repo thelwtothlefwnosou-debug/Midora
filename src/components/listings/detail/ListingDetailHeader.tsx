@@ -1,8 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
+import { Suspense, useEffect, useState } from "react";
+import { ListingBackToSearchLink } from "@/components/listings/detail/ListingBackToSearchLink";
 import type { User } from "@supabase/supabase-js";
 import { MidoraLogo } from "@/components/brand/MidoraLogo";
 import { SiteHeaderActions } from "@/components/layout/SiteHeaderActions";
@@ -47,13 +46,11 @@ export function ListingDetailHeader({ className }: Props) {
       )}
     >
       <div className="mx-auto flex h-[4.25rem] max-w-6xl items-center gap-3 px-4 sm:px-6">
-        <Link
-          href="/listings"
-          className="inline-flex min-h-10 shrink-0 items-center gap-1.5 text-sm text-muted hover:text-gold lg:hidden"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          Ακίνητα
-        </Link>
+        <Suspense fallback={null}>
+          <div className="lg:hidden">
+            <ListingBackToSearchLink />
+          </div>
+        </Suspense>
         <MidoraLogo href="/" variant="header" className="shrink-0" />
         <SiteHeaderActions user={user} variant="listings" className="ml-auto shrink-0" />
       </div>

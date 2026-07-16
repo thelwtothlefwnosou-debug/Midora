@@ -2,6 +2,9 @@ import "server-only";
 
 import { createClient } from "@/lib/supabase/server";
 import type { ListingExternalLink } from "@/lib/listing-external-links";
+import {
+  isStoredExternalLinkValid,
+} from "@/lib/listing-external-links";
 
 export async function getOwnerListingExternalLinks(
   listingId: string,
@@ -57,5 +60,7 @@ export async function getPublicListingExternalLinks(
     return [];
   }
 
-  return (data ?? []) as ListingExternalLink[];
+  return (data ?? [])
+    .filter((row) => isStoredExternalLinkValid(row as ListingExternalLink))
+    .map((row) => row as ListingExternalLink);
 }

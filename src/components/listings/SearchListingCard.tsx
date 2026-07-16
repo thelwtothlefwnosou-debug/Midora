@@ -19,7 +19,7 @@ import { pickListingCoverPhotoUrl } from "@/lib/listing-media";
 import { getListingCardAvailabilityLabel } from "@/lib/listing-card-availability";
 import { ListingCardAvailabilityOverlay } from "@/components/listings/ListingCardAvailabilityOverlay";
 import type { ListingUnavailablePeriod } from "@/lib/unavailable-periods";
-import { cn } from "@/lib/utils";
+import { cn, getListingPublicId } from "@/lib/utils";
 import { FavoriteButton } from "@/components/listings/FavoriteButton";
 
 function SearchListingCover({ listing, alt }: { listing: ListingWithImages; alt: string }) {
@@ -129,7 +129,7 @@ export const SearchListingCardGrid = memo(function SearchListingCardGrid({
   listingHref,
   unavailablePeriods = [],
 }: CardProps) {
-  const href = listingHref ?? `/listings/${listing.id}`;
+  const href = listingHref ?? `/listings/${getListingPublicId(listing)}`;
   const availabilityLabel = getListingCardAvailabilityLabel(listing, unavailablePeriods);
 
   return (
@@ -195,7 +195,7 @@ export function SearchListingCardCompact({
   onHoverEnd,
   unavailablePeriods = [],
 }: CardProps) {
-  const href = listingHref ?? `/listings/${listing.id}`;
+  const href = listingHref ?? `/listings/${getListingPublicId(listing)}`;
   const availabilityLabel = getListingCardAvailabilityLabel(listing, unavailablePeriods);
 
   return (

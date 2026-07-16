@@ -1,6 +1,8 @@
 import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
+import { Suspense } from "react";
 import { ListingDetailScrollFix } from "@/components/listings/detail/ListingDetailScrollFix";
+import { ListingBackToSearchLink } from "@/components/listings/detail/ListingBackToSearchLink";
+import { HelpAssistantTrigger } from "@/components/assistant/HelpAssistantContext";
 import { ListingDetailHeader } from "@/components/listings/detail/ListingDetailHeader";
 import { Footer } from "@/components/layout/Footer";
 import { getListingPublicDetail } from "@/lib/listing-detail-queries";
@@ -65,13 +67,22 @@ export async function ListingDetailBody({ id }: { id: string }) {
         <ListingDetailHeader />
         <main className="listing-detail min-h-screen bg-white pt-[4.25rem] pb-28 lg:pb-16">
           <div className="mx-auto max-w-6xl px-4 pt-3 sm:px-6 lg:pt-4">
-            <Link
-              href="/listings"
-              className="mb-2 inline-flex min-h-7 items-center gap-1.5 text-sm text-muted hover:text-gold"
-            >
-              <ArrowLeft className="h-4 w-4" />
-              Πίσω στα ακίνητα
-            </Link>
+            <div className="mb-2 flex flex-wrap items-center gap-3">
+              <Suspense
+                fallback={
+                  <span className="inline-flex min-h-7 items-center gap-1.5 text-sm text-muted">
+                    Πίσω στην αναζήτηση
+                  </span>
+                }
+              >
+                <ListingBackToSearchLink />
+              </Suspense>
+              <HelpAssistantTrigger
+                label="Χρειάζεσαι βοήθεια;"
+                seedQuestion="Πώς στέλνω αίτημα διαθεσιμότητας;"
+                className="text-sm font-medium text-muted hover:text-gold-dark"
+              />
+            </div>
 
             {isShortCapable ? (
               <ListingPageContent

@@ -5,12 +5,9 @@ import Link from "next/link";
 import type { PublicProfileListingItem } from "@/lib/profile-public-queries";
 import type { ListingWithImages } from "@/lib/types";
 import { pickListingCoverPhotoUrl } from "@/lib/listing-media";
-import {
-  buildListingDetailHref,
-  resolveListingSearchPrice,
-} from "@/lib/listing-search-links";
-import { listingRentalType } from "@/lib/rental-types";
-import { cn } from "@/lib/utils";
+import { resolveListingSearchPrice } from "@/lib/listing-search-links";
+import { formatListingPrice, listingRentalType } from "@/lib/rental-types";
+import { getListingPublicId, cn } from "@/lib/utils";
 
 type Props = {
   listing: PublicProfileListingItem;
@@ -38,20 +35,12 @@ export function PublicProfileListingCard({
     rentalTypeFilter: rentalTypeFilter ?? rentalMode,
   });
 
-  if (resolved.isUnavailable || !resolved.display || resolved.sortAmount <= 0) {
-    return null;
-  }
+  const priceDisplay =
+    resolved.display && resolved.sortAmount > 0 && !resolved.isUnavailable
+      ? resolved.display
+      : formatListingPrice(listing as unknown as ListingWithImages).display;
 
-  const stayParams = new URLSearchParams();
-  if (interestFrom) stayParams.set("interestFrom", interestFrom);
-  if (interestTo) stayParams.set("interestTo", interestTo);
-  if (durationMonths != null) stayParams.set("durationMonths", String(durationMonths));
-  if (rentalTypeFilter) stayParams.set("rentalType", rentalTypeFilter);
-
-  const href = buildListingDetailHref(
-    listing,
-    stayParams.toString() ? stayParams : undefined
-  );
+  const href = `/listings/${getListingPublicId(listing)}`;
   const location = [
     listing.area_display_name ?? listing.area,
     listing.city_display_name ?? listing.city,
@@ -93,7 +82,7 @@ export function PublicProfileListingCard({
       <div className="flex flex-1 flex-col p-4">
         <p className="line-clamp-2 font-medium leading-snug text-charcoal">{listing.title}</p>
         {location ? <p className="mt-1 text-sm text-muted">{location}</p> : null}
-        <p className="mt-2 text-[15px] font-semibold text-charcoal">{resolved.display}</p>
+        <p className="mt-2 text-[15px] font-semibold text-charcoal">{priceDisplay}</p>
       </div>
     </Link>
   );

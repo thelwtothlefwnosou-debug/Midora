@@ -1,6 +1,8 @@
 type ProfileRow = Record<string, unknown>;
 
 const OPTIONAL_PROFILE_COLUMNS = [
+  "email",
+  "referral_code",
   "display_name",
   "bio",
   "advertiser_type",

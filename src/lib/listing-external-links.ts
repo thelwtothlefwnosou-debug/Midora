@@ -31,9 +31,9 @@ export const EXTERNAL_LINK_PLATFORM_LABELS: Record<ExternalLinkPlatform, string>
 };
 
 export const EXTERNAL_LINK_PUBLIC_BUTTON_LABELS: Record<ExternalLinkPlatform, string> = {
-  airbnb: "Άνοιγμα εξωτερικής αγγελίας στο Airbnb",
-  booking: "Άνοιγμα εξωτερικής αγγελίας στο Booking.com",
-  vrbo: "Άνοιγμα εξωτερικής αγγελίας στο Vrbo",
+  airbnb: "Άνοιγμα αγγελίας στο Airbnb",
+  booking: "Άνοιγμα αγγελίας στο Booking.com",
+  vrbo: "Άνοιγμα αγγελίας στο Vrbo",
   other: "Άνοιγμα εξωτερικής αγγελίας",
 };
 
@@ -77,7 +77,10 @@ export function validateExternalLinkUrl(
   }
 
   if (parsed.protocol !== "https:") {
-    return { valid: false, error: "Επιτρέπονται μόνο HTTPS συνδέσμοι." };
+    return {
+      valid: false,
+      error: "Πρόσθεσε έγκυρο σύνδεσμο που ξεκινά με https://",
+    };
   }
 
   const hostname = parsed.hostname.toLowerCase();
@@ -90,7 +93,7 @@ export function validateExternalLinkUrl(
     if (!hostMatches(hostname, allowed)) {
       return {
         valid: false,
-        error: `Το URL πρέπει να ανήκει στο ${EXTERNAL_LINK_PLATFORM_LABELS[platform]}.`,
+        error: "Ο σύνδεσμος δεν φαίνεται να ανήκει στην επιλεγμένη πλατφόρμα.",
       };
     }
   }
@@ -105,6 +108,10 @@ export function validateExternalLinkUrl(
     normalizedUrl: parsed.toString(),
     warning,
   };
+}
+
+export function isStoredExternalLinkValid(link: Pick<ListingExternalLink, "platform" | "url">): boolean {
+  return validateExternalLinkUrl(link.platform, link.url).valid;
 }
 
 export const EXTERNAL_LINK_PLATFORMS: ExternalLinkPlatform[] = [

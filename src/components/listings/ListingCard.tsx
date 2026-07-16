@@ -21,7 +21,7 @@ import { getListingBadges, type ListingBadge } from "@/lib/listing-badges";
 import { formatListingPrice, cardRegistryLabel, listingCardDetailLines } from "@/lib/rental-types";
 import { pickListingCoverPhotoUrl } from "@/lib/listing-media";
 import { COPY } from "@/lib/copy";
-import { cn } from "@/lib/utils";
+import { cn, getListingPublicId } from "@/lib/utils";
 import { FavoriteButton } from "@/components/listings/FavoriteButton";
 import { ListingImageCarousel } from "@/components/listings/ListingImageCarousel";
 import { ListingCardBadges } from "@/components/listings/ListingCardBadges";
@@ -204,7 +204,7 @@ export function ListingCard({
     damping: 28,
   });
 
-  const href = `/listings/${listing.id}`;
+  const href = `/listings/${getListingPublicId(listing)}`;
   const images = listing.listing_images ?? [];
   const bathrooms = resolveListingBathrooms(listing.bathrooms, listing.bedrooms);
   const isHome = variant === "home";
