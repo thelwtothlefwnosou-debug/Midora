@@ -723,6 +723,7 @@ export async function getAdminUsers() {
 
   return profiles.map((p) => ({
     ...p,
+    email: null as string | null,
     listingCount: listingsByUser.get(p.id) ?? 0,
     newLeads: leadsByOwner.get(p.id) ?? 0,
     reportCount: reportsByUser.get(p.id) ?? 0,

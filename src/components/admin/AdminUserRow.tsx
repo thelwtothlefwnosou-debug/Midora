@@ -8,7 +8,8 @@ import { cn } from "@/lib/utils";
 export type AdminUserRowData = {
   id: string;
   full_name: string | null;
-  email: string | null;
+  /** Auth email is on auth.users; profiles.email is optional / often absent. */
+  email?: string | null;
   phone: string | null;
   role: string | null;
   created_at: string;

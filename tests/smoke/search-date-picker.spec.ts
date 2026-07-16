@@ -3,6 +3,18 @@ import { SMOKE_BASE_URL } from "./smoke-config";
 
 const SEARCH_URL = `${SMOKE_BASE_URL}/listings?rentalType=short_term`;
 
+/** Future calendar days relative to today (past days are disabled). */
+function futureDayParts(offsetDays: number): { year: number; month: number; day: number } {
+  const d = new Date();
+  d.setHours(12, 0, 0, 0);
+  d.setDate(d.getDate() + offsetDays);
+  return {
+    year: d.getFullYear(),
+    month: d.getMonth() + 1,
+    day: d.getDate(),
+  };
+}
+
 function dayAria(year: number, month: number, day: number): RegExp {
   const date = new Date(year, month - 1, day);
   const label = new Intl.DateTimeFormat("el-GR", {
@@ -26,12 +38,35 @@ async function datePopover(page: import("@playwright/test").Page) {
   return page.getByRole("dialog").last();
 }
 
+async function goToMonthIfNeeded(
+  page: import("@playwright/test").Page,
+  year: number,
+  month: number
+) {
+  const popover = await datePopover(page);
+  const target = new Date(year, month - 1, 1);
+  for (let i = 0; i < 14; i++) {
+    const dayBtn = popover.getByRole("button", { name: dayAria(year, month, 1) });
+    if ((await dayBtn.count()) > 0) return;
+    // Prefer next month when targeting future dates
+    const next = popover.getByRole("button", { name: "Επόμενος μήνας" });
+    if (await next.isEnabled()) {
+      await next.click();
+      continue;
+    }
+    const prev = popover.getByRole("button", { name: "Προηγούμενος μήνας" });
+    await prev.click();
+    void target;
+  }
+}
+
 async function clickCalendarDay(
   page: import("@playwright/test").Page,
   year: number,
   month: number,
   day: number
 ) {
+  await goToMonthIfNeeded(page, year, month);
   const popover = await datePopover(page);
   await popover.getByRole("button", { name: dayAria(year, month, day) }).click();
 }
@@ -70,48 +105,50 @@ test.describe("Search date picker close behavior", () => {
     await openSearchCheckIn(page);
     await calendarOpen(page);
 
-    const year = new Date().getFullYear();
-    const month = new Date().getMonth() + 1;
+    const checkIn = futureDayParts(3);
+    const checkOut = futureDayParts(6);
 
-    await clickCalendarDay(page, year, month, 16);
+    await clickCalendarDay(page, checkIn.year, checkIn.month, checkIn.day);
     await calendarOpen(page);
-    await clickCalendarDay(page, year, month, 19);
+    await clickCalendarDay(page, checkOut.year, checkOut.month, checkOut.day);
     await calendarClosed(page);
 
-    await expect(checkInButton(page)).toContainText("16");
-    await expect(checkOutButton(page)).toContainText("19");
+    await expect(checkInButton(page)).toContainText(String(checkIn.day));
+    await expect(checkOutButton(page)).toContainText(String(checkOut.day));
     await expect(page.getByText("Ενήλικες")).toHaveCount(0);
   });
 
   test("reopen calendar to edit dates", async ({ page }) => {
     await openSearchCheckIn(page);
 
-    const year = new Date().getFullYear();
-    const month = new Date().getMonth() + 1;
+    const firstIn = futureDayParts(3);
+    const firstOut = futureDayParts(6);
+    const secondIn = futureDayParts(7);
+    const secondOut = futureDayParts(11);
 
-    await clickCalendarDay(page, year, month, 16);
-    await clickCalendarDay(page, year, month, 19);
+    await clickCalendarDay(page, firstIn.year, firstIn.month, firstIn.day);
+    await clickCalendarDay(page, firstOut.year, firstOut.month, firstOut.day);
     await calendarClosed(page);
 
     await checkInButton(page).click();
     await calendarOpen(page);
 
-    await clickCalendarDay(page, year, month, 20);
-    await clickCalendarDay(page, year, month, 24);
+    await clickCalendarDay(page, secondIn.year, secondIn.month, secondIn.day);
+    await clickCalendarDay(page, secondOut.year, secondOut.month, secondOut.day);
     await calendarClosed(page);
 
-    await expect(checkInButton(page)).toContainText("20");
-    await expect(checkOutButton(page)).toContainText("24");
+    await expect(checkInButton(page)).toContainText(String(secondIn.day));
+    await expect(checkOutButton(page)).toContainText(String(secondOut.day));
   });
 
   test("search works without opening guests", async ({ page }) => {
     await openSearchCheckIn(page);
 
-    const year = new Date().getFullYear();
-    const month = new Date().getMonth() + 1;
+    const checkIn = futureDayParts(3);
+    const checkOut = futureDayParts(6);
 
-    await clickCalendarDay(page, year, month, 16);
-    await clickCalendarDay(page, year, month, 19);
+    await clickCalendarDay(page, checkIn.year, checkIn.month, checkIn.day);
+    await clickCalendarDay(page, checkOut.year, checkOut.month, checkOut.day);
     await calendarClosed(page);
 
     await page.locator(".listings-search-dock__submit").click();
