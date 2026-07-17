@@ -74,7 +74,7 @@ export async function GET(request: Request) {
       .from("profiles")
       .select("phone")
       .eq("id", user.id)
-      .single();
+      .maybeSingle();
 
     if (!profile?.phone?.trim()) {
       redirectPath = `/auth/complete-profile?next=${encodeURIComponent(next)}`;

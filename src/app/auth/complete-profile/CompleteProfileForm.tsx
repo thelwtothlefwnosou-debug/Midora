@@ -1,7 +1,6 @@
 "use client";
 
 import { useActionState } from "react";
-import { useSearchParams } from "next/navigation";
 import { completeProfile } from "@/lib/actions";
 import { Button } from "@/components/ui/Button";
 import { GlassCard } from "@/components/ui/GlassCard";
@@ -9,13 +8,12 @@ import { GlassCard } from "@/components/ui/GlassCard";
 export default function CompleteProfileForm({
   defaultFullName = "",
   defaultPhone = "",
+  nextPath = "/dashboard/listings",
 }: {
   defaultFullName?: string;
   defaultPhone?: string;
+  nextPath?: string;
 }) {
-  const searchParams = useSearchParams();
-  const nextPath = searchParams.get("next") ?? "/dashboard/profile";
-
   const [state, formAction, pending] = useActionState(
     async (_prev: { error?: string } | null, formData: FormData) => {
       formData.set("redirect", nextPath);

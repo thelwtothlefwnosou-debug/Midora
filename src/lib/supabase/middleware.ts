@@ -57,17 +57,22 @@ export async function updateSession(request: NextRequest) {
     const skipPhoneGate =
       path.startsWith("/admin/forbidden");
     if (!skipPhoneGate) {
-      const { data: profile } = await supabase
+      const { data: profile, error: profileError } = await supabase
         .from("profiles")
         .select("phone")
         .eq("id", user.id)
-        .single();
+        .maybeSingle();
 
-      if (!profile?.phone?.trim()) {
-        const url = request.nextUrl.clone();
-        url.pathname = "/auth/complete-profile";
-        url.searchParams.set("next", path);
-        return NextResponse.redirect(url);
+      // Only gate when we successfully read a row (or confirmed absence) with empty phone.
+      // Never trap users on complete-profile because of a transient select error.
+      if (!profileError) {
+        const phoneMissing = !profile?.phone?.trim();
+        if (phoneMissing) {
+          const url = request.nextUrl.clone();
+          url.pathname = "/auth/complete-profile";
+          url.searchParams.set("next", path);
+          return NextResponse.redirect(url);
+        }
       }
     }
   }

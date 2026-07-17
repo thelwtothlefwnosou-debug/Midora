@@ -131,28 +131,27 @@ export async function completeProfile(formData: FormData) {
 
   const fullName = (formData.get("full_name") as string)?.trim();
   const phone = (formData.get("phone") as string)?.trim();
-  const redirectTo = safePostAuthPath((formData.get("redirect") as string) || "/dashboard/profile");
+  const redirectTo = safePostAuthPath(
+    (formData.get("redirect") as string) || "/dashboard/listings"
+  );
 
   if (!fullName || !phone) {
     return { error: "Συμπλήρωσε όνομα και τηλέφωνο" };
   }
 
-  const { error } = await supabase.from("profiles").upsert(
-    {
-      id: user.id,
-      full_name: fullName,
-      phone,
-    },
-    { onConflict: "id" }
-  );
+  const { updateProfileRow } = await import("@/lib/profile-db-write");
+  const { error } = await updateProfileRow(supabase, user.id, {
+    full_name: fullName,
+    phone,
+  });
 
   if (error) {
     const admin = createServiceClient();
     if (admin) {
-      const { error: adminErr } = await admin.from("profiles").upsert(
-        { id: user.id, full_name: fullName, phone },
-        { onConflict: "id" }
-      );
+      const { error: adminErr } = await updateProfileRow(admin, user.id, {
+        full_name: fullName,
+        phone,
+      });
       if (adminErr) return { error: adminErr.message };
     } else {
       return { error: error.message };
