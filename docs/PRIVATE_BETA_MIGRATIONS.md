@@ -6,7 +6,11 @@
 |------|---------|
 | `supabase/migrations/20250713010000_profile_public_read_rls.sql` | Public SELECT on `profiles` for owners with approved listings, public slugs, admins, and **accepted** co-hosts only |
 
-Also ensure earlier migrations in `scripts/apply-pending-migrations.ts` are applied (co-hosts, public slug, external links, etc.).
+Also ensure earlier migrations in `scripts/apply-pending-migrations.ts` are applied (co-hosts, public slug, external links, property lead reply statuses, etc.).
+
+| File | Purpose |
+|------|---------|
+| `supabase/migrations/20250717120000_property_leads_reply_status.sql` | Align `property_leads.status` with app (`new` / `read` / `replied` / `archived`) so owner inquiry replies succeed |
 
 ## Apply locally (dev / linked Supabase)
 
