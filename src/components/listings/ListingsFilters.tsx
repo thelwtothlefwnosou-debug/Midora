@@ -41,7 +41,6 @@ import {
   type ActiveSearchField,
   getPartialDateRangeMessage,
 } from "@/lib/guided-search";
-import { HelpAssistantTrigger } from "@/components/assistant/HelpAssistantContext";
 import { saveLastSearchState } from "@/lib/midora-search-state";
 import { cn } from "@/lib/utils";
 
@@ -385,33 +384,6 @@ export function ListingsFilters({
     setGuestPickerOpen(false);
   }
 
-  function clearSearchFields() {
-    const cleared: ListingsFilterValues = {
-      ...values,
-      city: undefined,
-      area: undefined,
-      district: undefined,
-      nearby: undefined,
-      polygon: undefined,
-      bounds: undefined,
-      autoMap: undefined,
-      interestFrom: undefined,
-      interestTo: undefined,
-      startMonth: undefined,
-      durationMonths: undefined,
-      guests: undefined,
-      pets: undefined,
-    };
-    setSelectedLocation(null);
-    setNearbyCoords(null);
-    setValues(cleared);
-    setGuidedState(EMPTY_GUIDED_SEARCH);
-    setActiveSearchField(null);
-    setDatePickerOpen(false);
-    setGuestPickerOpen(false);
-    setPartialDateHint(null);
-  }
-
   const buildPreviewQuery = useCallback(
     (v: ListingsFilterValues) => {
       const fd = formRef.current ? new FormData(formRef.current) : null;
@@ -600,20 +572,6 @@ export function ListingsFilters({
                 onGuestPickerOpenChange: setGuestPickerOpen,
                 searchShellRef,
               }}
-            />
-
-            <button
-              type="button"
-              onClick={clearSearchFields}
-              className="listings-search-dock__clear hidden text-sm font-medium text-muted hover:text-charcoal lg:inline-flex"
-            >
-              Καθαρισμός
-            </button>
-
-            <HelpAssistantTrigger
-              label="Βοήθεια αναζήτησης"
-              seedQuestion="Πώς βάζω ημερομηνίες στην αναζήτηση;"
-              className="hidden text-sm font-medium text-muted hover:text-gold-dark lg:inline-flex"
             />
 
             <button
