@@ -1,4 +1,5 @@
 import { createServerClient } from "@supabase/ssr";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { cookies } from "next/headers";
 import {
   getSupabaseAnonKey,
@@ -11,8 +12,20 @@ import type { Profile } from "@/lib/types";
 
 export { isSupabaseConfigured, isServiceRoleConfigured } from "@/lib/supabase/config";
 
+/** Never include profiles.email — column is optional / often absent (admin migration pending). */
 const PROFILE_SELECT_MINIMAL =
-  "id, full_name, phone, role, created_at, email, referral_code, display_name, public_slug, public_profile_enabled" as const;
+  "id, full_name, phone, role, created_at, referral_code, display_name, public_slug, public_profile_enabled" as const;
+
+const PROFILE_SELECT_CORE = "id, full_name, phone, role, created_at" as const;
+
+function isMissingColumnError(message: string | undefined): boolean {
+  const msg = message ?? "";
+  return (
+    msg.includes("does not exist") ||
+    msg.includes("Could not find") ||
+    msg.includes("column")
+  );
+}
 
 function profileFromRow(row: Record<string, unknown>): Profile {
   return {
@@ -23,6 +36,40 @@ function profileFromRow(row: Record<string, unknown>): Profile {
     role: (row.role as Profile["role"]) ?? "user",
     created_at: String(row.created_at ?? new Date().toISOString()),
   } as Profile;
+}
+
+async function loadProfileRow(
+  client: SupabaseClient,
+  userId: string
+): Promise<Profile | null> {
+  const full = await client.from("profiles").select("*").eq("id", userId).maybeSingle();
+  if (!full.error && full.data) return profileFromRow(full.data as Record<string, unknown>);
+
+  const minimal = await client
+    .from("profiles")
+    .select(PROFILE_SELECT_MINIMAL)
+    .eq("id", userId)
+    .maybeSingle();
+  if (!minimal.error && minimal.data) {
+    return profileFromRow(minimal.data as Record<string, unknown>);
+  }
+  if (minimal.error && !isMissingColumnError(minimal.error.message)) {
+    console.error("[getCurrentProfile] minimal select failed:", minimal.error.message);
+  }
+
+  const core = await client
+    .from("profiles")
+    .select(PROFILE_SELECT_CORE)
+    .eq("id", userId)
+    .maybeSingle();
+  if (!core.error && core.data) {
+    return profileFromRow(core.data as Record<string, unknown>);
+  }
+  if (core.error) {
+    console.error("[getCurrentProfile] core select failed:", core.error.message);
+  }
+
+  return null;
 }
 
 export async function createClient() {
@@ -84,17 +131,19 @@ export async function getCurrentProfile() {
     },
   });
 
-  const full = await supabase.from("profiles").select("*").eq("id", user.id).single();
-  if (!full.error && full.data) return profileFromRow(full.data as Record<string, unknown>);
+  let profile = await loadProfileRow(supabase, user.id);
+  if (profile) return profile;
 
-  const minimal = await supabase
-    .from("profiles")
-    .select(PROFILE_SELECT_MINIMAL)
-    .eq("id", user.id)
-    .single();
-
-  if (!minimal.error && minimal.data) {
-    return profileFromRow(minimal.data as Record<string, unknown>);
+  // RLS or race after bootstrap: retry once via service role (own row only).
+  try {
+    const { createServiceClient } = await import("@/lib/supabase/service");
+    const service = createServiceClient();
+    if (service) {
+      profile = await loadProfileRow(service, user.id);
+      if (profile) return profile;
+    }
+  } catch (err) {
+    console.error("[getCurrentProfile] service fallback failed:", err);
   }
 
   return null;

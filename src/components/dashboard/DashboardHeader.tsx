@@ -21,7 +21,7 @@ import {
 import { cn } from "@/lib/utils";
 
 const PROFILE_LINKS = [
-  { href: "/dashboard/settings/profile", label: "Προφίλ" },
+  { href: "/dashboard/profile", label: "Προφίλ" },
   { href: "/dashboard/verification", label: "Επαλήθευση" },
   { href: "/dashboard/settings?tab=notifications", label: "Ειδοποιήσεις" },
   { href: "/dashboard/settings?tab=security", label: "Ασφάλεια και απόρρητο" },
