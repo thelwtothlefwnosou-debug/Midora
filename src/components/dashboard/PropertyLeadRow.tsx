@@ -34,18 +34,42 @@ function listingCoverUrl(listing: NonNullable<PropertyLeadWithListing["listings"
   return cover?.url ?? null;
 }
 
+function safeFormatDate(
+  iso: string | null | undefined,
+  opts: Intl.DateTimeFormatOptions
+): string | null {
+  if (!iso) return null;
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return null;
+  try {
+    return new Intl.DateTimeFormat("el-GR", opts).format(d);
+  } catch {
+    return null;
+  }
+}
+
 function formatInterestDates(lead: PropertyLeadWithListing): string | null {
   if (lead.interest_start_date && lead.interest_end_date) {
-    const fmt = new Intl.DateTimeFormat("el-GR", { dateStyle: "medium" });
-    return `${fmt.format(new Date(lead.interest_start_date))} – ${fmt.format(new Date(lead.interest_end_date))}`;
+    const start = safeFormatDate(lead.interest_start_date, { dateStyle: "medium" });
+    const end = safeFormatDate(lead.interest_end_date, { dateStyle: "medium" });
+    if (start && end) return `${start} – ${end}`;
   }
   if (lead.interest_start_month) {
     const [year, month] = lead.interest_start_month.split("-");
-    if (year && month) {
-      const label = new Intl.DateTimeFormat("el-GR", {
-        month: "long",
-        year: "numeric",
-      }).format(new Date(Number(year), Number(month) - 1, 1));
+    const y = Number(year);
+    const m = Number(month);
+    if (Number.isFinite(y) && Number.isFinite(m) && m >= 1 && m <= 12) {
+      const d = new Date(y, m - 1, 1);
+      let label: string | null = null;
+      try {
+        label = new Intl.DateTimeFormat("el-GR", {
+          month: "long",
+          year: "numeric",
+        }).format(d);
+      } catch {
+        label = null;
+      }
+      if (!label) return null;
       if (lead.interest_duration_months) {
         return `${label} · ${lead.interest_duration_months} μήνες`;
       }
@@ -53,9 +77,7 @@ function formatInterestDates(lead: PropertyLeadWithListing): string | null {
     }
   }
   if (lead.start_date) {
-    return new Intl.DateTimeFormat("el-GR", { dateStyle: "medium" }).format(
-      new Date(lead.start_date)
-    );
+    return safeFormatDate(lead.start_date, { dateStyle: "medium" });
   }
   return null;
 }
@@ -113,10 +135,11 @@ export function PropertyLeadRow({
     return `${reply.sender_display_name} απάντησε`;
   }
 
-  const created = new Intl.DateTimeFormat("el-GR", {
-    dateStyle: "medium",
-    timeStyle: "short",
-  }).format(new Date(lead.created_at));
+  const created =
+    safeFormatDate(lead.created_at, {
+      dateStyle: "medium",
+      timeStyle: "short",
+    }) ?? "";
 
   return (
     <article className="overflow-hidden rounded-2xl border border-border bg-white shadow-soft">

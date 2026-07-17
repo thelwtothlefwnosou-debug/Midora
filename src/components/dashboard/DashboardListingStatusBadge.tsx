@@ -50,7 +50,7 @@ export function DashboardListingStatusBadge({
   compact = false,
   className,
 }: Props) {
-  const styles = STATUS_STYLES[statusKey];
+  const styles = STATUS_STYLES[statusKey] ?? STATUS_STYLES.draft;
 
   if (compact) {
     return (
