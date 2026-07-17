@@ -1,5 +1,5 @@
 import { requireDashboardContext } from "@/lib/dashboard-context";
-import { getUserListings } from "@/lib/listings";
+import { getUserListingsForDashboardShell } from "@/lib/listings";
 import { countNewOwnerLeads } from "@/lib/leads";
 import { getEffectiveListingStatus } from "@/lib/listing-status";
 import { buildOwnerNotifications } from "@/lib/owner-dashboard";
@@ -14,8 +14,11 @@ export default async function DashboardLayout({
   children: React.ReactNode;
 }) {
   const { profile, email } = await requireDashboardContext("/dashboard");
-  const listings = await getUserListings(profile.id);
-  const newLeads = await countNewOwnerLeads(profile.id);
+  // Parallel + no images — keeps /dashboard/listings/new from hanging on heavy joins
+  const [listings, newLeads] = await Promise.all([
+    getUserListingsForDashboardShell(profile.id),
+    countNewOwnerLeads(profile.id),
+  ]);
   const notifications = buildOwnerNotifications({
     profile,
     listings,

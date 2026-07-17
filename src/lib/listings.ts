@@ -453,6 +453,33 @@ export async function getUserListings(userId: string): Promise<ListingWithImages
   return (data ?? []) as ListingWithImages[];
 }
 
+/** Lightweight owner listings for dashboard chrome (notifications) — no images. */
+export async function getUserListingsForDashboardShell(
+  userId: string
+): Promise<ListingWithImages[]> {
+  const supabase = await createClient();
+  if (!supabase) return [];
+
+  const { data, error } = await supabase
+    .from("listings")
+    .select(
+      "id, title, slug, status, approval_status, published_at, expires_at, updated_at, created_at, user_id"
+    )
+    .eq("user_id", userId)
+    .order("created_at", { ascending: false })
+    .limit(100);
+
+  if (error) {
+    console.error("[listings] getUserListingsForDashboardShell:", error.message);
+    return [];
+  }
+
+  return (data ?? []).map((row) => ({
+    ...row,
+    listing_images: [],
+  })) as ListingWithImages[];
+}
+
 export async function getPendingListings() {
   const supabase = await createClient();
   if (!supabase) return [];
