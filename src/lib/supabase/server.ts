@@ -12,9 +12,9 @@ import type { Profile } from "@/lib/types";
 
 export { isSupabaseConfigured, isServiceRoleConfigured } from "@/lib/supabase/config";
 
-/** Never include profiles.email — column is optional / often absent (admin migration pending). */
+/** Core columns only — optional profile columns (email, referral_code, …) often absent. */
 const PROFILE_SELECT_MINIMAL =
-  "id, full_name, phone, role, created_at, referral_code, display_name, public_slug, public_profile_enabled" as const;
+  "id, full_name, phone, role, created_at, display_name" as const;
 
 const PROFILE_SELECT_CORE = "id, full_name, phone, role, created_at" as const;
 
