@@ -100,6 +100,8 @@ export async function bootstrapAuthProfile(
   };
 
   if (input.email) {
+    // Only write when column exists — updateProfileRow strips unknown columns.
+    // Never use upsert-only email without full_name (NOT NULL).
     baseRow.email = input.email;
   }
 
@@ -126,6 +128,7 @@ export async function bootstrapAuthProfile(
     (slug) => isPublicSlugTaken(db, slug, input.userId)
   );
 
+  // Partial patch via UPDATE (updateProfileRow) — never sparse upsert without full_name.
   const { error } = await updateProfileRow(db, input.userId, {
     public_slug: publicSlug,
     public_profile_enabled: true,
