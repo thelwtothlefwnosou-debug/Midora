@@ -70,15 +70,8 @@ export async function GET(request: Request) {
 
     await promoteAdminFromEmail(user.id, user.email);
 
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("phone")
-      .eq("id", user.id)
-      .maybeSingle();
-
-    if (!profile?.phone?.trim()) {
-      redirectPath = `/auth/complete-profile?next=${encodeURIComponent(next)}`;
-    }
+    // Private beta: never force complete-profile from OAuth callback.
+    // Missing phone is handled in settings, not as a hard block.
   }
 
   const response = NextResponse.redirect(`${origin}${redirectPath}`);
