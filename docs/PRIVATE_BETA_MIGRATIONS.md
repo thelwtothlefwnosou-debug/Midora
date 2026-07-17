@@ -11,6 +11,7 @@ Also ensure earlier migrations in `scripts/apply-pending-migrations.ts` are appl
 | File | Purpose |
 |------|---------|
 | `supabase/migrations/20250717120000_property_leads_reply_status.sql` | Align `property_leads.status` with app (`new` / `read` / `replied` / `archived`) so owner inquiry replies succeed |
+| `supabase/migrations/20250717130000_property_leads_interest_columns.sql` | Add interest/timing columns on `property_leads` required for live inquiry submit |
 
 ## Apply locally (dev / linked Supabase)
 

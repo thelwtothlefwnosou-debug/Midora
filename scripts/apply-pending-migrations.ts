@@ -24,6 +24,7 @@ const MIGRATION_FILES = [
   "supabase/migrations/20250712180000_profile_public_slug.sql",
   "supabase/migrations/20250713010000_profile_public_read_rls.sql",
   "supabase/migrations/20250717120000_property_leads_reply_status.sql",
+  "supabase/migrations/20250717130000_property_leads_interest_columns.sql",
 ] as const;
 
 async function main() {
