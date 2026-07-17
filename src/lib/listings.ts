@@ -477,7 +477,7 @@ export async function getUserListingsForDashboardShell(
   return (data ?? []).map((row) => ({
     ...row,
     listing_images: [],
-  })) as ListingWithImages[];
+  })) as unknown as ListingWithImages[];
 }
 
 export async function getPendingListings() {
