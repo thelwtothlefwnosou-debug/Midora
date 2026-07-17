@@ -1,4 +1,3 @@
-import Image from "next/image";
 import Link from "next/link";
 import { ImageIcon } from "lucide-react";
 import { Button } from "@/components/ui/Button";
@@ -91,7 +90,8 @@ export function OwnerListingStatusHero({ row }: Props) {
             className="relative hidden h-20 w-28 shrink-0 overflow-hidden rounded-xl bg-sand/50 sm:block"
           >
             {cover ? (
-              <Image src={cover} alt="" fill className="object-cover" sizes="112px" />
+              // eslint-disable-next-line @next/next/no-img-element -- avoid next/image hostname crashes blanking dashboard
+              <img src={cover} alt="" className="absolute inset-0 h-full w-full object-cover" />
             ) : (
               <div className="flex h-full items-center justify-center text-muted">
                 <ImageIcon className="h-6 w-6 opacity-40" />

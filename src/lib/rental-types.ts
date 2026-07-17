@@ -170,19 +170,21 @@ export function formatListingPrice(
   const priceType = listingPriceType(listing);
 
   if (priceType === "per_night" || rentalType === "short_term") {
-    const amount = listing.price_per_night ?? listing.price_monthly;
+    const raw = listing.price_per_night ?? listing.price_monthly;
+    const amount = typeof raw === "number" && Number.isFinite(raw) ? raw : 0;
     return {
       amount,
       unit: "/ βράδυ",
-      display: `€${amount.toLocaleString("el-GR")} / βράδυ`,
+      display: amount > 0 ? `€${amount.toLocaleString("el-GR")} / βράδυ` : "—",
     };
   }
 
-  const amount = listing.price_monthly;
+  const raw = listing.price_monthly;
+  const amount = typeof raw === "number" && Number.isFinite(raw) ? raw : 0;
   return {
     amount,
     unit: "/ μήνα",
-    display: `€${amount.toLocaleString("el-GR")} / μήνα`,
+    display: amount > 0 ? `€${amount.toLocaleString("el-GR")} / μήνα` : "—",
   };
 }
 

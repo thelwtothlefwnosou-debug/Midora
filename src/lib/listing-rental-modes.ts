@@ -120,17 +120,20 @@ export function publicPricePrimary(
   mode: PublicRentalMode
 ): { amount: number; suffix: string; display: string } {
   if (mode === "short_term") {
-    const amount = listing.price_per_night ?? listing.price_monthly;
+    const raw = listing.price_per_night ?? listing.price_monthly;
+    const amount = typeof raw === "number" && Number.isFinite(raw) ? raw : 0;
     return {
       amount,
       suffix: "/ βράδυ",
-      display: `€${amount.toLocaleString("el-GR")} / βράδυ`,
+      display: amount > 0 ? `€${amount.toLocaleString("el-GR")} / βράδυ` : "—",
     };
   }
+  const raw = listing.price_monthly;
+  const amount = typeof raw === "number" && Number.isFinite(raw) ? raw : 0;
   return {
-    amount: listing.price_monthly,
+    amount,
     suffix: "/ μήνα",
-    display: `€${listing.price_monthly.toLocaleString("el-GR")} / μήνα`,
+    display: amount > 0 ? `€${amount.toLocaleString("el-GR")} / μήνα` : "—",
   };
 }
 

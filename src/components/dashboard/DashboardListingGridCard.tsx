@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import Image from "next/image";
 import { ImageIcon } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { DashboardListingStatusBadge } from "@/components/dashboard/DashboardListingStatusBadge";
@@ -50,12 +49,11 @@ export function DashboardListingGridCard({ row }: Props) {
     <article className="group flex flex-col overflow-hidden rounded-2xl border border-border bg-white shadow-soft transition-shadow hover:shadow-card">
       <Link href={manageHref} className="relative block aspect-[16/10] overflow-hidden bg-sand/40">
         {cover ? (
-          <Image
+          // eslint-disable-next-line @next/next/no-img-element -- avoid next/image hostname crashes blanking dashboard
+          <img
             src={cover}
             alt=""
-            fill
-            className="object-cover transition-transform duration-300 group-hover:scale-[1.02]"
-            sizes="(max-width: 640px) 100vw, (max-width: 1280px) 50vw, 33vw"
+            className="absolute inset-0 h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.02]"
           />
         ) : (
           <div className="flex h-full flex-col items-center justify-center gap-2 text-muted">

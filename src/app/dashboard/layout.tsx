@@ -14,18 +14,27 @@ export default async function DashboardLayout({
   children: React.ReactNode;
 }) {
   const { profile, email } = await requireDashboardContext("/dashboard");
-  // Parallel + no images — keeps /dashboard/listings/new from hanging on heavy joins
-  const [listings, newLeads] = await Promise.all([
-    getUserListingsForDashboardShell(profile.id),
-    countNewOwnerLeads(profile.id),
-  ]);
-  const notifications = buildOwnerNotifications({
-    profile,
-    listings,
-    newLeadsCount: newLeads,
-    getEffectiveStatus: getEffectiveListingStatus,
-  });
-  const avatarUrl = resolveProfileAvatarUrl(profile, getSupabaseUrl());
+
+  let notifications: ReturnType<typeof buildOwnerNotifications> = [];
+  let newLeads = 0;
+  let avatarUrl: string | null = null;
+
+  try {
+    const [listings, leadsCount] = await Promise.all([
+      getUserListingsForDashboardShell(profile.id),
+      countNewOwnerLeads(profile.id),
+    ]);
+    newLeads = leadsCount;
+    notifications = buildOwnerNotifications({
+      profile,
+      listings,
+      newLeadsCount: newLeads,
+      getEffectiveStatus: getEffectiveListingStatus,
+    });
+    avatarUrl = resolveProfileAvatarUrl(profile, getSupabaseUrl());
+  } catch (err) {
+    console.error("[dashboard] layout chrome data failed:", err);
+  }
 
   return (
     <DashboardLayoutProvider

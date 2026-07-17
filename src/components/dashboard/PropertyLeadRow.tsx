@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import {
@@ -124,12 +123,11 @@ export function PropertyLeadRow({
       <div className="flex flex-col sm:flex-row">
         <div className="relative h-36 shrink-0 bg-sand sm:h-auto sm:w-40">
           {cover ? (
-            <Image
+            // eslint-disable-next-line @next/next/no-img-element -- avoid next/image hostname crashes
+            <img
               src={cover}
               alt={listing?.title ?? "Αγγελία"}
-              fill
-              className="object-cover"
-              sizes="160px"
+              className="absolute inset-0 h-full w-full object-cover"
             />
           ) : (
             <div className="flex h-full min-h-[9rem] items-center justify-center">

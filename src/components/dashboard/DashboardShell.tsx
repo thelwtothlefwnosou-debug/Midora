@@ -26,7 +26,26 @@ export function DashboardShell({
 }) {
   const ctx = useDashboardLayout();
   if (!ctx) {
-    throw new Error("DashboardShell requires DashboardLayoutProvider");
+    // Never blank the whole dashboard — show a recoverable shell instead of throwing.
+    return (
+      <div className="min-h-screen bg-cream px-4 py-10">
+        <div className="mx-auto max-w-lg rounded-2xl border border-border bg-white p-6 text-center shadow-soft">
+          <p className="font-display text-lg font-semibold text-charcoal">
+            Δεν φορτώθηκε το dashboard
+          </p>
+          <p className="mt-2 text-sm text-muted">
+            Ανανέωσε τη σελίδα. Αν συνεχίζει, αποσυνδέσου και ξανασυνδέσου.
+          </p>
+          <a
+            href="/dashboard"
+            className="mt-4 inline-flex rounded-full bg-gold px-5 py-2.5 text-sm font-medium text-white"
+          >
+            Ανανέωση
+          </a>
+        </div>
+        {children}
+      </div>
+    );
   }
 
   const { profile, email, avatarUrl, notifications, sidebarCollapsed, setSidebarCollapsed } =

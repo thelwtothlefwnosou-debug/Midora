@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import { cn } from "@/lib/utils";
 import { avatarInitials, type ProfileAvatarFields } from "@/lib/profile-avatar";
 
@@ -30,7 +29,8 @@ export function ProfileAvatar({ profile, imageUrl, size = "md", className }: Pro
           className
         )}
       >
-        <Image src={src} alt="" fill className="object-cover" sizes="56px" />
+        {/* eslint-disable-next-line @next/next/no-img-element -- avoid next/image hostname crashes */}
+        <img src={src} alt="" className="absolute inset-0 h-full w-full object-cover" />
       </span>
     );
   }
@@ -38,7 +38,7 @@ export function ProfileAvatar({ profile, imageUrl, size = "md", className }: Pro
   return (
     <span
       className={cn(
-        "inline-flex shrink-0 items-center justify-center rounded-full bg-charcoal font-semibold text-white ring-1 ring-border",
+        "inline-flex items-center justify-center rounded-full bg-charcoal font-semibold text-white ring-1 ring-border",
         sizes[size],
         className
       )}

@@ -19,22 +19,30 @@ export default async function DashboardPage({
   const params = await searchParams;
   const { profile, email } = await requireDashboardContext("/dashboard");
 
-  const listings = await attachStoredViewCounts(await getUserListings(profile.id));
-  const listingIds = listings.map((l) => l.id);
-  const [leadStatsMap, newInquiries] = await Promise.all([
-    getOwnerLeadStatsByListingIds(profile.id, listingIds),
-    countNewOwnerLeads(profile.id),
-  ]);
-  const rows = listings.map((listing) =>
-    buildOwnerListingRowModel(
-      listing,
-      getEffectiveListingStatus(listing),
-      leadStatsMap.get(listing.id) ?? { total: 0, last30Days: 0, unread: 0 }
-    )
-  );
-  const overview = buildOwnerListingsOverview(rows, newInquiries);
-  const leads = await getOwnerLeads(profile.id);
-  const recentLeads = leads.filter((l) => l.status !== "archived").slice(0, 3);
+  let rows: ReturnType<typeof buildOwnerListingRowModel>[] = [];
+  let overview = buildOwnerListingsOverview([], 0);
+  let recentLeads: Awaited<ReturnType<typeof getOwnerLeads>> = [];
+
+  try {
+    const listings = await attachStoredViewCounts(await getUserListings(profile.id));
+    const listingIds = listings.map((l) => l.id);
+    const [leadStatsMap, newInquiries] = await Promise.all([
+      getOwnerLeadStatsByListingIds(profile.id, listingIds),
+      countNewOwnerLeads(profile.id),
+    ]);
+    rows = listings.map((listing) =>
+      buildOwnerListingRowModel(
+        listing,
+        getEffectiveListingStatus(listing),
+        leadStatsMap.get(listing.id) ?? { total: 0, last30Days: 0, unread: 0 }
+      )
+    );
+    overview = buildOwnerListingsOverview(rows, newInquiries);
+    const leads = await getOwnerLeads(profile.id);
+    recentLeads = leads.filter((l) => l.status !== "archived").slice(0, 3);
+  } catch (err) {
+    console.error("[dashboard] owner home data failed:", err);
+  }
 
   const firstName = profile.full_name?.split(" ")[0] ?? "φίλε";
 
