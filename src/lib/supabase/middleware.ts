@@ -53,29 +53,9 @@ export async function updateSession(request: NextRequest) {
   const protectedPaths = ["/dashboard", "/admin"];
   const isProtected = protectedPaths.some((p) => path.startsWith(p));
 
-  if (user && isProtected && !path.startsWith("/auth/complete-profile")) {
-    const skipPhoneGate =
-      path.startsWith("/admin/forbidden");
-    if (!skipPhoneGate) {
-      const { data: profile, error: profileError } = await supabase
-        .from("profiles")
-        .select("phone")
-        .eq("id", user.id)
-        .maybeSingle();
-
-      // Only gate when we successfully read a row (or confirmed absence) with empty phone.
-      // Never trap users on complete-profile because of a transient select error.
-      if (!profileError) {
-        const phoneMissing = !profile?.phone?.trim();
-        if (phoneMissing) {
-          const url = request.nextUrl.clone();
-          url.pathname = "/auth/complete-profile";
-          url.searchParams.set("next", path);
-          return NextResponse.redirect(url);
-        }
-      }
-    }
-  }
+  // Private beta: do NOT block dashboard behind phone complete-profile.
+  // Owners were trapped on /auth/complete-profile and could not open new listing.
+  // Phone remains collectible in profile settings; not a hard gate.
 
   if (isProtected && !user) {
     const url = request.nextUrl.clone();
