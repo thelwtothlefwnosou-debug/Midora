@@ -6,7 +6,8 @@ import { getSupabaseAnonKey, getSupabaseUrl } from "@/lib/supabase/config";
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request });
 
-  const supabase = createServerClient(getSupabaseUrl(), getSupabaseAnonKey(), {      cookies: {
+  const supabase = createServerClient(getSupabaseUrl(), getSupabaseAnonKey(), {
+      cookies: {
         getAll() {
           return request.cookies.getAll();
         },
@@ -53,9 +54,8 @@ export async function updateSession(request: NextRequest) {
   const protectedPaths = ["/dashboard", "/admin"];
   const isProtected = protectedPaths.some((p) => path.startsWith(p));
 
-  // Private beta: do NOT block dashboard behind phone complete-profile.
-  // Owners were trapped on /auth/complete-profile and could not open new listing.
-  // Phone remains collectible in profile settings; not a hard gate.
+  // Phone gate disabled: never redirect /dashboard to /auth/complete-profile.
+  // Keep login redirect for unauthenticated users and admin role checks below.
 
   if (isProtected && !user) {
     const url = request.nextUrl.clone();
