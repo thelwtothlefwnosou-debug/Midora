@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
 import {
   CreateListingWizardShell,
   WizardChoiceCard,
@@ -145,7 +144,6 @@ type Props = {
 type SaveStatus = "idle" | "saving" | "saved" | "error";
 
 export function NewListingWizard({ profile, email, initialListingId = null }: Props) {
-  const router = useRouter();
   const [step, setStep] = useState(1);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -962,24 +960,32 @@ export function NewListingWizard({ profile, email, initialListingId = null }: Pr
     setDraftSaving(true);
     setSaveStatus("saving");
     const activeListingId = resolveListingId();
-    startTransition(async () => {
-      const result = await savePortalListingDraft(buildFormData(), activeListingId);
-      setDraftSaving(false);
-      if (result.error) {
-        setError(result.error);
+    void (async () => {
+      try {
+        const result = await savePortalListingDraft(buildFormData(), activeListingId);
+        if (result.error) {
+          setError(result.error);
+          setSaveStatus("error");
+          return;
+        }
+        if (result.listingId) {
+          persistListingId(result.listingId);
+          void refreshSavedPhotoCount(result.listingId);
+          markDraftSaved();
+          onDone(result.listingId);
+        } else {
+          setError(
+            "Δεν ήταν δυνατή η αποθήκευση της αγγελίας. Δοκίμασε ξανά ή επικοινώνησε με την υποστήριξη."
+          );
+          setSaveStatus("error");
+        }
+      } catch {
+        setError("Δεν ήταν δυνατή η αποθήκευση. Δοκίμασε ξανά.");
         setSaveStatus("error");
-        return;
+      } finally {
+        setDraftSaving(false);
       }
-      if (result.listingId) {
-        persistListingId(result.listingId);
-        void refreshSavedPhotoCount(result.listingId);
-        markDraftSaved();
-        onDone(result.listingId);
-      } else {
-        setError("Δεν ήταν δυνατή η αποθήκευση της αγγελίας. Δοκίμασε ξανά ή επικοινώνησε με την υποστήριξη.");
-        setSaveStatus("error");
-      }
-    });
+    })();
   }
 
   function next() {
@@ -1068,39 +1074,42 @@ export function NewListingWizard({ profile, email, initialListingId = null }: Pr
   }
 
   function saveDraft() {
-    if (pending || draftSaving) return;
+    // Soft-save + exit: no step validation; leave wizard on success.
+    if (draftSaving) return;
     setError(null);
     setSuccess(null);
     const activeListingId = resolveListingId();
     setDraftSaving(true);
     setSaveStatus("saving");
-    startTransition(async () => {
-      const result = await savePortalListingDraft(buildFormData(), activeListingId);
-      setDraftSaving(false);
-      if (result.error) {
-        setError(result.error);
-        setSaveStatus("error");
-        return;
-      }
-      if (result.listingId) {
-        persistListingId(result.listingId);
-        await refreshSavedPhotoCount();
-        const amenityResult = await saveOwnerListingAmenities(
-          result.listingId,
-          selectedAmenityKeys
-        );
-        if ("error" in amenityResult && amenityResult.error) {
-          setError(amenityResult.error);
+    void (async () => {
+      let leftWizard = false;
+      try {
+        const result = await savePortalListingDraft(buildFormData(), activeListingId);
+        if (result.error) {
+          setError(result.error);
           setSaveStatus("error");
           return;
         }
+        if (!result.listingId) {
+          setError("Δεν ήταν δυνατή η αποθήκευση. Δοκίμασε ξανά.");
+          setSaveStatus("error");
+          return;
+        }
+
+        persistListingId(result.listingId);
+        // Best-effort amenities — never block leave after draft is saved.
+        void saveOwnerListingAmenities(result.listingId, selectedAmenityKeys);
         markDraftSaved();
-        router.push("/dashboard/listings?saved=draft");
-      } else {
+        leftWizard = true;
+        // Hard navigate so we always leave the fixed full-screen wizard.
+        window.location.assign("/dashboard/listings?draftSaved=1");
+      } catch {
         setError("Δεν ήταν δυνατή η αποθήκευση. Δοκίμασε ξανά.");
         setSaveStatus("error");
+      } finally {
+        if (!leftWizard) setDraftSaving(false);
       }
-    });
+    })();
   }
 
   function submit() {

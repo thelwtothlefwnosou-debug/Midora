@@ -168,7 +168,7 @@ export function CreateListingWizardShell({
                 isLastStep && "bg-charcoal hover:bg-charcoal/90"
               )}
             >
-              {busy ? "Αποθήκευση…" : nextLabel}
+              {nextLabel}
               {!isLastStep && <ChevronRight className="h-4 w-4" />}
             </button>
           )}

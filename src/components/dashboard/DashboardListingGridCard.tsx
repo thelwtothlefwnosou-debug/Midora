@@ -129,8 +129,16 @@ export function DashboardListingGridCard({ row }: Props) {
           )}
         </div>
 
-        <Button href={manageHref} size="sm" className="mt-4 w-full">
-          Διαχείριση ακινήτου
+        <Button
+          href={
+            isDraft
+              ? `/dashboard/listings/new?draft=${listing.id}`
+              : manageHref
+          }
+          size="sm"
+          className="mt-4 w-full"
+        >
+          {isDraft ? "Συνέχεια δημιουργίας" : "Διαχείριση ακινήτου"}
         </Button>
       </div>
     </article>

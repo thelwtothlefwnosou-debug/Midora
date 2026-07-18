@@ -20,10 +20,15 @@ function mapLegacyStatusFilter(status?: string): ListingFilterTab {
 export default async function DashboardListingsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ submitted?: string; saved?: string; status?: string }>;
+  searchParams: Promise<{
+    submitted?: string;
+    saved?: string;
+    draftSaved?: string;
+    status?: string;
+  }>;
 }) {
   const { profile, email } = await requireDashboardContext("/dashboard/listings");
-  const { submitted, saved, status: statusFilter } = await searchParams;
+  const { submitted, saved, draftSaved, status: statusFilter } = await searchParams;
   const [allListings, cohostItems] = await Promise.all([
     attachStoredViewCounts(await getUserListings(profile.id)),
     getCohostManagedListings(profile.id),
@@ -58,9 +63,9 @@ export default async function DashboardListingsPage({
           Η αγγελία υποβλήθηκε για έλεγχο. Θα ενημερωθείς όταν ολοκληρωθεί ο βασικός έλεγχο.
         </div>
       )}
-      {saved === "draft" && (
+      {(draftSaved === "1" || saved === "draft") && (
         <div className="mb-5 rounded-xl border border-gold/30 bg-gold/10 px-4 py-3 text-sm text-charcoal">
-          Η πρόχειρη αγγελία αποθηκεύτηκε. Μπορείς να συνεχίσεις όποτε θέλεις από εδώ.
+          Η αγγελία αποθηκεύτηκε ως πρόχειρο.
         </div>
       )}
 

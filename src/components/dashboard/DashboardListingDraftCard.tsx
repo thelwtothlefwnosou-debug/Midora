@@ -104,7 +104,7 @@ export function DashboardListingDraftCard({ listing }: Props) {
                 "hover:bg-teal/5"
               )}
             >
-              Δημοσίευση
+              Συνέχεια δημιουργίας
             </Link>
           </div>
         </div>
