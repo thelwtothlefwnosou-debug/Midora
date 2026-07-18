@@ -1,4 +1,4 @@
-import "server-only";
+"use server";
 
 import { createClient } from "@/lib/supabase/server";
 import type { ListingExternalLink } from "@/lib/listing-external-links";
@@ -37,6 +37,21 @@ export async function getOwnerListingExternalLinks(
   }
 
   return (data ?? []) as ListingExternalLink[];
+}
+
+/** Client-callable: load links for the authenticated owner of the listing. */
+export async function getMyListingExternalLinks(
+  listingId: string
+): Promise<ListingExternalLink[]> {
+  const supabase = await createClient();
+  if (!supabase) return [];
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return [];
+
+  return getOwnerListingExternalLinks(listingId, user.id);
 }
 
 export async function getPublicListingExternalLinks(

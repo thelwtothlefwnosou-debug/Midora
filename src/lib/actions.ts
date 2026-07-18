@@ -2122,9 +2122,13 @@ export async function saveListingExternalLink(
     updated_at: now,
   };
 
-  const { error } = await auth.supabase.from("listing_external_links").upsert(row, {
-    onConflict: "listing_id,platform",
-  });
+  const { error, data } = await auth.supabase
+    .from("listing_external_links")
+    .upsert(row, {
+      onConflict: "listing_id,platform",
+    })
+    .select("*")
+    .single();
 
   if (error) {
     if (error.message.includes("does not exist") || error.message.includes("Could not find")) {
@@ -2133,10 +2137,12 @@ export async function saveListingExternalLink(
     return { error: error.message };
   }
 
+  revalidatePath(`/dashboard/listings/${listingId}`);
   revalidatePath(`/dashboard/listings/${listingId}/edit`);
+  revalidatePath(`/dashboard/listings/${listingId}/trust-links`);
   revalidatePath(`/dashboard/listings/${listingId}/publish`);
   revalidatePath(`/listings/${listingId}`);
-  return { success: true, warning: validation.warning };
+  return { success: true, warning: validation.warning, link: data };
 }
 
 export async function removeListingExternalLink(listingId: string, platform: string) {
@@ -2156,7 +2162,9 @@ export async function removeListingExternalLink(listingId: string, platform: str
     return { error: error.message };
   }
 
+  revalidatePath(`/dashboard/listings/${listingId}`);
   revalidatePath(`/dashboard/listings/${listingId}/edit`);
+  revalidatePath(`/dashboard/listings/${listingId}/trust-links`);
   revalidatePath(`/dashboard/listings/${listingId}/publish`);
   revalidatePath(`/listings/${listingId}`);
   return { success: true };

@@ -18,6 +18,8 @@ export function isWorkspaceTabVisible(
       return true;
     case "edit":
       return permissions.can_manage_listing;
+    case "trust":
+      return permissions.can_manage_listing;
     case "photos":
       return permissions.can_manage_photos;
     case "availability":

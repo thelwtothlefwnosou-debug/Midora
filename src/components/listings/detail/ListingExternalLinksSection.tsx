@@ -25,10 +25,11 @@ export function ListingExternalLinksSection({ links }: Props) {
       className="listing-section scroll-mt-32 border-t border-charcoal/8 pt-10"
     >
       <h2 className="listing-section-title text-base">
-        Η αγγελία υπάρχει και σε άλλες πλατφόρμες
+        Σύνδεσμοι σε άλλες πλατφόρμες
       </h2>
       <p className="mt-2 text-sm text-muted">
-        Ο ιδιοκτήτης έχει προσθέσει σύνδεσμο σε εξωτερική πλατφόρμα για αυτό το ακίνητο.
+        Ο ιδιοκτήτης έχει προσθέσει εξωτερικό σύνδεσμο για αυτό το ακίνητο. Δεν αποτελεί
+        επαλήθευση ή έγκριση από το Midora.
       </p>
 
       <div className="mt-4 rounded-xl border border-border bg-sand/15 p-4">

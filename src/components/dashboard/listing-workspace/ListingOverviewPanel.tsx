@@ -8,6 +8,7 @@ import {
   MessageSquare,
   ArrowRight,
   BarChart3,
+  Link2,
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { DashboardEmptyState } from "@/components/dashboard/DashboardEmptyState";
@@ -28,6 +29,7 @@ import { getListingPublicId } from "@/lib/utils";
 type Props = {
   ctx: ListingWorkspaceContext;
   recentLeads?: PropertyLeadWithListing[];
+  externalLinkCount?: number;
 };
 
 function activeUntilLabel(
@@ -95,7 +97,11 @@ function nextAction(
   }
 }
 
-export function ListingOverviewPanel({ ctx, recentLeads = [] }: Props) {
+export function ListingOverviewPanel({
+  ctx,
+  recentLeads = [],
+  externalLinkCount = 0,
+}: Props) {
   const { listing, ownerStatusKey, ownerStatusLabel, photoCount, rentalType } = ctx;
   const analytics = buildListingAnalytics(
     listing,
@@ -109,9 +115,34 @@ export function ListingOverviewPanel({ ctx, recentLeads = [] }: Props) {
   const hasPerformance = hasListingPerformanceData(analytics);
   const price = formatListingPrice(listing);
   const isShortTerm = rentalType === "short_term";
+  const showTrustRecommendation = externalLinkCount === 0;
 
   return (
     <div className="space-y-4">
+      {showTrustRecommendation && (
+        <section className="rounded-xl border border-gold/30 bg-white p-4 shadow-soft">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div className="min-w-0 flex-1">
+              <p className="flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-wide text-gold-dark">
+                <Link2 className="h-3.5 w-3.5" />
+                Σύσταση
+              </p>
+              <h3 className="mt-1 font-display text-sm font-semibold text-charcoal">
+                Πρόσθεσε συνδέσμους αξιοπιστίας
+              </h3>
+              <p className="mt-1 text-sm text-muted">
+                Αν η αγγελία υπάρχει και αλλού (Airbnb, Booking κ.ά.), πρόσθεσε το HTTPS link.
+                Βοηθά τους επισκέπτες να διασταυρώσουν το ακίνητο — χωρίς να σημαίνει έλεγχο από
+                το Midora.
+              </p>
+            </div>
+            <Button href={`/dashboard/listings/${listing.id}/trust-links`} size="sm">
+              Προσθήκη
+            </Button>
+          </div>
+        </section>
+      )}
+
       <section className="grid gap-3 lg:grid-cols-2">
         <div className="rounded-xl border border-border bg-white p-4 shadow-soft">
           <p className="text-[11px] font-medium uppercase tracking-wide text-muted">
@@ -256,6 +287,14 @@ export function ListingOverviewPanel({ ctx, recentLeads = [] }: Props) {
           <Button href={`/dashboard/listings/${listing.id}/edit`} size="sm" variant="outline">
             <Pencil className="h-3.5 w-3.5" />
             Επεξεργασία
+          </Button>
+          <Button
+            href={`/dashboard/listings/${listing.id}/trust-links`}
+            size="sm"
+            variant="outline"
+          >
+            <Link2 className="h-3.5 w-3.5" />
+            Αξιοπιστία
           </Button>
           <Button href={`/dashboard/listings/${listing.id}/photos`} size="sm" variant="outline">
             <Camera className="h-3.5 w-3.5" />

@@ -23,7 +23,7 @@ export const FAQ_CATEGORY_LABELS: Record<FaqCategoryId, string> = {
   owner_listing: "Ιδιοκτήτες / ανέβασμα αγγελίας",
   owner_dashboard: "Dashboard ιδιοκτήτη",
   cohosts: "Συνοικοδεσπότες",
-  external_links: "Εξωτερικοί σύνδεσμοι",
+  external_links: "Σύνδεσμοι αξιοπιστίας",
   profile: "Προφίλ και λογαριασμός",
   safety: "Ασφάλεια και εμπιστοσύνη",
   troubleshooting: "Τεχνικά προβλήματα",

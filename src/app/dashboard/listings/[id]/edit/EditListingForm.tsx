@@ -87,6 +87,12 @@ export function EditListingForm({
         </div>
       )}
 
+      <ListingExternalLinksEditor
+        listingId={listing.id}
+        initialLinks={externalLinks}
+        className="mb-6 mt-0"
+      />
+
       {isShortTerm && (
         <ListingBedroomsEditor
           listing={listing}
@@ -97,8 +103,6 @@ export function EditListingForm({
       <ListingAmenitiesEditor listing={listing} initialAmenities={amenities} />
 
       <ListingLocationEditor listing={listing} />
-
-      <ListingExternalLinksEditor listingId={listing.id} initialLinks={externalLinks} />
 
       <GlassCard className="mt-6 p-6 sm:p-8">
         <ListingForm

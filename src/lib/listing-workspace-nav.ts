@@ -1,6 +1,7 @@
 export type ListingWorkspaceTabId =
   | "overview"
   | "edit"
+  | "trust"
   | "photos"
   | "availability"
   | "inquiries"
@@ -30,6 +31,12 @@ export const LISTING_WORKSPACE_TABS: ListingWorkspaceTab[] = [
     match: (path, id) =>
       path.startsWith(`/dashboard/listings/${id}/edit`) ||
       path.startsWith(`/dashboard/listings/${id}/pricing`),
+  },
+  {
+    id: "trust",
+    label: "Αξιοπιστία",
+    href: (id) => `/dashboard/listings/${id}/trust-links`,
+    match: (path, id) => path.startsWith(`/dashboard/listings/${id}/trust-links`),
   },
   {
     id: "photos",

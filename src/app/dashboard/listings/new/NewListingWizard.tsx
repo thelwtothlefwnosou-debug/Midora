@@ -25,11 +25,16 @@ import {
   areWizardDeclarationsComplete,
   ListingWizardDeclarationsStep,
 } from "@/components/listings/wizard/ListingWizardDeclarationsStep";
+import { ListingWizardTrustLinksStep } from "@/components/listings/wizard/ListingWizardTrustLinksStep";
 import {
   isReviewReady,
   ListingWizardReviewStep,
 } from "@/components/listings/wizard/ListingWizardReviewStep";
 import type { WizardPhaseId } from "@/lib/listing-wizard-steps";
+import type { ListingExternalLink } from "@/lib/listing-external-links";
+import {
+  getMyListingExternalLinks,
+} from "@/lib/listing-external-links-db";
 import { suggestPhotoRooms } from "@/lib/photo-rooms-catalog";
 import {
   getSavedListingImageCount,
@@ -88,6 +93,7 @@ const STEPS = [
   "Φωτογραφίες",
   "Επικοινωνία",
   "Δηλώσεις",
+  "Σύνδεσμοι αξιοπιστίας",
   "Έλεγχος πριν την υποβολή",
 ] as const;
 
@@ -100,6 +106,7 @@ const STEP_PHASES = [
   "Να ξεχωρίζει",
   "Ολοκλήρωση",
   "Να ξεχωρίζει",
+  "Ολοκλήρωση",
   "Ολοκλήρωση",
   "Ολοκλήρωση",
   "Ολοκλήρωση",
@@ -116,6 +123,7 @@ const STEP_HINTS = [
   "Ανέβασε τουλάχιστον μία φωτογραφία — η πρώτη γίνεται κύρια.",
   "Πώς θα επικοινωνούν μαζί σου οι ενδιαφερόμενοι.",
   "Αποδέχσου τις απαιτούμενες δηλώσεις για υποβολή.",
+  "Προαιρετικά: σύνδεσμος από άλλη πλατφόρμα για διασταύρωση — μπορείς να το παραλείψεις.",
   "Έλεγξε όλα τα στοιχεία πριν υποβάλεις για έλεγχο.",
 ] as const;
 
@@ -128,7 +136,8 @@ const PRICING_STEP = 7;
 const PHOTOS_STEP = 8;
 const CONTACT_STEP = 9;
 const DECLARATIONS_STEP = 10;
-const REVIEW_STEP = 11;
+const TRUST_LINKS_STEP = 11;
+const REVIEW_STEP = 12;
 
 function clearWizardDraftSession(setListingId: (id: string | null) => void) {
   setListingId(null);
@@ -356,6 +365,8 @@ export function NewListingWizard({ profile, email, initialListingId = null }: Pr
   const [termsPrivacyAccepted, setTermsPrivacyAccepted] = useState(false);
   const [selectedAmenityKeys, setSelectedAmenityKeys] = useState<string[]>([]);
   const amenitiesHydratedForRef = useRef<string | null>(null);
+  const [externalLinks, setExternalLinks] = useState<ListingExternalLink[]>([]);
+  const externalLinksHydratedForRef = useRef<string | null>(null);
 
   const popularAmenities = useMemo(
     () => popularFilterAmenities(supportsMonthly ? "monthly" : "short_term"),
@@ -601,6 +612,9 @@ export function NewListingWizard({ profile, email, initialListingId = null }: Pr
             .filter(Boolean)
         );
 
+        externalLinksHydratedForRef.current = draftId;
+        setExternalLinks(await getMyListingExternalLinks(draftId));
+
         if ((result.photoCount ?? 0) >= MIN_LISTING_PHOTOS_FOR_REVIEW) {
           setStep(REVIEW_STEP);
         } else if ((result.photoCount ?? 0) > 0) {
@@ -621,6 +635,19 @@ export function NewListingWizard({ profile, email, initialListingId = null }: Pr
       setSelectedAmenityKeys(
         rows.map((row) => normalizeAmenityKey(row.amenity_key)).filter(Boolean)
       );
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [listingId]);
+
+  useEffect(() => {
+    if (!listingId || externalLinksHydratedForRef.current === listingId) return;
+    let cancelled = false;
+    externalLinksHydratedForRef.current = listingId;
+    void getMyListingExternalLinks(listingId).then((rows) => {
+      if (cancelled) return;
+      setExternalLinks(rows);
     });
     return () => {
       cancelled = true;
@@ -846,6 +873,10 @@ export function NewListingWizard({ profile, email, initialListingId = null }: Pr
     }
     if (targetStep === AMENITIES_STEP) {
       // Optional — always skippable.
+      return null;
+    }
+    if (targetStep === TRUST_LINKS_STEP) {
+      // Optional trust links — always skippable.
       return null;
     }
     if (targetStep === PRICING_STEP) {
@@ -1344,7 +1375,7 @@ export function NewListingWizard({ profile, email, initialListingId = null }: Pr
       <div
         ref={wizardTopRef}
         onKeyDown={(e) => {
-          if ((step === DECLARATIONS_STEP || step === REVIEW_STEP) && e.key === "Enter") {
+          if ((step === DECLARATIONS_STEP || step === TRUST_LINKS_STEP || step === REVIEW_STEP) && e.key === "Enter") {
             e.preventDefault();
           }
         }}
@@ -2019,6 +2050,13 @@ export function NewListingWizard({ profile, email, initialListingId = null }: Pr
             onPlatformChange={setPlatformDeclarationAccepted}
             onTermsChange={setTermsPrivacyAccepted}
             allRequiredChecked={allDeclarationsChecked}
+          />
+        )}
+
+        {!showingPhaseIntro && step === TRUST_LINKS_STEP && (
+          <ListingWizardTrustLinksStep
+            listingId={resolveListingId()}
+            initialLinks={externalLinks}
           />
         )}
 

@@ -165,7 +165,7 @@ export const FAQ_TROUBLESHOOTING: FaqItem[] = [
     quickSuggestion: false,
     suggestionContexts: ["owner_listing_workspace"],
     keywords: ["εξωτερικ", "link", "url"],
-    actionLinks: [{ label: "Σύνδεσμοι", href: "/dashboard/listings/{id}/edit#external-links" }],
+    actionLinks: [{ label: "Σύνδεσμοι", href: "/dashboard/listings/{id}/trust-links" }],
   },
   {
     id: "troubleshoot-wrong-price",

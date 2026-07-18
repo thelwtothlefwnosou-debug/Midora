@@ -5,9 +5,9 @@ const R = ["/listings/", "/dashboard/listings/"] as const;
 export const FAQ_EXTERNAL_LINKS: FaqItem[] = [
   {
     id: "external-links-what",
-    question: "Τι είναι οι εξωτερικοί σύνδεσμοι;",
+    question: "Τι είναι οι σύνδεσμοι αξιοπιστίας;",
     answer:
-      "Είναι links που ο ιδιοκτήτης προσθέτει από άλλες πλατφόρμες (π.χ. Airbnb, Booking, Vrbo) ώστε οι επισκέπτες να δουν ότι η αγγελία υπάρχει και αλλού. Δεν είναι κράτηση μέσω Midora.",
+      "Είναι προαιρετικά HTTPS links που ο ιδιοκτήτης προσθέτει από άλλες πλατφόρμες (π.χ. Airbnb, Booking, Vrbo) ώστε οι επισκέπτες να διασταυρώσουν ότι η αγγελία υπάρχει και αλλού. Δεν είναι επαλήθευση από το Midora ούτε κράτηση μέσω Midora.",
     category: "external_links",
     audience: "all",
     relatedRoutes: [...R],
@@ -20,7 +20,7 @@ export const FAQ_EXTERNAL_LINKS: FaqItem[] = [
     id: "external-links-add-airbnb-booking",
     question: "Πού βάζω link από Airbnb ή Booking;",
     answer:
-      "1. Άνοιξε την αγγελία → καρτέλα Καταχώριση (edit).\n2. Ενότητα «Σύνδεσμοι σε άλλες πλατφόρμες».\n3. Προσθήκη συνδέσμου → επικόλλησε URL → επίλεξε πλατφόρμα.\n4. Αποθήκευση.",
+      "1. Άνοιξε την αγγελία → καρτέλα Αξιοπιστία.\n2. Ενότητα «Σύνδεσμοι αξιοπιστίας».\n3. Προσθήκη συνδέσμου → επικόλλησε HTTPS URL → επίλεξε πλατφόρμα.\n4. Αποθήκευση.",
     category: "external_links",
     audience: "owner",
     relatedRoutes: ["/dashboard/listings/"],
@@ -28,7 +28,7 @@ export const FAQ_EXTERNAL_LINKS: FaqItem[] = [
     quickSuggestion: false,
     suggestionContexts: ["owner_listing_workspace"],
     keywords: ["airbnb", "booking", "vrbo", "προσθεσ"],
-    actionLinks: [{ label: "Καταχώριση", href: "/dashboard/listings/{id}/edit#external-links" }],
+    actionLinks: [{ label: "Αξιοπιστία", href: "/dashboard/listings/{id}/trust-links" }],
   },
   {
     id: "external-links-other-platform",
@@ -133,6 +133,6 @@ export const FAQ_EXTERNAL_LINKS: FaqItem[] = [
     quickSuggestion: false,
     suggestionContexts: ["owner_listing_workspace"],
     keywords: ["προσεξ", "tips", "url"],
-    actionLinks: [{ label: "Σύνδεσμοι", href: "/dashboard/listings/{id}/edit#external-links" }],
+    actionLinks: [{ label: "Σύνδεσμοι", href: "/dashboard/listings/{id}/trust-links" }],
   },
 ];

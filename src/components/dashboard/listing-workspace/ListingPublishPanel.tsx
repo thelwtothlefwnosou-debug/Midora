@@ -68,6 +68,27 @@ export function ListingPublishPanel({
         </p>
       )}
 
+      <div className="rounded-xl border border-gold/25 bg-white p-4 shadow-soft">
+        <h3 className="text-sm font-semibold text-charcoal">Σύνδεσμοι αξιοπιστίας</h3>
+        <p className="mt-2 text-sm text-muted">
+          Πρόσθεσε προαιρετικά σύνδεσμο από Airbnb, Booking ή άλλη πλατφόρμα. Βοηθά στη
+          διασταύρωση της αγγελίας — χωρίς επαλήθευση από το Midora.
+        </p>
+        {externalLinkCount > 0 ? (
+          <p className="mt-2 text-xs text-muted">
+            {externalLinkCount} αποθηκευμένοι · {publicExternalLinkCount} δημόσιοι
+          </p>
+        ) : (
+          <p className="mt-2 text-xs text-gold-dark">Δεν έχεις προσθέσει ακόμα σύνδεσμο.</p>
+        )}
+        <Link
+          href={`/dashboard/listings/${listingId}/trust-links`}
+          className="mt-3 inline-flex min-h-9 items-center rounded-xl border border-border px-4 text-sm font-medium text-charcoal hover:border-gold/30 hover:bg-sand"
+        >
+          {externalLinkCount > 0 ? "Διαχείριση συνδέσμων" : "Προσθήκη συνδέσμου"}
+        </Link>
+      </div>
+
       <div className="rounded-xl border border-border bg-white p-4 shadow-soft">
         <dl className="space-y-3 text-sm">
           <div className="flex justify-between gap-4">
@@ -148,24 +169,6 @@ export function ListingPublishPanel({
           Προσφορά launch — η προβολή αγγελίας είναι δωρεάν.
         </p>
       )}
-
-      <div className="rounded-xl border border-border bg-white p-4 shadow-soft">
-        <h3 className="text-sm font-semibold text-charcoal">Αξιοπιστία αγγελίας</h3>
-        <p className="mt-2 text-sm text-muted">
-          Μπορείς προαιρετικά να προσθέσεις σύνδεσμο από άλλη πλατφόρμα όπου υπάρχει το ακίνητο.
-        </p>
-        {externalLinkCount > 0 && (
-          <p className="mt-2 text-xs text-muted">
-            {externalLinkCount} αποθηκευμένοι σύνδεσμοι · {publicExternalLinkCount} δημόσιοι
-          </p>
-        )}
-        <Link
-          href={`/dashboard/listings/${listingId}/edit#external-links`}
-          className="mt-3 inline-flex min-h-9 items-center rounded-xl border border-border px-4 text-sm font-medium text-charcoal hover:border-gold/30 hover:bg-sand"
-        >
-          Προσθήκη συνδέσμου
-        </Link>
-      </div>
     </div>
   );
 }

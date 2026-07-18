@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
   Check,
@@ -12,6 +12,7 @@ import {
   X,
 } from "lucide-react";
 import { GlassCard } from "@/components/ui/GlassCard";
+import { PortalModal } from "@/components/ui/PortalModal";
 import {
   removeListingExternalLink,
   saveListingExternalLink,
@@ -29,6 +30,9 @@ import { cn } from "@/lib/utils";
 type Props = {
   listingId: string;
   initialLinks: ListingExternalLink[];
+  /** When false, omit the outer card chrome (e.g. dedicated trust page already has a heading). */
+  showCardChrome?: boolean;
+  className?: string;
 };
 
 type ModalMode = "add" | "edit" | null;
@@ -76,7 +80,7 @@ function ExternalLinkModal({
   editingLink: ListingExternalLink | null;
   pending: boolean;
   onClose: () => void;
-  onSaved: () => void;
+  onSaved: (links?: ListingExternalLink[]) => void;
 }) {
   const usedPlatforms = useMemo(
     () => new Set(initialLinks.map((l) => l.platform)),
@@ -91,7 +95,9 @@ function ExternalLinkModal({
   }, [editingLink, mode, usedPlatforms]);
 
   const [form, setForm] = useState<FormState>(() =>
-    mode === "edit" && editingLink ? formFromLink(editingLink) : { ...EMPTY_FORM, platform: availablePlatforms[0] ?? "airbnb" }
+    mode === "edit" && editingLink
+      ? formFromLink(editingLink)
+      : { ...EMPTY_FORM, platform: availablePlatforms[0] ?? "airbnb" }
   );
   const [error, setError] = useState<string | null>(null);
   const [localPending, startTransition] = useTransition();
@@ -122,16 +128,24 @@ function ExternalLinkModal({
         setError(saveResult.error);
         return;
       }
-      onSaved();
+      const nextLinks =
+        saveResult && "link" in saveResult && saveResult.link
+          ? (() => {
+              const link = saveResult.link as ListingExternalLink;
+              const without = initialLinks.filter((l) => l.platform !== link.platform);
+              return [...without, link].sort((a, b) =>
+                a.platform.localeCompare(b.platform)
+              );
+            })()
+          : undefined;
+      onSaved(nextLinks);
       onClose();
     });
   }
 
   function handleRemove() {
     if (!editingLink) return;
-    if (
-      !window.confirm("Θέλεις σίγουρα να αφαιρέσεις αυτόν τον σύνδεσμο;")
-    ) {
+    if (!window.confirm("Θέλεις σίγουρα να αφαιρέσεις αυτόν τον σύνδεσμο;")) {
       return;
     }
 
@@ -141,158 +155,155 @@ function ExternalLinkModal({
         setError(result.error);
         return;
       }
-      onSaved();
+      onSaved(initialLinks.filter((l) => l.platform !== editingLink.platform));
       onClose();
     });
   }
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-charcoal/40 p-4">
-      <div
-        className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-xl"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="external-link-modal-title"
-      >
-        <h3
-          id="external-link-modal-title"
-          className="font-display text-lg font-semibold text-charcoal"
+  const footer = (
+    <div className="flex flex-wrap items-center justify-between gap-2">
+      {mode === "edit" ? (
+        <button
+          type="button"
+          disabled={busy}
+          onClick={handleRemove}
+          className="inline-flex min-h-10 items-center gap-1.5 rounded-xl border border-red-200 px-4 text-sm font-medium text-red-700 hover:bg-red-50 disabled:opacity-40"
         >
-          {mode === "add" ? "Προσθήκη εξωτερικού συνδέσμου" : "Επεξεργασία συνδέσμου"}
-        </h3>
+          <Trash2 className="h-4 w-4" />
+          Αφαίρεση
+        </button>
+      ) : (
+        <span />
+      )}
 
-        <div className="mt-5 space-y-4">
-          <label className="block">
-            <span className="text-xs font-medium uppercase text-muted">Πλατφόρμα</span>
-            <select
-              value={form.platform}
-              disabled={mode === "edit"}
-              onChange={(e) =>
-                setForm((prev) => ({
-                  ...prev,
-                  platform: e.target.value as ExternalLinkPlatform,
-                }))
-              }
-              className="mt-1.5 w-full rounded-xl border border-border px-3 py-2.5 text-sm text-charcoal outline-none focus:border-gold/40 disabled:bg-sand/30"
-            >
-              {(mode === "edit" ? EXTERNAL_LINK_PLATFORMS : availablePlatforms).map((p) => (
-                <option key={p} value={p}>
-                  {EXTERNAL_LINK_PLATFORM_LABELS[p]}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <label className="block">
-            <span className="text-xs font-medium uppercase text-muted">Σύνδεσμος αγγελίας</span>
-            <input
-              type="url"
-              inputMode="url"
-              placeholder="Επικόλλησε εδώ το link της αγγελίας"
-              value={form.url}
-              onChange={(e) => setForm((prev) => ({ ...prev, url: e.target.value }))}
-              className="mt-1.5 w-full rounded-xl border border-border px-3 py-2.5 text-sm text-charcoal outline-none focus:border-gold/40"
-            />
-          </label>
-
-          {validation?.valid && (
-            <p className="text-xs text-teal">Ο σύνδεσμος είναι έγκυρος.</p>
-          )}
-          {validation?.error && (
-            <p className="text-xs text-red-600">{validation.error}</p>
-          )}
-          {validation?.warning && validation.valid && (
-            <p className="text-xs text-amber-800">{validation.warning}</p>
-          )}
-
-          {form.platform === "other" && (
-            <label className="block">
-              <span className="text-xs font-medium uppercase text-muted">Όνομα πλατφόρμας</span>
-              <input
-                type="text"
-                placeholder="Όνομα πλατφόρμας"
-                value={form.label}
-                onChange={(e) => setForm((prev) => ({ ...prev, label: e.target.value }))}
-                className="mt-1.5 w-full rounded-xl border border-border px-3 py-2.5 text-sm text-charcoal outline-none focus:border-gold/40"
-              />
-            </label>
-          )}
-
-          <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-border bg-sand/15 px-3 py-3">
-            <input
-              type="checkbox"
-              checked={form.isPublic}
-              onChange={(e) => setForm((prev) => ({ ...prev, isPublic: e.target.checked }))}
-              className="mt-0.5 h-4 w-4 accent-charcoal"
-            />
-            <span className="text-sm text-charcoal">
-              <span className="font-medium">Εμφάνιση στη δημόσια αγγελία</span>
-              <span className="mt-1 block text-xs text-muted">
-                Αν το ενεργοποιήσεις, ο σύνδεσμος θα εμφανίζεται χαμηλά στη δημόσια σελίδα της
-                αγγελίας.
-              </span>
-            </span>
-          </label>
-
-          {error && (
-            <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-              {error}
-            </p>
-          )}
-        </div>
-
-        <div className="mt-6 flex flex-wrap items-center justify-between gap-2">
-          {mode === "edit" ? (
-            <button
-              type="button"
-              disabled={busy}
-              onClick={handleRemove}
-              className="inline-flex min-h-10 items-center gap-1.5 rounded-xl border border-red-200 px-4 text-sm font-medium text-red-700 hover:bg-red-50 disabled:opacity-40"
-            >
-              <Trash2 className="h-4 w-4" />
-              Αφαίρεση συνδέσμου
-            </button>
-          ) : (
-            <span />
-          )}
-
-          <div className="flex flex-wrap gap-2">
-            <button
-              type="button"
-              disabled={busy}
-              onClick={onClose}
-              className="rounded-xl border border-border px-4 py-2 text-sm font-medium text-charcoal hover:bg-sand"
-            >
-              Ακύρωση
-            </button>
-            <button
-              type="button"
-              disabled={busy || !form.url.trim() || !validation?.valid}
-              onClick={handleSave}
-              className="rounded-xl bg-charcoal px-4 py-2 text-sm font-semibold text-white hover:bg-charcoal/90 disabled:opacity-40"
-            >
-              {busy
-                ? "Αποθήκευση…"
-                : mode === "add"
-                  ? "Αποθήκευση συνδέσμου"
-                  : "Αποθήκευση αλλαγών"}
-            </button>
-          </div>
-        </div>
+      <div className="flex flex-wrap gap-2">
+        <button
+          type="button"
+          disabled={busy}
+          onClick={onClose}
+          className="rounded-xl border border-border px-4 py-2 text-sm font-medium text-charcoal hover:bg-sand"
+        >
+          Άκυρο
+        </button>
+        <button
+          type="button"
+          disabled={busy || !form.url.trim() || !validation?.valid}
+          onClick={handleSave}
+          className="rounded-xl bg-charcoal px-4 py-2 text-sm font-semibold text-white hover:bg-charcoal/90 disabled:opacity-40"
+        >
+          {busy ? "Αποθήκευση…" : "Αποθήκευση"}
+        </button>
       </div>
     </div>
   );
+
+  return (
+    <PortalModal
+      open
+      onClose={onClose}
+      title={mode === "add" ? "Προσθήκη συνδέσμου αξιοπιστίας" : "Επεξεργασία συνδέσμου"}
+      titleId="external-link-modal-title"
+      footer={footer}
+    >
+      <div className="space-y-4">
+        <label className="block">
+          <span className="text-xs font-medium uppercase text-muted">Πλατφόρμα</span>
+          <select
+            value={form.platform}
+            disabled={mode === "edit"}
+            onChange={(e) =>
+              setForm((prev) => ({
+                ...prev,
+                platform: e.target.value as ExternalLinkPlatform,
+              }))
+            }
+            className="mt-1.5 w-full rounded-xl border border-border px-3 py-2.5 text-sm text-charcoal outline-none focus:border-gold/40 disabled:bg-sand/30"
+          >
+            {(mode === "edit" ? EXTERNAL_LINK_PLATFORMS : availablePlatforms).map((p) => (
+              <option key={p} value={p}>
+                {EXTERNAL_LINK_PLATFORM_LABELS[p]}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        <label className="block">
+          <span className="text-xs font-medium uppercase text-muted">Σύνδεσμος αγγελίας</span>
+          <input
+            type="url"
+            inputMode="url"
+            placeholder="https://…"
+            value={form.url}
+            onChange={(e) => setForm((prev) => ({ ...prev, url: e.target.value }))}
+            className="mt-1.5 w-full rounded-xl border border-border px-3 py-2.5 text-sm text-charcoal outline-none focus:border-gold/40"
+          />
+        </label>
+
+        {validation?.valid && (
+          <p className="text-xs text-teal">Ο σύνδεσμος είναι έγκυρος (HTTPS).</p>
+        )}
+        {validation?.error && <p className="text-xs text-red-600">{validation.error}</p>}
+        {validation?.warning && validation.valid && (
+          <p className="text-xs text-amber-800">{validation.warning}</p>
+        )}
+
+        {form.platform === "other" && (
+          <label className="block">
+            <span className="text-xs font-medium uppercase text-muted">Όνομα πλατφόρμας</span>
+            <input
+              type="text"
+              placeholder="Όνομα πλατφόρμας"
+              value={form.label}
+              onChange={(e) => setForm((prev) => ({ ...prev, label: e.target.value }))}
+              className="mt-1.5 w-full rounded-xl border border-border px-3 py-2.5 text-sm text-charcoal outline-none focus:border-gold/40"
+            />
+          </label>
+        )}
+
+        <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-border bg-sand/15 px-3 py-3">
+          <input
+            type="checkbox"
+            checked={form.isPublic}
+            onChange={(e) => setForm((prev) => ({ ...prev, isPublic: e.target.checked }))}
+            className="mt-0.5 h-4 w-4 accent-charcoal"
+          />
+          <span className="text-sm text-charcoal">
+            <span className="font-medium">Εμφάνιση στη δημόσια αγγελία</span>
+            <span className="mt-1 block text-xs text-muted">
+              Αν το ενεργοποιήσεις, ο σύνδεσμος εμφανίζεται χαμηλά στη δημόσια σελίδα — ως
+              εξωτερικός σύνδεσμος, όχι ως επαλήθευση από το Midora.
+            </span>
+          </span>
+        </label>
+
+        {error && (
+          <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+            {error}
+          </p>
+        )}
+      </div>
+    </PortalModal>
+  );
 }
 
-export function ListingExternalLinksEditor({ listingId, initialLinks }: Props) {
+export function ListingExternalLinksEditor({
+  listingId,
+  initialLinks,
+  showCardChrome = true,
+  className,
+}: Props) {
   const router = useRouter();
+  const [links, setLinks] = useState(initialLinks);
   const [modalMode, setModalMode] = useState<ModalMode>(null);
   const [editingLink, setEditingLink] = useState<ListingExternalLink | null>(null);
   const [pending, startTransition] = useTransition();
   const [feedback, setFeedback] = useState<string | null>(null);
 
-  const savedLinks = initialLinks;
-  const canAddMore = savedLinks.length < EXTERNAL_LINK_PLATFORMS.length;
+  useEffect(() => {
+    setLinks(initialLinks);
+  }, [initialLinks]);
+
+  const canAddMore = links.length < EXTERNAL_LINK_PLATFORMS.length;
 
   function openAdd() {
     setEditingLink(null);
@@ -309,28 +320,37 @@ export function ListingExternalLinksEditor({ listingId, initialLinks }: Props) {
     setEditingLink(null);
   }
 
-  function handleSaved() {
+  function handleSaved(nextLinks?: ListingExternalLink[]) {
+    if (nextLinks) setLinks(nextLinks);
     setFeedback("Ο σύνδεσμος αποθηκεύτηκε.");
     startTransition(() => router.refresh());
   }
 
-  return (
-    <GlassCard id="external-links" className="mt-6 scroll-mt-24 p-5 sm:p-6">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0 flex-1">
-          <h3 className="font-display text-base font-semibold text-charcoal">
-            Σύνδεσμοι σε άλλες πλατφόρμες
-          </h3>
-          <p className="mt-1 max-w-2xl text-sm text-muted">
-            Πρόσθεσε προαιρετικά σύνδεσμο από άλλη πλατφόρμα όπου υπάρχει το ίδιο ακίνητο.
-          </p>
+  const body = (
+    <>
+      {showCardChrome && (
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="min-w-0 flex-1">
+            <h3 className="font-display text-base font-semibold text-charcoal">
+              Σύνδεσμοι αξιοπιστίας
+            </h3>
+            <p className="mt-1 max-w-2xl text-sm text-muted">
+              Πρόσθεσε προαιρετικά HTTPS σύνδεσμο από άλλη πλατφόρμα όπου υπάρχει το ίδιο
+              ακίνητο. Βοηθά στη διασταύρωση — χωρίς επαλήθευση από το Midora.
+            </p>
+          </div>
+          <Link2 className="h-5 w-5 shrink-0 text-gold/60" aria-hidden />
         </div>
-        <Link2 className="h-5 w-5 shrink-0 text-gold/60" aria-hidden />
-      </div>
+      )}
 
-      <p className="mt-3 rounded-lg border border-border/80 bg-sand/20 px-3 py-2 text-xs text-muted">
-        Οι σύνδεσμοι μπορούν να βοηθήσουν τον επισκέπτη να διασταυρώσει ότι το ακίνητο υπάρχει και
-        αλλού. Το Midora δεν εισάγει αυτόματα περιεχόμενο από άλλες πλατφόρμες.
+      <p
+        className={cn(
+          "rounded-lg border border-border/80 bg-sand/20 px-3 py-2 text-xs text-muted",
+          showCardChrome ? "mt-3" : "mt-0"
+        )}
+      >
+        Το Midora δεν εισάγει ούτε ελέγχει περιεχόμενο από τρίτες πλατφόρμες — αποθηκεύει μόνο
+        το link που επικολλάς.
       </p>
 
       {feedback && (
@@ -339,11 +359,9 @@ export function ListingExternalLinksEditor({ listingId, initialLinks }: Props) {
         </p>
       )}
 
-      {savedLinks.length === 0 ? (
+      {links.length === 0 ? (
         <div className="mt-5 rounded-xl border border-dashed border-border bg-sand/10 px-4 py-8 text-center">
-          <p className="text-sm text-muted">
-            Δεν έχεις προσθέσει ακόμα σύνδεσμο από άλλη πλατφόρμα.
-          </p>
+          <p className="text-sm text-muted">Δεν έχεις προσθέσει ακόμα σύνδεσμο αξιοπιστίας.</p>
           <button
             type="button"
             onClick={openAdd}
@@ -355,7 +373,7 @@ export function ListingExternalLinksEditor({ listingId, initialLinks }: Props) {
         </div>
       ) : (
         <div className="mt-5 space-y-3">
-          {savedLinks.map((link) => {
+          {links.map((link) => {
             const valid = isStoredExternalLinkValid(link);
             const platformLabel =
               link.platform === "other" && link.label
@@ -448,13 +466,27 @@ export function ListingExternalLinksEditor({ listingId, initialLinks }: Props) {
         <ExternalLinkModal
           mode={modalMode}
           listingId={listingId}
-          initialLinks={savedLinks}
+          initialLinks={links}
           editingLink={editingLink}
           pending={pending}
           onClose={closeModal}
           onSaved={handleSaved}
         />
       )}
+    </>
+  );
+
+  if (!showCardChrome) {
+    return <div className={cn(className)}>{body}</div>;
+  }
+
+  return (
+    <GlassCard
+      id="external-links"
+      overflowVisible
+      className={cn("mt-6 scroll-mt-24 p-5 sm:p-6", className)}
+    >
+      {body}
     </GlassCard>
   );
 }

@@ -1,6 +1,7 @@
 import { ListingOverviewPanel } from "@/components/dashboard/listing-workspace/ListingOverviewPanel";
 import { requireDashboardContext } from "@/lib/dashboard-context";
 import { getOwnerLeads } from "@/lib/leads";
+import { getOwnerListingExternalLinks } from "@/lib/listing-external-links-db";
 import { loadListingWorkspace } from "@/lib/listing-workspace-server";
 
 export default async function ListingWorkspaceOverviewPage({
@@ -15,6 +16,13 @@ export default async function ListingWorkspaceOverviewPage({
   const recentLeads = allLeads
     .filter((l) => l.listing_id === id && l.status !== "archived")
     .slice(0, 3);
+  const externalLinks = await getOwnerListingExternalLinks(id, profile.id);
 
-  return <ListingOverviewPanel ctx={ctx} recentLeads={recentLeads} />;
+  return (
+    <ListingOverviewPanel
+      ctx={ctx}
+      recentLeads={recentLeads}
+      externalLinkCount={externalLinks.length}
+    />
+  );
 }
