@@ -493,10 +493,12 @@ body {
   grid-template-columns: minmax(0, 1fr) 360px;
   column-gap: 72px;
   align-items: start;
+  overflow: visible;
 }
 
 .listing-left-column {
   min-width: 0;
+  overflow: visible;
 }
 
 .listing-right-column {
@@ -504,13 +506,16 @@ body {
   align-self: stretch;
   position: relative;
   min-width: 0;
+  overflow: visible;
 }
 
 .sticky-inquiry-card {
   position: sticky;
-  top: 6rem;
+  top: calc(var(--listing-header-height, 4.25rem) + 1.5rem);
   z-index: 20;
+  align-self: start;
   max-height: calc(100vh - 7.5rem);
+  overflow-x: visible;
   overflow-y: auto;
 }
 
@@ -1574,25 +1579,37 @@ body {
 /* Public listing availability — unified blocked/past day treatment */
 .calendar-day--unavailable {
   pointer-events: none;
+  cursor: not-allowed;
 }
 
+.calendar-day--unavailable .calendar-day__number,
+.calendar-day__number--blocked {
+  position: relative;
+  color: color-mix(in srgb, var(--muted) 45%, white);
+}
+
+.calendar-day--unavailable .calendar-day__number::after,
 .calendar-day__number--blocked::after,
 .calendar-day-legend-sample::after {
   content: "";
   position: absolute;
   left: 50%;
-  top: 52%;
-  width: 0.55rem;
-  height: 1.5px;
-  transform: translateX(-50%);
+  top: 50%;
+  width: 14px;
+  height: 1px;
+  transform: translate(-50%, -50%);
   border-radius: 1px;
-  background-color: color-mix(in srgb, var(--muted) 55%, transparent);
+  background: currentColor;
+  opacity: 0.75;
   pointer-events: none;
 }
 
+.calendar-day-legend-sample {
+  color: color-mix(in srgb, var(--muted) 45%, white);
+}
+
 .calendar-day-legend-sample::after {
-  top: 58%;
-  width: 0.45rem;
+  width: 12px;
 }
 
 /* Midora help assistant */

@@ -18,7 +18,17 @@ export function useListingSearchUrlSync() {
     (next: URLSearchParams) => {
       const qs = next.toString();
       saveLastSearchState(next);
-      router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
+      const url = qs ? `${pathname}?${qs}` : pathname;
+      // Keep listing scroll + sticky inquiry card stable when dates/guests sync to URL.
+      const scrollY = typeof window !== "undefined" ? window.scrollY : 0;
+      router.replace(url, { scroll: false });
+      if (typeof window !== "undefined") {
+        requestAnimationFrame(() => {
+          if (Math.abs(window.scrollY - scrollY) > 1) {
+            window.scrollTo(0, scrollY);
+          }
+        });
+      }
     },
     [pathname, router]
   );

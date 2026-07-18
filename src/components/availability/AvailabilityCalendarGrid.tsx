@@ -135,7 +135,7 @@ function DayCell({
       className={cn(
         "calendar-day__number relative z-10 flex flex-col items-center justify-center font-medium transition-all duration-150",
         sizeClass,
-        premiumBlocked && "calendar-day__number--blocked text-muted/40",
+        premiumBlocked && "calendar-day__number--blocked",
         !premiumBlocked && !day.inMonth && "text-transparent",
         !premiumBlocked && day.inMonth && past && "text-muted/35",
         !premiumBlocked && day.inMonth && unavailable && !past && !selectionRole && "text-muted",
@@ -247,6 +247,7 @@ function DayCell({
         aria-hidden={!day.inMonth && !premiumBlocked}
         role={premiumBlocked ? "gridcell" : undefined}
         aria-disabled={premiumBlocked ? true : undefined}
+        tabIndex={premiumBlocked ? -1 : undefined}
         aria-label={
           premiumBlocked && blockedReason
             ? unavailableDayAriaLabel(day.dateKey, blockedReason)
@@ -340,7 +341,7 @@ function CalendarLegend({
             Επιλεγμένες ημερομηνίες
           </span>
           <span className="flex items-center gap-2">
-            <span className="calendar-day-legend-sample relative flex h-3.5 w-3.5 items-center justify-center text-[10px] text-muted/40">
+            <span className="calendar-day-legend-sample relative flex h-3.5 w-3.5 items-center justify-center text-[10px]">
               0
             </span>
             Μη διαθέσιμες ημερομηνίες

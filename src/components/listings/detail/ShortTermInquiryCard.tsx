@@ -307,6 +307,8 @@ export function ShortTermInquiryCard({
         listingId={listing.id}
         autoApplyOnComplete
         closeOnAutoApply
+        showLegend
+        unavailableDayStyle="premium-blocked"
       />
     </>
   );

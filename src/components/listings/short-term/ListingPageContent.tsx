@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useMemo } from "react";
+import { useMemo } from "react";
 import { useSearchParams } from "next/navigation";
 import { ListingRentalModeSwitcher } from "@/components/listings/ListingRentalModeSwitcher";
 import { ListingMediaGallery } from "@/components/listings/ListingMediaGallery";
@@ -172,13 +172,11 @@ function ListingPageContentInner({
           </>
         }
         sidebar={
-          <Suspense fallback={null}>
-            <ShortTermInquiryCard
-              listing={listing}
-              periods={unavailablePeriods}
-              contact={contact}
-            />
-          </Suspense>
+          <ShortTermInquiryCard
+            listing={listing}
+            periods={unavailablePeriods}
+            contact={contact}
+          />
         }
       />
 

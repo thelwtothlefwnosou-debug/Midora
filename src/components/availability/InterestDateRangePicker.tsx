@@ -50,6 +50,8 @@ type Props = {
   anchorRef?: React.RefObject<HTMLElement | null>;
   ignoreRefs?: React.RefObject<HTMLElement | null>[];
   clearLabel?: string;
+  /** Premium blocked styling for public listing calendars. */
+  unavailableDayStyle?: "default" | "premium-blocked";
 };
 
 function useIsMobile(breakpoint = 768) {
@@ -88,6 +90,7 @@ export function InterestDateRangePicker({
   anchorRef,
   ignoreRefs,
   clearLabel = "Καθαρισμός",
+  unavailableDayStyle = "default",
 }: Props) {
   const titleId = useId();
   const isMobile = useIsMobile();
@@ -137,10 +140,12 @@ export function InterestDateRangePicker({
 
   useEffect(() => {
     if (!open || presentation === "popover") return;
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
+    // Only lock vertical scroll — overflow shorthand would wipe overflow-x:clip
+    // from ListingDetailScrollFix and break position:sticky on the inquiry card.
+    const prevY = document.body.style.overflowY;
+    document.body.style.overflowY = "hidden";
     return () => {
-      document.body.style.overflow = prev;
+      document.body.style.overflowY = prevY;
     };
   }, [open, presentation]);
 
@@ -294,6 +299,7 @@ export function InterestDateRangePicker({
         priceForDate={priceForDate}
         isWeekendDay={isWeekendDay}
         layout={isMobile ? "single" : "dual"}
+        unavailableDayStyle={unavailableDayStyle}
       />
     </>
   );
