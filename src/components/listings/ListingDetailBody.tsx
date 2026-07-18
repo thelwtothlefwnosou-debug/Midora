@@ -1,8 +1,6 @@
-import Link from "next/link";
 import { Suspense } from "react";
 import { ListingDetailScrollFix } from "@/components/listings/detail/ListingDetailScrollFix";
 import { ListingBackToSearchLink } from "@/components/listings/detail/ListingBackToSearchLink";
-import { HelpAssistantTrigger } from "@/components/assistant/HelpAssistantContext";
 import { ListingDetailHeader } from "@/components/listings/detail/ListingDetailHeader";
 import { Footer } from "@/components/layout/Footer";
 import { getListingPublicDetail } from "@/lib/listing-detail-queries";
@@ -77,11 +75,6 @@ export async function ListingDetailBody({ id }: { id: string }) {
               >
                 <ListingBackToSearchLink />
               </Suspense>
-              <HelpAssistantTrigger
-                label="Χρειάζεσαι βοήθεια;"
-                seedQuestion="Πώς στέλνω αίτημα διαθεσιμότητας;"
-                className="text-sm font-medium text-muted hover:text-gold-dark"
-              />
             </div>
 
             {isShortCapable ? (
