@@ -443,6 +443,24 @@ export async function getWizardListingDraft(listingId: string) {
   return { listing: data, photoCount };
 }
 
+/** Latest incomplete draft for the signed-in owner (create-wizard resume). */
+export async function getOwnerLatestDraftListingId() {
+  const auth = await requireUser();
+  if ("error" in auth) return { error: auth.error };
+
+  const { data, error } = await auth.supabase
+    .from("listings")
+    .select("id")
+    .eq("user_id", auth.user.id)
+    .eq("approval_status", "draft")
+    .order("updated_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error) return { error: toListingSaveError(error) };
+  return { listingId: data?.id ?? null };
+}
+
 /** @deprecated Use getSavedListingImageCount */
 export async function getWizardListingPhotoCount(listingId: string) {
   return getSavedListingImageCount(listingId);

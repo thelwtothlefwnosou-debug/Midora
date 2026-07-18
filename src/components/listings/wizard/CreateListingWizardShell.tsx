@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReactNode } from "react";
 import Link from "next/link";
 import { ChevronLeft, ChevronRight, HelpCircle } from "lucide-react";
 import { MidoraLogo } from "@/components/brand/MidoraLogo";
@@ -12,7 +13,9 @@ type Props = {
   phaseLabel?: string;
   saveStatus?: "idle" | "saving" | "saved" | "error";
   error?: string | null;
-  children: React.ReactNode;
+  children: ReactNode;
+  /** Optional live preview — shown on lg+ to the right of the main step content. */
+  aside?: ReactNode;
   onBack?: () => void;
   onNext?: () => void;
   onSaveAndExit?: () => void;
@@ -31,6 +34,7 @@ export function CreateListingWizardShell({
   saveStatus = "idle",
   error,
   children,
+  aside,
   onBack,
   onNext,
   onSaveAndExit,
@@ -41,6 +45,8 @@ export function CreateListingWizardShell({
   busy = false,
 }: Props) {
   const progress = Math.max(4, Math.round(((stepIndex + 1) / stepCount) * 100));
+  const layoutMax = aside ? "max-w-[1100px]" : "max-w-[820px]";
+  const chromeMax = aside ? "max-w-[1100px]" : "max-w-5xl";
 
   const saveLabel =
     saveStatus === "saving"
@@ -54,7 +60,12 @@ export function CreateListingWizardShell({
   return (
     <div className="fixed inset-0 z-40 flex flex-col bg-white text-charcoal">
       <header className="shrink-0 border-b border-border/80 bg-white/95 backdrop-blur-sm">
-        <div className="mx-auto flex h-14 max-w-5xl items-center justify-between gap-3 px-4 sm:h-16 sm:px-6">
+        <div
+          className={cn(
+            "mx-auto flex h-14 items-center justify-between gap-3 px-4 sm:h-16 sm:px-6",
+            chromeMax
+          )}
+        >
           <MidoraLogo size="sm" href="/dashboard" />
           <div className="flex items-center gap-2 sm:gap-3">
             {saveLabel && (
@@ -95,30 +106,45 @@ export function CreateListingWizardShell({
       </header>
 
       <main className="min-h-0 flex-1 overflow-y-auto">
-        <div className="mx-auto w-full max-w-[820px] px-4 py-8 sm:px-6 sm:py-12">
-          <p className="text-xs font-medium uppercase tracking-[0.14em] text-muted">
-            {phaseLabel ? `${phaseLabel} · ` : ""}
-            Βήμα {stepIndex + 1} από {stepCount}
-          </p>
-          <h1 className="mt-2 font-display text-2xl font-semibold tracking-tight text-charcoal sm:text-3xl">
-            {stepLabel}
-          </h1>
+        <div className={cn("mx-auto w-full px-4 py-8 sm:px-6 sm:py-12", layoutMax)}>
+          <div className={cn(aside && "lg:flex lg:items-start lg:gap-10")}>
+            <div className="min-w-0 flex-1">
+              <p className="text-xs font-medium uppercase tracking-[0.14em] text-muted">
+                {phaseLabel ? `${phaseLabel} · ` : ""}
+                Βήμα {stepIndex + 1} από {stepCount}
+              </p>
+              <h1 className="mt-2 font-display text-2xl font-semibold tracking-tight text-charcoal sm:text-3xl">
+                {stepLabel}
+              </h1>
 
-          {error && (
-            <div
-              role="alert"
-              className="mt-5 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800"
-            >
-              {error}
+              {error && (
+                <div
+                  role="alert"
+                  className="mt-5 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800"
+                >
+                  {error}
+                </div>
+              )}
+
+              <div className="mt-8 pb-28">{children}</div>
             </div>
-          )}
 
-          <div className="mt-8 pb-28">{children}</div>
+            {aside ? (
+              <aside className="sticky top-8 hidden w-[280px] shrink-0 lg:block">
+                {aside}
+              </aside>
+            ) : null}
+          </div>
         </div>
       </main>
 
       <footer className="shrink-0 border-t border-border/80 bg-white">
-        <div className="mx-auto flex max-w-5xl items-center justify-between gap-3 px-4 py-3 sm:px-6 sm:py-4">
+        <div
+          className={cn(
+            "mx-auto flex items-center justify-between gap-3 px-4 py-3 sm:px-6 sm:py-4",
+            chromeMax
+          )}
+        >
           {showBack && onBack ? (
             <button
               type="button"

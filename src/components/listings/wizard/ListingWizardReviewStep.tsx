@@ -44,11 +44,11 @@ function buildReviewItems(
   termsPrivacyAccepted: boolean,
   listingPhoneReady: boolean
 ): ReviewCheckItem[] {
-  const basicOk =
+  const propertyTypeOk = Boolean(fields.property_type);
+  const titleDescOk =
     fields.title.trim().length >= MIN_LISTING_TITLE_LENGTH &&
-    Boolean(fields.city?.trim()) &&
-    Boolean(fields.area?.trim()) &&
-    Boolean(fields.property_type) &&
+    fields.description.trim().length >= MIN_LISTING_DESCRIPTION_LENGTH;
+  const capacityOk =
     (fields.sqm ?? 0) > 0 &&
     fields.bedrooms != null &&
     fields.bedrooms >= 0 &&
@@ -56,7 +56,7 @@ function buildReviewItems(
     fields.bathrooms >= 0 &&
     fields.floor != null &&
     fields.floor >= 0 &&
-    fields.description.trim().length >= MIN_LISTING_DESCRIPTION_LENGTH;
+    Boolean(fields.max_guests && fields.max_guests > 0);
 
   const locationOk = Boolean(fields.city?.trim() && fields.area?.trim());
   const addressOk = Boolean(fields.address_street?.trim() && fields.address_number?.trim());
@@ -98,33 +98,50 @@ function buildReviewItems(
   });
 
   const items: ReviewCheckItem[] = [
-    { id: "basics", label: "Βασικά στοιχεία", step: 2, status: basicOk ? "complete" : "warning" },
-    { id: "location", label: "Περιοχή", step: 2, status: locationOk ? "complete" : "warning" },
-    { id: "address", label: "Διεύθυνση", step: 2, status: addressOk ? "complete" : "warning" },
+    {
+      id: "property_type",
+      label: "Τύπος ακινήτου",
+      step: 2,
+      status: propertyTypeOk ? "complete" : "warning",
+    },
+    { id: "location", label: "Περιοχή", step: 3, status: locationOk ? "complete" : "warning" },
+    { id: "address", label: "Διεύθυνση", step: 3, status: addressOk ? "complete" : "warning" },
     {
       id: "exact_pin",
       label: "Ακριβής τοποθεσία (pin)",
-      step: 2,
+      step: 3,
       status: exactPinOk ? "complete" : "warning",
+    },
+    {
+      id: "capacity",
+      label: "Χωρητικότητα & στοιχεία",
+      step: 4,
+      status: capacityOk ? "complete" : "warning",
+    },
+    {
+      id: "title_description",
+      label: "Τίτλος & περιγραφή",
+      step: 5,
+      status: titleDescOk ? "complete" : "warning",
     },
     {
       id: "pricing",
       label: fields.supports_short_term
         ? "Τιμή και όροι βραχυχρόνιας διαμονής"
         : "Τιμή και όροι μίσθωσης",
-      step: 3,
+      step: 7,
       status: pricingOk ? "complete" : "warning",
     },
     {
       id: "photos",
       label: `Φωτογραφίες (≥${MIN_LISTING_PHOTOS_FOR_REVIEW})`,
-      step: 4,
+      step: 8,
       status: photosOk ? "complete" : "warning",
     },
     {
       id: "availability",
       label: "Διαθεσιμότητα",
-      step: 3,
+      step: 7,
       status: availabilityOk ? "complete" : "warning",
     },
   ];
@@ -133,7 +150,7 @@ function buildReviewItems(
     items.push({
       id: "registry",
       label: "Αριθμός καταχώρισης",
-      step: 3,
+      step: 7,
       status: registryOk ? "complete" : "warning",
     });
   }
@@ -142,10 +159,10 @@ function buildReviewItems(
     {
       id: "contact",
       label: "Στοιχεία επικοινωνίας",
-      step: 5,
+      step: 9,
       status: contactOk ? "complete" : "warning",
     },
-    { id: "declarations", label: "Δηλώσεις", step: 6, status: declarationsOk ? "complete" : "warning" }
+    { id: "declarations", label: "Δηλώσεις", step: 10, status: declarationsOk ? "complete" : "warning" }
   );
 
   return items;

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import {
   CreateListingWizardShell,
   WizardChoiceCard,
+  WizardCounter,
 } from "@/components/listings/wizard/CreateListingWizardShell";
 import { ListingCityField } from "@/components/listings/wizard/ListingCityField";
 import { ListingAreaField } from "@/components/listings/wizard/ListingAreaField";
@@ -25,6 +26,7 @@ import {
   ListingWizardReviewStep,
 } from "@/components/listings/wizard/ListingWizardReviewStep";
 import {
+  getOwnerLatestDraftListingId,
   getSavedListingImageCount,
   getWizardListingDraft,
   savePortalListingDraft,
@@ -39,7 +41,8 @@ import { MIN_LISTING_PHOTOS_FOR_REVIEW } from "@/lib/constants";
 import {
   MIN_LISTING_DESCRIPTION_LENGTH,
   MIN_LISTING_TITLE_LENGTH,
-  validateBasicDetails,
+  resolveWizardArea,
+  resolveWizardCity,
   isValidRegistryNumber,
 } from "@/lib/listing-wizard-validation";
 import {
@@ -56,10 +59,26 @@ import {
 } from "@/lib/rental-types";
 import { LISTING_AVAILABILITY_STATUS_OPTIONS as AVAIL_OPTS } from "@/lib/listing-availability-status";
 import { hasCallablePhone, listingPhoneReadyForCalls } from "@/lib/listing-contact";
+import {
+  amenityLabel,
+  normalizeAmenityKey,
+  popularFilterAmenities,
+} from "@/lib/amenities-catalog";
+import {
+  getOwnerListingAmenities,
+  saveOwnerListingAmenities,
+} from "@/lib/listing-amenities";
+import { amenityIconForKey } from "@/lib/amenity-icons";
+import { cn } from "@/lib/utils";
+import { Check } from "lucide-react";
 
 const STEPS = [
   "Τύπος μίσθωσης",
-  "Το ακίνητό σου",
+  "Τύπος ακινήτου",
+  "Τοποθεσία",
+  "Χωρητικότητα",
+  "Τίτλος & περιγραφή",
+  "Παροχές",
   "Τιμή & διαθεσιμότητα",
   "Φωτογραφίες",
   "Επικοινωνία",
@@ -67,10 +86,13 @@ const STEPS = [
   "Έλεγχος πριν την υποβολή",
 ] as const;
 
-/** Host-facing phase labels (about / stand_out / finish) aligned to the 7 legacy steps. */
 const STEP_PHASES = [
   "Το ακίνητό σου",
   "Το ακίνητό σου",
+  "Το ακίνητό σου",
+  "Το ακίνητό σου",
+  "Να ξεχωρίζει",
+  "Να ξεχωρίζει",
   "Ολοκλήρωση",
   "Να ξεχωρίζει",
   "Ολοκλήρωση",
@@ -80,7 +102,11 @@ const STEP_PHASES = [
 
 const STEP_HINTS = [
   "Διάλεξε αν η αγγελία είναι βραχυχρόνια ή μηνιαία / μεσοπρόθεσμη.",
-  "Συμπλήρωσε τίτλο, τοποθεσία και βασικά χαρακτηριστικά του ακινήτου.",
+  "Τι είδους ακίνητο προσφέρεις;",
+  "Πού βρίσκεται — πόλη, περιοχή και ακριβής θέση στον χάρτη.",
+  "Πόσα άτομα φιλοξενεί και βασικά μεγέθη του χώρου.",
+  "Ένας καθαρός τίτλος και μια περιγραφή που λέει τα σημαντικά.",
+  "Επίλεξε παροχές που ισχύουν πραγματικά — μπορείς να τις συμπληρώσεις αργότερα.",
   "Όρισε τιμές, διαθεσιμότητα και στοιχεία καταχώρισης αν χρειάζεται.",
   "Ανέβασε τουλάχιστον μία φωτογραφία — η πρώτη γίνεται κύρια.",
   "Πώς θα επικοινωνούν μαζί σου οι ενδιαφερόμενοι.",
@@ -91,6 +117,13 @@ const STEP_HINTS = [
 const TOTAL_STEPS = STEPS.length;
 const WIZARD_SCROLL_OFFSET = 112;
 const WIZARD_DRAFT_STORAGE_KEY = "midora_new_listing_draft_id";
+const AUTOSAVE_DEBOUNCE_MS = 800;
+const AMENITIES_STEP = 6;
+const PRICING_STEP = 7;
+const PHOTOS_STEP = 8;
+const CONTACT_STEP = 9;
+const DECLARATIONS_STEP = 10;
+const REVIEW_STEP = 11;
 
 function clearWizardDraftSession(setListingId: (id: string | null) => void) {
   setListingId(null);
@@ -110,6 +143,8 @@ type Props = {
   initialListingId?: string | null;
 };
 
+type SaveStatus = "idle" | "saving" | "saved" | "error";
+
 export function NewListingWizard({ profile, email, initialListingId = null }: Props) {
   const router = useRouter();
   const [step, setStep] = useState(1);
@@ -117,15 +152,19 @@ export function NewListingWizard({ profile, email, initialListingId = null }: Pr
   const [success, setSuccess] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
   const [draftSaving, setDraftSaving] = useState(false);
-  const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
+  const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");
   const [listingId, setListingId] = useState<string | null>(initialListingId);
   const [savedPhotoCount, setSavedPhotoCount] = useState(0);
   const [photosUploadBusy, setPhotosUploadBusy] = useState(false);
+  const [resumeDraftId, setResumeDraftId] = useState<string | null>(null);
+  const [resumeChecking, setResumeChecking] = useState(true);
 
   const wizardTopRef = useRef<HTMLDivElement>(null);
   const stepHeadingRef = useRef<HTMLHeadingElement>(null);
   const skipInitialScrollRef = useRef(true);
   const draftLoadedRef = useRef(false);
+  const autosaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const autosaveSkipRef = useRef(true);
 
   function resolveListingId(): string | null {
     return listingId;
@@ -306,6 +345,13 @@ export function NewListingWizard({ profile, email, initialListingId = null }: Pr
   const [registryDeclarationAccepted, setRegistryDeclarationAccepted] = useState(false);
   const [platformDeclarationAccepted, setPlatformDeclarationAccepted] = useState(false);
   const [termsPrivacyAccepted, setTermsPrivacyAccepted] = useState(false);
+  const [selectedAmenityKeys, setSelectedAmenityKeys] = useState<string[]>([]);
+  const amenitiesHydratedForRef = useRef<string | null>(null);
+
+  const popularAmenities = useMemo(
+    () => popularFilterAmenities(supportsMonthly ? "monthly" : "short_term"),
+    [supportsMonthly]
+  );
 
   const needsAma =
     supportsShortTerm || (supportsMonthly && acceptsUnder60);
@@ -322,173 +368,8 @@ export function NewListingWizard({ profile, email, initialListingId = null }: Pr
     allowPhoneContact,
     profile
   );
-  const refreshSavedPhotoCount = useCallback(
-    async (targetListingId?: string | null): Promise<number> => {
-      const id = targetListingId ?? listingId;
-      if (!id) {
-        setSavedPhotoCount(0);
-        return 0;
-      }
 
-      const result = await getSavedListingImageCount(id);
-      if ("error" in result && result.error) {
-        logListingImageValidationDebug({
-          listingId: id,
-          savedImageCount: 0,
-          currentStep: step,
-        });
-        return 0;
-      }
-
-      const count =
-        "photoCount" in result && typeof result.photoCount === "number"
-          ? result.photoCount
-          : 0;
-      setSavedPhotoCount(count);
-      return count;
-    },
-    [listingId, step]
-  );
-
-  const handlePhotoCountChange = useCallback(() => {
-    void refreshSavedPhotoCount();
-  }, [refreshSavedPhotoCount]);
-
-  const scrollToWizardStep = useCallback(() => {
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        const target = stepHeadingRef.current ?? wizardTopRef.current;
-        if (!target) return;
-        const top =
-          target.getBoundingClientRect().top + window.scrollY - WIZARD_SCROLL_OFFSET;
-        window.scrollTo({ top: Math.max(0, top), behavior: "auto" });
-        stepHeadingRef.current?.focus({ preventScroll: true });
-      });
-    });
-  }, []);
-
-  useEffect(() => {
-    if (skipInitialScrollRef.current) {
-      skipInitialScrollRef.current = false;
-      return;
-    }
-    scrollToWizardStep();
-  }, [step, scrollToWizardStep]);
-
-  useEffect(() => {
-    if (draftLoadedRef.current) return;
-    draftLoadedRef.current = true;
-
-    if (typeof window === "undefined") return;
-
-    const params = new URLSearchParams(window.location.search);
-    const fresh = params.get("fresh") === "1";
-    const draftIdFromUrl = params.get("draft")?.trim() || null;
-    const draftId = initialListingId ?? draftIdFromUrl;
-
-    // Νέα αγγελία χωρίς ?draft= → πάντα κενό φόρμα, όχι επαναφορά παλιού draft
-    if (fresh || !draftId) {
-      clearWizardDraftSession(setListingId);
-      if (fresh) {
-        window.history.replaceState(null, "", "/dashboard/listings/new");
-      }
-      return;
-    }
-
-    startTransition(async () => {
-      persistListingId(draftId);
-      const result = await getWizardListingDraft(draftId);
-      if ("error" in result && result.error) {
-        setError(result.error);
-        clearWizardDraftSession(setListingId);
-        window.history.replaceState(null, "", "/dashboard/listings/new");
-        return;
-      }
-      if (!("listing" in result) || !result.listing) return;
-
-      hydrateFromListing(result.listing as Record<string, unknown>);
-      setSavedPhotoCount(result.photoCount ?? 0);
-
-      if ((result.photoCount ?? 0) >= MIN_LISTING_PHOTOS_FOR_REVIEW) {
-        setStep(7);
-      } else if ((result.photoCount ?? 0) > 0) {
-        setStep(4);
-      }
-    });
-  }, [initialListingId]);
-
-  function renderStepHeading(title: string, hint?: string) {
-    return (
-      <div className="mb-5">
-        <h2
-          ref={stepHeadingRef}
-          tabIndex={-1}
-          className="font-display text-xl font-semibold text-charcoal outline-none"
-        >
-          {title}
-        </h2>
-        <p className="mt-1.5 text-sm text-muted">{hint ?? STEP_HINTS[step - 1]}</p>
-      </div>
-    );
-  }
-
-  function markDraftSaved() {
-    setLastSavedAt(new Date());
-  }
-
-  function locationState(): PropertyLocationState {
-    return {
-      addressSearch,
-      addressStreet,
-      addressNumber,
-      addressPostalCode,
-      city,
-      area,
-      cityDisplayName: cityDisplayName || city,
-      areaDisplayName: areaDisplayName || area,
-      formattedAddress,
-      providerPlaceId,
-      latitude,
-      longitude,
-      locationConfirmedByOwner,
-      locationPinMovedManually,
-      suggestedLat,
-      suggestedLng,
-      locationConfirmedAt,
-      areaLockedByUser,
-    };
-  }
-
-  function patchLocationState(patch: Partial<PropertyLocationState>) {
-    if (patch.addressSearch !== undefined) setAddressSearch(patch.addressSearch);
-    if (patch.addressStreet !== undefined) setAddressStreet(patch.addressStreet);
-    if (patch.addressNumber !== undefined) setAddressNumber(patch.addressNumber);
-    if (patch.addressPostalCode !== undefined) setAddressPostalCode(patch.addressPostalCode);
-    if (patch.city !== undefined) setCity(patch.city);
-    if (patch.area !== undefined) setArea(patch.area);
-    if (patch.cityDisplayName !== undefined) setCityDisplayName(patch.cityDisplayName);
-    if (patch.areaDisplayName !== undefined) setAreaDisplayName(patch.areaDisplayName);
-    if (patch.formattedAddress !== undefined) setFormattedAddress(patch.formattedAddress);
-    if (patch.providerPlaceId !== undefined) setProviderPlaceId(patch.providerPlaceId);
-    if (patch.latitude !== undefined) setLatitude(patch.latitude);
-    if (patch.longitude !== undefined) setLongitude(patch.longitude);
-    if (patch.suggestedLat !== undefined) setSuggestedLat(patch.suggestedLat);
-    if (patch.suggestedLng !== undefined) setSuggestedLng(patch.suggestedLng);
-    if (patch.locationConfirmedByOwner !== undefined) {
-      setLocationConfirmedByOwner(patch.locationConfirmedByOwner);
-    }
-    if (patch.locationPinMovedManually !== undefined) {
-      setLocationPinMovedManually(patch.locationPinMovedManually);
-    }
-    if (patch.locationConfirmedAt !== undefined) {
-      setLocationConfirmedAt(patch.locationConfirmedAt);
-    }
-    if (patch.areaLockedByUser !== undefined) {
-      setAreaLockedByUser(patch.areaLockedByUser);
-    }
-  }
-
-  function buildFormData(): FormData {
+  const buildFormData = useCallback((): FormData => {
     const fd = new FormData();
     fd.set("rental_type", rentalTypeChoice);
     if (supportsShortTerm) fd.set("supports_short_term", "on");
@@ -572,6 +453,329 @@ export function NewListingWizard({ profile, email, initialListingId = null }: Pr
     fd.set("furnished", "on");
     fd.set("min_months", supportsShortTerm && !supportsMonthly ? "1" : "2");
     return fd;
+  }, [
+    rentalTypeChoice,
+    supportsShortTerm,
+    supportsMonthly,
+    title,
+    city,
+    area,
+    addressStreet,
+    addressNumber,
+    addressPostalCode,
+    addressFloor,
+    addressUnit,
+    cityDisplayName,
+    areaDisplayName,
+    formattedAddress,
+    providerPlaceId,
+    latitude,
+    longitude,
+    locationConfirmedByOwner,
+    locationPinMovedManually,
+    locationConfirmedAt,
+    useProfileContact,
+    allowPhoneContact,
+    allowWhatsApp,
+    allowViber,
+    allowMessage,
+    contactWhatsappUsePrimary,
+    contactViberUsePrimary,
+    contactWhatsappPhone,
+    contactViberPhone,
+    propertyType,
+    sqm,
+    bedrooms,
+    bathrooms,
+    floor,
+    description,
+    pricePerNight,
+    includedGuests,
+    extraGuestFee,
+    maxGuests,
+    shortMinStay,
+    priceMonthly,
+    monthlyMinStay,
+    monthlyTerms,
+    acceptsUnder60,
+    needsAma,
+    amaNumber,
+    legalRegistryType,
+    availabilityStatus,
+    availabilityNote,
+    contactName,
+    contactPhone,
+    contactEmail,
+    preferredContact,
+    verificationCode,
+    ownerDeclarationAccepted,
+    registryDeclarationAccepted,
+    platformDeclarationAccepted,
+    termsPrivacyAccepted,
+  ]);
+
+  const refreshSavedPhotoCount = useCallback(
+    async (targetListingId?: string | null): Promise<number> => {
+      const id = targetListingId ?? listingId;
+      if (!id) {
+        setSavedPhotoCount(0);
+        return 0;
+      }
+
+      const result = await getSavedListingImageCount(id);
+      if ("error" in result && result.error) {
+        logListingImageValidationDebug({
+          listingId: id,
+          savedImageCount: 0,
+          currentStep: step,
+        });
+        return 0;
+      }
+
+      const count =
+        "photoCount" in result && typeof result.photoCount === "number"
+          ? result.photoCount
+          : 0;
+      setSavedPhotoCount(count);
+      return count;
+    },
+    [listingId, step]
+  );
+
+  const handlePhotoCountChange = useCallback(() => {
+    void refreshSavedPhotoCount();
+  }, [refreshSavedPhotoCount]);
+
+  const scrollToWizardStep = useCallback(() => {
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        const target = stepHeadingRef.current ?? wizardTopRef.current;
+        if (!target) return;
+        const top =
+          target.getBoundingClientRect().top + window.scrollY - WIZARD_SCROLL_OFFSET;
+        window.scrollTo({ top: Math.max(0, top), behavior: "auto" });
+        stepHeadingRef.current?.focus({ preventScroll: true });
+      });
+    });
+  }, []);
+
+  useEffect(() => {
+    if (skipInitialScrollRef.current) {
+      skipInitialScrollRef.current = false;
+      return;
+    }
+    scrollToWizardStep();
+  }, [step, scrollToWizardStep]);
+
+  const loadDraftById = useCallback(
+    (draftId: string) => {
+      startTransition(async () => {
+        persistListingId(draftId);
+        const result = await getWizardListingDraft(draftId);
+        if ("error" in result && result.error) {
+          setError(result.error);
+          clearWizardDraftSession(setListingId);
+          window.history.replaceState(null, "", "/dashboard/listings/new");
+          return;
+        }
+        if (!("listing" in result) || !result.listing) return;
+
+        hydrateFromListing(result.listing as Record<string, unknown>);
+        setSavedPhotoCount(result.photoCount ?? 0);
+        setSaveStatus("saved");
+
+        amenitiesHydratedForRef.current = draftId;
+        const amenityRows = await getOwnerListingAmenities(draftId);
+        setSelectedAmenityKeys(
+          amenityRows
+            .map((row) => normalizeAmenityKey(row.amenity_key))
+            .filter(Boolean)
+        );
+
+        if ((result.photoCount ?? 0) >= MIN_LISTING_PHOTOS_FOR_REVIEW) {
+          setStep(REVIEW_STEP);
+        } else if ((result.photoCount ?? 0) > 0) {
+          setStep(PHOTOS_STEP);
+        }
+      });
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- hydrate uses setters; load once per id
+    []
+  );
+
+  useEffect(() => {
+    if (!listingId || amenitiesHydratedForRef.current === listingId) return;
+    let cancelled = false;
+    amenitiesHydratedForRef.current = listingId;
+    void getOwnerListingAmenities(listingId).then((rows) => {
+      if (cancelled) return;
+      setSelectedAmenityKeys(
+        rows.map((row) => normalizeAmenityKey(row.amenity_key)).filter(Boolean)
+      );
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [listingId]);
+
+  useEffect(() => {
+    if (draftLoadedRef.current) return;
+    draftLoadedRef.current = true;
+
+    if (typeof window === "undefined") return;
+
+    const params = new URLSearchParams(window.location.search);
+    const fresh = params.get("fresh") === "1";
+    const draftIdFromUrl = params.get("draft")?.trim() || null;
+    const draftId = initialListingId ?? draftIdFromUrl;
+
+    if (fresh) {
+      clearWizardDraftSession(setListingId);
+      window.history.replaceState(null, "", "/dashboard/listings/new");
+      setResumeChecking(false);
+      return;
+    }
+
+    if (draftId) {
+      setResumeChecking(false);
+      loadDraftById(draftId);
+      return;
+    }
+
+    startTransition(async () => {
+      let sessionDraft: string | null = null;
+      try {
+        sessionDraft = sessionStorage.getItem(WIZARD_DRAFT_STORAGE_KEY)?.trim() || null;
+      } catch {
+        sessionDraft = null;
+      }
+
+      const latest = await getOwnerLatestDraftListingId();
+      const dbDraft =
+        !("error" in latest) && latest.listingId ? latest.listingId : null;
+      const candidate = sessionDraft || dbDraft;
+
+      if (candidate) {
+        setResumeDraftId(candidate);
+        setResumeChecking(false);
+        return;
+      }
+
+      clearWizardDraftSession(setListingId);
+      setResumeChecking(false);
+    });
+  }, [initialListingId, loadDraftById]);
+
+  // Debounced autosave after draft exists (title / description / price / city).
+  useEffect(() => {
+    if (!listingId || resumeDraftId || resumeChecking) return;
+    if (autosaveSkipRef.current) {
+      autosaveSkipRef.current = false;
+      return;
+    }
+    if (draftSaving || pending) return;
+
+    if (autosaveTimerRef.current) clearTimeout(autosaveTimerRef.current);
+    autosaveTimerRef.current = setTimeout(() => {
+      const activeListingId = listingId;
+      if (!activeListingId || draftSaving) return;
+      setSaveStatus("saving");
+      void (async () => {
+        const result = await savePortalListingDraft(buildFormData(), activeListingId);
+        if (result.error) {
+          setSaveStatus("error");
+          return;
+        }
+        setSaveStatus("saved");
+      })();
+    }, AUTOSAVE_DEBOUNCE_MS);
+
+    return () => {
+      if (autosaveTimerRef.current) {
+        clearTimeout(autosaveTimerRef.current);
+        autosaveTimerRef.current = null;
+      }
+    };
+  }, [
+    listingId,
+    title,
+    description,
+    pricePerNight,
+    priceMonthly,
+    city,
+    resumeDraftId,
+    resumeChecking,
+    draftSaving,
+    pending,
+    buildFormData,
+  ]);
+
+  function renderStepHeading(_heading: string, hint?: string) {
+    // Shell already shows step title as h1 — keep a focus/scroll target + hint only.
+    return (
+      <div className="mb-5">
+        <span ref={stepHeadingRef} tabIndex={-1} className="sr-only outline-none">
+          {_heading}
+        </span>
+        <p className="text-sm text-muted">{hint ?? STEP_HINTS[step - 1]}</p>
+      </div>
+    );
+  }
+
+  function markDraftSaved() {
+    setSaveStatus("saved");
+  }
+
+  function locationState(): PropertyLocationState {
+    return {
+      addressSearch,
+      addressStreet,
+      addressNumber,
+      addressPostalCode,
+      city,
+      area,
+      cityDisplayName: cityDisplayName || city,
+      areaDisplayName: areaDisplayName || area,
+      formattedAddress,
+      providerPlaceId,
+      latitude,
+      longitude,
+      locationConfirmedByOwner,
+      locationPinMovedManually,
+      suggestedLat,
+      suggestedLng,
+      locationConfirmedAt,
+      areaLockedByUser,
+    };
+  }
+
+  function patchLocationState(patch: Partial<PropertyLocationState>) {
+    if (patch.addressSearch !== undefined) setAddressSearch(patch.addressSearch);
+    if (patch.addressStreet !== undefined) setAddressStreet(patch.addressStreet);
+    if (patch.addressNumber !== undefined) setAddressNumber(patch.addressNumber);
+    if (patch.addressPostalCode !== undefined) setAddressPostalCode(patch.addressPostalCode);
+    if (patch.city !== undefined) setCity(patch.city);
+    if (patch.area !== undefined) setArea(patch.area);
+    if (patch.cityDisplayName !== undefined) setCityDisplayName(patch.cityDisplayName);
+    if (patch.areaDisplayName !== undefined) setAreaDisplayName(patch.areaDisplayName);
+    if (patch.formattedAddress !== undefined) setFormattedAddress(patch.formattedAddress);
+    if (patch.providerPlaceId !== undefined) setProviderPlaceId(patch.providerPlaceId);
+    if (patch.latitude !== undefined) setLatitude(patch.latitude);
+    if (patch.longitude !== undefined) setLongitude(patch.longitude);
+    if (patch.suggestedLat !== undefined) setSuggestedLat(patch.suggestedLat);
+    if (patch.suggestedLng !== undefined) setSuggestedLng(patch.suggestedLng);
+    if (patch.locationConfirmedByOwner !== undefined) {
+      setLocationConfirmedByOwner(patch.locationConfirmedByOwner);
+    }
+    if (patch.locationPinMovedManually !== undefined) {
+      setLocationPinMovedManually(patch.locationPinMovedManually);
+    }
+    if (patch.locationConfirmedAt !== undefined) {
+      setLocationConfirmedAt(patch.locationConfirmedAt);
+    }
+    if (patch.areaLockedByUser !== undefined) {
+      setAreaLockedByUser(patch.areaLockedByUser);
+    }
   }
 
   function validateWizardStep(
@@ -586,28 +790,72 @@ export function NewListingWizard({ profile, email, initialListingId = null }: Pr
       return null;
     }
     if (targetStep === 2) {
-      const basicErr = validateBasicDetails({
-        title,
-        city,
-        area,
-        addressStreet,
-        addressNumber,
-        addressPostalCode,
-        propertyType,
-        sqm,
-        bedrooms,
-        bathrooms,
-        floor,
-        description,
-        forSubmission: true,
-      });
-      if (basicErr) return basicErr;
-      if (forSubmission && (latitude == null || longitude == null)) {
-        return "Ορίσε την ακριβή θέση του ακινήτου στον χάρτη για να συνεχίσεις.";
-      }
+      if (!propertyType) return "Επίλεξε τύπο ακινήτου για να συνεχίσεις.";
       return null;
     }
     if (targetStep === 3) {
+      if (!city.trim()) return "Συμπλήρωσε την πόλη.";
+      const effectiveArea = area.trim() || city.trim();
+      const { city: canonicalCity } = resolveWizardCity(city);
+      if (area.trim()) {
+        const { mismatch } = resolveWizardArea(canonicalCity, area);
+        if (mismatch) {
+          return "Η περιοχή δεν ταιριάζει με την επιλεγμένη πόλη.";
+        }
+      } else if (!effectiveArea) {
+        return "Συμπλήρωσε την πόλη.";
+      }
+      if (forSubmission) {
+        if (!addressStreet.trim()) return "Συμπλήρωσε την οδό.";
+        if (!addressNumber.trim()) return "Συμπλήρωσε τον αριθμό.";
+        if (!addressPostalCode.trim()) return "Συμπλήρωσε τον ταχυδρομικό κώδικα.";
+        if (latitude == null || longitude == null) {
+          return "Ορίσε την ακριβή θέση του ακινήτου στον χάρτη για να συνεχίσεις.";
+        }
+      }
+      return null;
+    }
+    if (targetStep === 4) {
+      const guests = parseInt(maxGuests, 10);
+      if (!Number.isFinite(guests) || guests < 1) {
+        return "Ο μέγιστος αριθμός ατόμων πρέπει να είναι τουλάχιστον 1.";
+      }
+      const sqmNum = parseInt(sqm, 10);
+      if (!Number.isFinite(sqmNum) || sqmNum <= 0) {
+        return "Τα τετραγωνικά μέτρα πρέπει να είναι θετικός ακέραιος αριθμός.";
+      }
+      const beds = parseInt(bedrooms, 10);
+      if (!Number.isFinite(beds) || beds < 0) {
+        return "Τα υπνοδωμάτια πρέπει να είναι ακέραιος ≥ 0 (0 = στούντιο).";
+      }
+      const baths = parseInt(bathrooms, 10);
+      if (!Number.isFinite(baths) || baths < 0) {
+        return "Συμπλήρωσε τον αριθμό μπάνιων (0 αν δεν υπάρχει ξεχωριστό).";
+      }
+      const floorNum = parseInt(floor, 10);
+      if (!Number.isFinite(floorNum) || floorNum < 0) {
+        return "Συμπλήρωσε τον όροφο (0 = ισόγειο).";
+      }
+      return null;
+    }
+    if (targetStep === 5) {
+      const t = title.trim();
+      if (!t) return "Συμπλήρωσε τον τίτλο της αγγελίας.";
+      if (forSubmission && t.length < MIN_LISTING_TITLE_LENGTH) {
+        return `Ο τίτλος πρέπει να έχει τουλάχιστον ${MIN_LISTING_TITLE_LENGTH} χαρακτήρες.`;
+      }
+      const d = description.trim();
+      if (!d) return "Συμπλήρωσε την περιγραφή.";
+      if (forSubmission && d.length < MIN_LISTING_DESCRIPTION_LENGTH) {
+        return `Η περιγραφή πρέπει να έχει τουλάχιστον ${MIN_LISTING_DESCRIPTION_LENGTH} χαρακτήρες.`;
+      }
+      return null;
+    }
+    if (targetStep === AMENITIES_STEP) {
+      // Optional — always skippable.
+      return null;
+    }
+    if (targetStep === PRICING_STEP) {
       const fields = parsePortalListingFields(buildFormData());
       const err = validatePortalListingFields(fields, { forSubmission: false });
       if (err) return err;
@@ -620,13 +868,13 @@ export function NewListingWizard({ profile, email, initialListingId = null }: Pr
       }
       return null;
     }
-    if (targetStep === 4) {
+    if (targetStep === PHOTOS_STEP) {
       if (forSubmission) {
         return photoCountSubmitError(dbPhotoCount);
       }
       return photoCountStepError(dbPhotoCount);
     }
-    if (targetStep === 5) {
+    if (targetStep === CONTACT_STEP) {
       if (!contactName.trim()) return "Συμπλήρωσε όνομα αγγελιοδότη.";
       if (!contactPhone.trim() && !contactEmail.trim()) {
         return "Συμπλήρωσε τηλέφωνο ή email επικοινωνίας.";
@@ -635,12 +883,12 @@ export function NewListingWizard({ profile, email, initialListingId = null }: Pr
         return "Συμπλήρωσε έγκυρο κινητό τηλέφωνο (Ελλάδα).";
       }
     }
-    if (targetStep === 6) {
+    if (targetStep === DECLARATIONS_STEP) {
       if (!allDeclarationsChecked) {
         return "Επίλεξε όλες τις απαιτούμενες δηλώσεις για να συνεχίσεις.";
       }
     }
-    if (targetStep === 7 && forSubmission) {
+    if (targetStep === REVIEW_STEP && forSubmission) {
       const fields = parsePortalListingFields(buildFormData());
       if (
         !isReviewReady(
@@ -660,41 +908,55 @@ export function NewListingWizard({ profile, email, initialListingId = null }: Pr
     return null;
   }
 
-  function mapErrorToStep(error: string): number | null {
-    const msg = error.toLowerCase();
+  function mapErrorToStep(errorMsg: string): number | null {
+    const msg = errorMsg.toLowerCase();
     if (msg.includes("τύπο") && msg.includes("μίσθωσ")) return 1;
+    if (msg.includes("τύπο") && msg.includes("ακινήτ")) return 2;
     if (
-      msg.includes("τετραγων") ||
-      msg.includes("τίτλ") ||
-      msg.includes("περιγραφ") ||
       msg.includes("πόλη") ||
       msg.includes("περιοχ") ||
       msg.includes("οδό") ||
       msg.includes("ταχυδρομ") ||
-      msg.includes("υπνοδωμάτ") ||
-      msg.includes("ακινήτου")
+      msg.includes("θέση") ||
+      msg.includes("χάρτη")
     ) {
-      return 2;
+      return 3;
     }
+    if (
+      msg.includes("τετραγων") ||
+      msg.includes("υπνοδωμάτ") ||
+      msg.includes("μπάνι") ||
+      msg.includes("όροφο") ||
+      (msg.includes("ατόμ") && !msg.includes("τιμ"))
+    ) {
+      return 4;
+    }
+    if (msg.includes("τίτλ") || msg.includes("περιγραφ")) return 5;
+    if (msg.includes("παροχ")) return AMENITIES_STEP;
     if (
       msg.includes("τιμ") ||
       msg.includes("βράδυ") ||
       msg.includes("μήνα") ||
-      msg.includes("ατόμ") ||
       msg.includes("διαμον") ||
       msg.includes("καταχώρισ") ||
       msg.includes("αριθμ")
     ) {
-      return 3;
+      return PRICING_STEP;
     }
-    if (msg.includes("φωτογραφ")) return 4;
-    if (msg.includes("επικοινων") || msg.includes("τηλέφων") || msg.includes("email") || msg.includes("αγγελιοδότη")) {
-      return 5;
+    if (msg.includes("φωτογραφ")) return PHOTOS_STEP;
+    if (
+      msg.includes("επικοινων") ||
+      msg.includes("τηλέφων") ||
+      msg.includes("email") ||
+      msg.includes("αγγελιοδότη")
+    ) {
+      return CONTACT_STEP;
     }
-    if (msg.includes("δήλωσ") || msg.includes("δηλώσ")) return 6;
-    if (msg.includes("υποβολ") || msg.includes("ολοκλήρωσε όλα")) return 7;
+    if (msg.includes("δήλωσ") || msg.includes("δηλώσ")) return DECLARATIONS_STEP;
+    if (msg.includes("υποβολ") || msg.includes("ολοκλήρωσε όλα")) return REVIEW_STEP;
     return null;
   }
+
   async function findFirstInvalidStep(
     forSubmission: boolean
   ): Promise<{ step: number; error: string } | null> {
@@ -724,12 +986,14 @@ export function NewListingWizard({ profile, email, initialListingId = null }: Pr
   function ensureDraft(onDone: (id: string) => void) {
     if (draftSaving || pending) return;
     setDraftSaving(true);
+    setSaveStatus("saving");
     const activeListingId = resolveListingId();
     startTransition(async () => {
       const result = await savePortalListingDraft(buildFormData(), activeListingId);
       setDraftSaving(false);
       if (result.error) {
         setError(result.error);
+        setSaveStatus("error");
         return;
       }
       if (result.listingId) {
@@ -739,6 +1003,7 @@ export function NewListingWizard({ profile, email, initialListingId = null }: Pr
         onDone(result.listingId);
       } else {
         setError("Δεν ήταν δυνατή η αποθήκευση της αγγελίας. Δοκίμασε ξανά ή επικοινώνησε με την υποστήριξη.");
+        setSaveStatus("error");
       }
     });
   }
@@ -746,7 +1011,7 @@ export function NewListingWizard({ profile, email, initialListingId = null }: Pr
   function next() {
     if (pending || draftSaving) return;
 
-    if (step === 4 && resolveListingId()) {
+    if (step === PHOTOS_STEP && resolveListingId()) {
       if (photosUploadBusy) {
         setError("Περίμενε να ολοκληρωθεί το ανέβασμα των φωτογραφιών.");
         return;
@@ -754,17 +1019,20 @@ export function NewListingWizard({ profile, email, initialListingId = null }: Pr
       const activeListingId = resolveListingId();
       startTransition(async () => {
         const dbPhotoCount = await refreshSavedPhotoCount(activeListingId!);
-        const err = validateWizardStep(4, false, dbPhotoCount);
+        const err = validateWizardStep(PHOTOS_STEP, false, dbPhotoCount);
         if (err) {
           setError(err);
           return;
         }
         setError(null);
+        setSaveStatus("saving");
         const result = await savePortalListingDraft(buildFormData(), activeListingId);
-        if (result.error) setError(result.error);
-        else {
+        if (result.error) {
+          setError(result.error);
+          setSaveStatus("error");
+        } else {
           markDraftSaved();
-          setStep(5);
+          setStep(CONTACT_STEP);
         }
       });
       return;
@@ -777,22 +1045,36 @@ export function NewListingWizard({ profile, email, initialListingId = null }: Pr
     }
     setError(null);
 
-    if (step === 1 || step === 2) {
+    if (step === AMENITIES_STEP) {
+      ensureDraft((id) => {
+        startTransition(async () => {
+          const amenityResult = await saveOwnerListingAmenities(id, selectedAmenityKeys);
+          if ("error" in amenityResult && amenityResult.error) {
+            setError(amenityResult.error);
+            return;
+          }
+          setStep((s) => Math.min(s + 1, TOTAL_STEPS));
+        });
+      });
+      return;
+    }
+
+    // Save draft on advance for early steps (1–5) and pricing.
+    if (step >= 1 && step <= PRICING_STEP) {
       ensureDraft(() => setStep((s) => Math.min(s + 1, TOTAL_STEPS)));
       return;
     }
 
-    if (step === 3) {
-      ensureDraft(() => setStep(4));
-      return;
-    }
-    if (step >= 4 && resolveListingId()) {
+    if (step >= PHOTOS_STEP && resolveListingId()) {
       const activeListingId = resolveListingId();
       startTransition(async () => {
         await refreshSavedPhotoCount();
+        setSaveStatus("saving");
         const result = await savePortalListingDraft(buildFormData(), activeListingId);
-        if (result.error) setError(result.error);
-        else {
+        if (result.error) {
+          setError(result.error);
+          setSaveStatus("error");
+        } else {
           markDraftSaved();
           setStep((s) => Math.min(s + 1, TOTAL_STEPS));
         }
@@ -806,7 +1088,7 @@ export function NewListingWizard({ profile, email, initialListingId = null }: Pr
     setError(null);
     const nextStep = Math.max(step - 1, 1);
     setStep(nextStep);
-    if (resolveListingId() && (nextStep >= 4 || step >= 4)) {
+    if (resolveListingId() && (nextStep >= PHOTOS_STEP || step >= PHOTOS_STEP)) {
       void refreshSavedPhotoCount();
     }
   }
@@ -817,20 +1099,32 @@ export function NewListingWizard({ profile, email, initialListingId = null }: Pr
     setSuccess(null);
     const activeListingId = resolveListingId();
     setDraftSaving(true);
+    setSaveStatus("saving");
     startTransition(async () => {
       const result = await savePortalListingDraft(buildFormData(), activeListingId);
       setDraftSaving(false);
       if (result.error) {
         setError(result.error);
+        setSaveStatus("error");
         return;
       }
       if (result.listingId) {
         persistListingId(result.listingId);
         await refreshSavedPhotoCount();
+        const amenityResult = await saveOwnerListingAmenities(
+          result.listingId,
+          selectedAmenityKeys
+        );
+        if ("error" in amenityResult && amenityResult.error) {
+          setError(amenityResult.error);
+          setSaveStatus("error");
+          return;
+        }
         markDraftSaved();
         router.push("/dashboard/listings?saved=draft");
       } else {
         setError("Δεν ήταν δυνατή η αποθήκευση. Δοκίμασε ξανά.");
+        setSaveStatus("error");
       }
     });
   }
@@ -866,12 +1160,123 @@ export function NewListingWizard({ profile, email, initialListingId = null }: Pr
     });
   }
 
+  function continueResumeDraft() {
+    if (!resumeDraftId) return;
+    const id = resumeDraftId;
+    setResumeDraftId(null);
+    loadDraftById(id);
+  }
+
+  function startFreshListing() {
+    clearWizardDraftSession(setListingId);
+    amenitiesHydratedForRef.current = null;
+    setSelectedAmenityKeys([]);
+    setResumeDraftId(null);
+    setStep(1);
+    setSaveStatus("idle");
+    window.history.replaceState(null, "", "/dashboard/listings/new");
+  }
+
+  const displayPrice = (() => {
+    if (supportsShortTerm) {
+      const n = Number(pricePerNight);
+      return Number.isFinite(n) && n > 1 ? n : null;
+    }
+    const n = Number(priceMonthly);
+    return Number.isFinite(n) && n > 1 ? n : null;
+  })();
+
+  const completionPercent = useMemo(() => {
+    const filled = [
+      Boolean(rentalTypeChoice),
+      Boolean(propertyType),
+      Boolean(city.trim()),
+      Boolean(title.trim()),
+      displayPrice != null,
+      savedPhotoCount >= 1,
+      Boolean(contactName.trim() && (contactPhone.trim() || contactEmail.trim())),
+    ].filter(Boolean).length;
+    return Math.round((filled / 7) * 100);
+  }, [
+    rentalTypeChoice,
+    propertyType,
+    city,
+    title,
+    displayPrice,
+    savedPhotoCount,
+    contactName,
+    contactPhone,
+    contactEmail,
+  ]);
+
+  const rentalModeLabel =
+    MVP_LISTING_TYPE_OPTIONS.find((o) => o.value === rentalTypeChoice)?.label ?? "";
+
+  const previewAside = (
+    <div className="rounded-2xl border border-border bg-sand/30 p-4">
+      <p className="text-[11px] font-medium uppercase tracking-[0.12em] text-muted">
+        Προεπισκόπηση
+      </p>
+      <p className="mt-2 font-display text-lg font-semibold text-charcoal">
+        {title.trim() || "Νέα αγγελία"}
+      </p>
+      <p className="mt-1 text-sm text-muted">
+        {[city.trim(), area.trim()].filter(Boolean).join(" · ") || "Τοποθεσία —"}
+      </p>
+      <dl className="mt-4 space-y-2 text-sm">
+        <div className="flex justify-between gap-2">
+          <dt className="text-muted">Μίσθωση</dt>
+          <dd className="text-right font-medium text-charcoal">{rentalModeLabel}</dd>
+        </div>
+        {displayPrice != null && (
+          <div className="flex justify-between gap-2">
+            <dt className="text-muted">Τιμή</dt>
+            <dd className="text-right font-medium text-charcoal">
+              €{displayPrice}
+              {supportsShortTerm ? " / βράδυ" : " / μήνα"}
+            </dd>
+          </div>
+        )}
+        <div className="flex justify-between gap-2">
+          <dt className="text-muted">Χώρος</dt>
+          <dd className="text-right font-medium text-charcoal">
+            {bedrooms || "—"} υπν. · {maxGuests || "—"} άτομα
+          </dd>
+        </div>
+        <div className="flex justify-between gap-2">
+          <dt className="text-muted">Φωτογραφίες</dt>
+          <dd className="text-right font-medium text-charcoal">{savedPhotoCount}</dd>
+        </div>
+        {selectedAmenityKeys.length > 0 && (
+          <div className="flex justify-between gap-2">
+            <dt className="text-muted">Παροχές</dt>
+            <dd className="text-right font-medium text-charcoal">
+              {selectedAmenityKeys.length}
+            </dd>
+          </div>
+        )}
+      </dl>
+      <div className="mt-5">
+        <div className="flex items-center justify-between text-xs text-muted">
+          <span>Ολοκλήρωση</span>
+          <span className="font-medium text-charcoal">{completionPercent}%</span>
+        </div>
+        <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-border/80">
+          <div
+            className="h-full rounded-full bg-gold transition-[width] duration-300"
+            style={{ width: `${completionPercent}%` }}
+          />
+        </div>
+      </div>
+    </div>
+  );
+
   const wizardBusy = pending || draftSaving;
   const nextDisabled =
     step < TOTAL_STEPS
       ? wizardBusy ||
-        (step === 4 && photosUploadBusy) ||
-        (step === 6 && !allDeclarationsChecked)
+        (step === PHOTOS_STEP && photosUploadBusy) ||
+        (step === DECLARATIONS_STEP && !allDeclarationsChecked)
       : wizardBusy ||
         !allDeclarationsChecked ||
         !isReviewReady(
@@ -884,11 +1289,53 @@ export function NewListingWizard({ profile, email, initialListingId = null }: Pr
           termsPrivacyAccepted,
           listingPhoneReady
         );
-  const saveStatus: "idle" | "saving" | "saved" | "error" = draftSaving
-    ? "saving"
-    : lastSavedAt
-      ? "saved"
-      : "idle";
+
+  if (resumeChecking) {
+    return (
+      <div className="fixed inset-0 z-40 flex items-center justify-center bg-white">
+        <p className="text-sm text-muted">Φόρτωση…</p>
+      </div>
+    );
+  }
+
+  if (resumeDraftId) {
+    return (
+      <div className="fixed inset-0 z-40 flex items-center justify-center bg-white/95 px-4">
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="resume-draft-title"
+          className="w-full max-w-md rounded-2xl border border-border bg-white p-6 shadow-soft"
+        >
+          <h2
+            id="resume-draft-title"
+            className="font-display text-xl font-semibold text-charcoal"
+          >
+            Πρόχειρη αγγελία
+          </h2>
+          <p className="mt-2 text-sm leading-relaxed text-muted">
+            Έχεις ήδη μια πρόχειρη αγγελία. Θέλεις να συνεχίσεις ή να ξεκινήσεις νέα;
+          </p>
+          <div className="mt-6 flex flex-col gap-3 sm:flex-row-reverse">
+            <button
+              type="button"
+              onClick={continueResumeDraft}
+              className="rounded-full bg-gold px-5 py-2.5 text-sm font-semibold text-white hover:bg-gold-dark"
+            >
+              Συνέχεια πρόχειρης
+            </button>
+            <button
+              type="button"
+              onClick={startFreshListing}
+              className="rounded-full border border-border px-5 py-2.5 text-sm font-medium text-charcoal hover:bg-sand/50"
+            >
+              Νέα αγγελία
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <CreateListingWizardShell
@@ -898,6 +1345,7 @@ export function NewListingWizard({ profile, email, initialListingId = null }: Pr
       phaseLabel={STEP_PHASES[step - 1]}
       saveStatus={saveStatus}
       error={error}
+      aside={previewAside}
       onBack={back}
       onNext={step < TOTAL_STEPS ? next : submit}
       onSaveAndExit={saveDraft}
@@ -910,30 +1358,80 @@ export function NewListingWizard({ profile, email, initialListingId = null }: Pr
       <div
         ref={wizardTopRef}
         onKeyDown={(e) => {
-          if ((step === 6 || step === 7) && e.key === "Enter") {
+          if ((step === DECLARATIONS_STEP || step === REVIEW_STEP) && e.key === "Enter") {
             e.preventDefault();
           }
         }}
       >
         {success && <p className="mb-4 text-sm text-teal">{success}</p>}
 
+        {step === 1 && (
+          <div>
+            <p className="text-sm text-muted">
+              Κάθε αγγελία είναι είτε βραχυχρόνια είτε μηνιαία. Αν θέλεις και τους δύο τρόπους,
+              δημιούργησε ξεχωριστή αγγελία για κάθε τύπο.
+            </p>
+
+            <div className="mt-6 grid gap-4">
+              {MVP_LISTING_TYPE_OPTIONS.map((opt) => (
+                <WizardChoiceCard
+                  key={opt.value}
+                  selected={rentalTypeChoice === opt.value}
+                  title={opt.label}
+                  description={`${opt.description} ${opt.helper}`}
+                  onSelect={() => {
+                    setRentalTypeChoice(opt.value);
+                    setError(null);
+                  }}
+                />
+              ))}
+            </div>
+          </div>
+        )}
+
         {step === 2 && (
+          <div>
+            {renderStepHeading("Τι είδους ακίνητο είναι;")}
+            <div className="mt-2 grid gap-3 sm:grid-cols-2">
+              {PROPERTY_TYPES.map((t) => (
+                <WizardChoiceCard
+                  key={t.value}
+                  selected={propertyType === t.value}
+                  title={t.label}
+                  description={
+                    t.value === "studio"
+                      ? "Ένας ενιαίος χώρος — τα υπνοδωμάτια θα οριστούν σε 0."
+                      : t.value === "room"
+                        ? "Ιδιωτικό δωμάτιο σε μεγαλύτερο χώρο."
+                        : t.value === "apartment"
+                          ? "Διαμέρισμα σε πολυκατοικία ή συγκρότημα."
+                          : t.value === "house"
+                            ? "Ανεξάρτητο σπίτι ή μεζονέτα."
+                            : t.value === "villa"
+                              ? "Μεγαλύτερη κατοικία με ιδιωτικό χαρακτήρα."
+                              : "Άλλη κατηγορία που ταιριάζει καλύτερα."
+                  }
+                  onSelect={() => {
+                    setPropertyType(t.value);
+                    if (t.value === "studio") setBedrooms("0");
+                    setError(null);
+                  }}
+                />
+              ))}
+            </div>
+          </div>
+        )}
+
+        {step === 3 && (
           <div className="space-y-4">
-            {renderStepHeading("Το ακίνητό σου")}
-            <label className="block">
-              <span className="text-xs text-muted uppercase">Τίτλος αγγελίας *</span>
-              <input value={title} onChange={(e) => setTitle(e.target.value)} className={inputClass} />
-              <span className="mt-1 block text-[11px] text-muted">
-                Τουλάχιστον {MIN_LISTING_TITLE_LENGTH} χαρακτήρες
-              </span>
-            </label>
+            {renderStepHeading("Πού βρίσκεται το ακίνητο;")}
             <label className="block">
               <span className="text-xs text-muted uppercase">Πόλη *</span>
               <ListingCityField
                 value={city}
-                onChange={(next) => {
-                  setCity(next);
-                  setCityDisplayName(next);
+                onChange={(nextCity) => {
+                  setCity(nextCity);
+                  setCityDisplayName(nextCity);
                   setAddressPostalCode("");
                   setArea("");
                   setAreaDisplayName("");
@@ -980,9 +1478,9 @@ export function NewListingWizard({ profile, email, initialListingId = null }: Pr
                 <ListingAreaField
                   city={city}
                   value={area}
-                  onChange={(next) => {
-                    setArea(next);
-                    setAreaDisplayName(next);
+                  onChange={(nextArea) => {
+                    setArea(nextArea);
+                    setAreaDisplayName(nextArea);
                     setAreaLockedByUser(true);
                     setAddressStreet("");
                     setAddressSearch("");
@@ -1046,20 +1544,24 @@ export function NewListingWizard({ profile, email, initialListingId = null }: Pr
                   state={locationState()}
                   onChange={patchLocationState}
                   inputClassName={inputClass}
-                  onCityChange={(next) => {
-                    setCity(next);
-                    setCityDisplayName(next);
+                  onCityChange={(nextCity) => {
+                    setCity(nextCity);
+                    setCityDisplayName(nextCity);
                   }}
-                  onAreaChange={(next) => {
-                    setArea(next);
-                    setAreaDisplayName(next);
+                  onAreaChange={(nextArea) => {
+                    setArea(nextArea);
+                    setAreaDisplayName(nextArea);
                   }}
                 />
               </div>
               <div className="mt-4 grid gap-4 sm:grid-cols-2">
                 <label className="block">
-                  <span className="text-xs text-muted uppercase">Όροφος</span>
-                  <input value={addressFloor} onChange={(e) => setAddressFloor(e.target.value)} className={inputClass} />
+                  <span className="text-xs text-muted uppercase">Όροφος διεύθυνσης</span>
+                  <input
+                    value={addressFloor}
+                    onChange={(e) => setAddressFloor(e.target.value)}
+                    className={inputClass}
+                  />
                 </label>
                 <label className="block">
                   <span className="text-xs text-muted uppercase">Διαμέρισμα (προαιρετικά)</span>
@@ -1075,24 +1577,34 @@ export function NewListingWizard({ profile, email, initialListingId = null }: Pr
                 </label>
               </div>
             </div>
+          </div>
+        )}
 
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              <label className="block sm:col-span-2 lg:col-span-1">
-                <span className="text-xs text-muted uppercase">Τύπος ακινήτου *</span>
-                <select
-                  value={propertyType}
-                  onChange={(e) => {
-                    const next = e.target.value;
-                    setPropertyType(next);
-                    if (next === "studio") setBedrooms("0");
-                  }}
-                  className={inputClass}
-                >
-                  {PROPERTY_TYPES.map((t) => (
-                    <option key={t.value} value={t.value}>{t.label}</option>
-                  ))}
-                </select>
-              </label>
+        {step === 4 && (
+          <div className="space-y-4">
+            {renderStepHeading("Πόσα άτομα και τι μέγεθος;")}
+            <WizardCounter
+              label="Μέγιστα άτομα"
+              value={Math.max(1, parseInt(maxGuests, 10) || 1)}
+              min={1}
+              max={30}
+              onChange={(n) => setMaxGuests(String(n))}
+            />
+            <WizardCounter
+              label="Υπνοδωμάτια"
+              value={Math.max(0, parseInt(bedrooms, 10) || 0)}
+              min={0}
+              max={20}
+              onChange={(n) => setBedrooms(String(n))}
+            />
+            <WizardCounter
+              label="Μπάνια"
+              value={Math.max(0, parseInt(bathrooms, 10) || 0)}
+              min={0}
+              max={20}
+              onChange={(n) => setBathrooms(String(n))}
+            />
+            <div className="grid gap-4 sm:grid-cols-2">
               <label className="block">
                 <span className="text-xs text-muted uppercase">Τετραγωνικά μέτρα *</span>
                 <input
@@ -1101,27 +1613,6 @@ export function NewListingWizard({ profile, email, initialListingId = null }: Pr
                   required
                   value={sqm}
                   onChange={(e) => setSqm(e.target.value)}
-                  className={inputClass}
-                />
-              </label>
-              <label className="block">
-                <span className="text-xs text-muted uppercase">Υπνοδωμάτια *</span>
-                <input
-                  type="number"
-                  min={0}
-                  value={bedrooms}
-                  onChange={(e) => setBedrooms(e.target.value)}
-                  className={inputClass}
-                />
-                <span className="mt-1 block text-[10px] text-muted">0 = στούντιο</span>
-              </label>
-              <label className="block">
-                <span className="text-xs text-muted uppercase">Μπάνια *</span>
-                <input
-                  type="number"
-                  min={0}
-                  value={bathrooms}
-                  onChange={(e) => setBathrooms(e.target.value)}
                   className={inputClass}
                 />
               </label>
@@ -1137,9 +1628,28 @@ export function NewListingWizard({ profile, email, initialListingId = null }: Pr
                 />
               </label>
             </div>
+            <p className="text-[11px] text-muted">0 υπνοδωμάτια = στούντιο</p>
+          </div>
+        )}
+
+        {step === 5 && (
+          <div className="space-y-4">
+            {renderStepHeading("Πώς θα φαίνεται η αγγελία σου;")}
+            <label className="block">
+              <span className="text-xs text-muted uppercase">Τίτλος αγγελίας *</span>
+              <input value={title} onChange={(e) => setTitle(e.target.value)} className={inputClass} />
+              <span className="mt-1 block text-[11px] text-muted">
+                Τουλάχιστον {MIN_LISTING_TITLE_LENGTH} χαρακτήρες
+              </span>
+            </label>
             <label className="block">
               <span className="text-xs text-muted uppercase">Περιγραφή *</span>
-              <textarea rows={5} value={description} onChange={(e) => setDescription(e.target.value)} className={inputClass} />
+              <textarea
+                rows={6}
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                className={inputClass}
+              />
               <span className="mt-1 block text-[11px] text-muted">
                 Τουλάχιστον {MIN_LISTING_DESCRIPTION_LENGTH} χαρακτήρες για υποβολή
               </span>
@@ -1147,31 +1657,67 @@ export function NewListingWizard({ profile, email, initialListingId = null }: Pr
           </div>
         )}
 
-        {step === 1 && (
-          <div>
+        {step === AMENITIES_STEP && (
+          <div className="space-y-4">
+            {renderStepHeading("Τι παρέχει το ακίνητο;")}
             <p className="text-sm text-muted">
-              Κάθε αγγελία είναι είτε βραχυχρόνια είτε μηνιαία. Αν θέλεις και τους δύο τρόπους,
-              δημιούργησε ξεχωριστή αγγελία για κάθε τύπο.
+              Επίλεξε δημοφιλείς παροχές που ισχύουν. Μπορείς να τις συμπληρώσεις αργότερα από τον
+              χώρο εργασίας της αγγελίας.
             </p>
-
-            <div className="mt-6 grid gap-4">
-              {MVP_LISTING_TYPE_OPTIONS.map((opt) => (
-                <WizardChoiceCard
-                  key={opt.value}
-                  selected={rentalTypeChoice === opt.value}
-                  title={opt.label}
-                  description={`${opt.description} ${opt.helper}`}
-                  onSelect={() => {
-                    setRentalTypeChoice(opt.value);
-                    setError(null);
-                  }}
-                />
-              ))}
-            </div>
+            {popularAmenities.length > 0 ? (
+              <div className="flex flex-wrap gap-2">
+                {popularAmenities.map((def) => {
+                  const active = selectedAmenityKeys.includes(def.key);
+                  const Icon = amenityIconForKey(def.key);
+                  return (
+                    <button
+                      key={def.key}
+                      type="button"
+                      onClick={() => {
+                        setSelectedAmenityKeys((prev) =>
+                          prev.includes(def.key)
+                            ? prev.filter((k) => k !== def.key)
+                            : [...prev, def.key]
+                        );
+                        setError(null);
+                      }}
+                      className={cn(
+                        "inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm font-medium transition-colors",
+                        active
+                          ? "border-gold bg-gold/15 text-gold-dark"
+                          : "border-charcoal/12 bg-white text-charcoal hover:border-gold/35"
+                      )}
+                    >
+                      {active ? (
+                        <Check className="h-3.5 w-3.5 shrink-0" />
+                      ) : (
+                        <Icon className="h-3.5 w-3.5 shrink-0 text-muted" />
+                      )}
+                      {amenityLabel(def.key)}
+                    </button>
+                  );
+                })}
+              </div>
+            ) : (
+              <p className="text-sm text-muted">Δεν υπάρχουν δημοφιλείς παροχές για αυτόν τον τύπο.</p>
+            )}
+            {selectedAmenityKeys.length > 0 && (
+              <p className="text-xs text-muted">{selectedAmenityKeys.length} επιλεγμένες</p>
+            )}
+            <button
+              type="button"
+              onClick={() => {
+                setError(null);
+                next();
+              }}
+              className="text-sm font-medium text-muted underline-offset-2 hover:text-charcoal hover:underline"
+            >
+              Παράλειψη προς το παρόν
+            </button>
           </div>
         )}
 
-        {step === 3 && (
+        {step === PRICING_STEP && (
           <div className="space-y-4">
             {renderStepHeading("Τιμή & διαθεσιμότητα")}
             {supportsShortTerm && (
@@ -1179,49 +1725,85 @@ export function NewListingWizard({ profile, email, initialListingId = null }: Pr
                 <p className="text-sm font-medium text-charcoal">Βραχυχρόνια τιμολόγηση</p>
                 <label className="block">
                   <span className="text-xs text-muted uppercase">Βασική τιμή ανά βράδυ (€) *</span>
-                  <input type="number" min={1} value={pricePerNight} onChange={(e) => setPricePerNight(e.target.value)} className={inputClass} />
+                  <input
+                    type="number"
+                    min={1}
+                    value={pricePerNight}
+                    onChange={(e) => setPricePerNight(e.target.value)}
+                    className={inputClass}
+                  />
                 </label>
                 <div className="grid gap-4 sm:grid-cols-2">
                   <label className="block">
-                    <span className="text-xs text-muted uppercase">Η τιμή περιλαμβάνει έως πόσα άτομα *</span>
-                    <input type="number" min={1} value={includedGuests} onChange={(e) => setIncludedGuests(e.target.value)} className={inputClass} />
+                    <span className="text-xs text-muted uppercase">
+                      Η τιμή περιλαμβάνει έως πόσα άτομα *
+                    </span>
+                    <input
+                      type="number"
+                      min={1}
+                      value={includedGuests}
+                      onChange={(e) => setIncludedGuests(e.target.value)}
+                      className={inputClass}
+                    />
                   </label>
                   <label className="block">
-                    <span className="text-xs text-muted uppercase">Χρέωση ανά επιπλέον άτομο / βράδυ (€) *</span>
-                    <input type="number" min={0} value={extraGuestFee} onChange={(e) => setExtraGuestFee(e.target.value)} className={inputClass} />
+                    <span className="text-xs text-muted uppercase">
+                      Χρέωση ανά επιπλέον άτομο / βράδυ (€) *
+                    </span>
+                    <input
+                      type="number"
+                      min={0}
+                      value={extraGuestFee}
+                      onChange={(e) => setExtraGuestFee(e.target.value)}
+                      className={inputClass}
+                    />
                   </label>
                 </div>
                 <label className="block">
-                  <span className="text-xs text-muted uppercase">Μέγιστος αριθμός ατόμων *</span>
-                  <input type="number" min={1} value={maxGuests} onChange={(e) => setMaxGuests(e.target.value)} className={inputClass} />
-                </label>
-                <label className="block">
                   <span className="text-xs text-muted uppercase">Ελάχιστη διαμονή σε νύχτες *</span>
-                  <select value={shortMinStay} onChange={(e) => setShortMinStay(e.target.value)} className={inputClass}>
+                  <select
+                    value={shortMinStay}
+                    onChange={(e) => setShortMinStay(e.target.value)}
+                    className={inputClass}
+                  >
                     <option value="">Επίλεξε...</option>
                     {SHORT_TERM_MIN_STAY_OPTIONS.map((o) => (
-                      <option key={o} value={o}>{o}</option>
+                      <option key={o} value={o}>
+                        {o}
+                      </option>
                     ))}
                   </select>
                 </label>
                 <label className="block">
                   <span className="text-xs text-muted uppercase">Διαθεσιμότητα</span>
-                  <select value={availabilityStatus} onChange={(e) => setAvailabilityStatus(e.target.value)} className={inputClass}>
+                  <select
+                    value={availabilityStatus}
+                    onChange={(e) => setAvailabilityStatus(e.target.value)}
+                    className={inputClass}
+                  >
                     {AVAIL_OPTS.map((o) => (
-                      <option key={o.value} value={o.value}>{o.label}</option>
+                      <option key={o.value} value={o.value}>
+                        {o.label}
+                      </option>
                     ))}
                   </select>
                 </label>
                 {availabilityStatus === "from_month" && (
                   <label className="block">
                     <span className="text-xs text-muted uppercase">Από ποιον μήνα</span>
-                    <input value={availabilityNote} onChange={(e) => setAvailabilityNote(e.target.value)} placeholder="π.χ. Σεπτέμβριος 2026" className={inputClass} />
+                    <input
+                      value={availabilityNote}
+                      onChange={(e) => setAvailabilityNote(e.target.value)}
+                      placeholder="π.χ. Σεπτέμβριος 2026"
+                      className={inputClass}
+                    />
                   </label>
                 )}
                 {pricePerNight && includedGuests && (
                   <p className="rounded-lg bg-sand/50 p-3 text-xs text-muted">
                     Δημόσια εμφάνιση: Από €{pricePerNight} / βράδυ για έως {includedGuests} άτομα
-                    {Number(extraGuestFee) > 0 && ` · + €${extraGuestFee} / βράδυ για κάθε επιπλέον άτομο`}
+                    {Number(extraGuestFee) > 0 &&
+                      ` · + €${extraGuestFee} / βράδυ για κάθε επιπλέον άτομο`}
                   </p>
                 )}
                 {needsAma && (
@@ -1240,29 +1822,49 @@ export function NewListingWizard({ profile, email, initialListingId = null }: Pr
                 <p className="text-sm font-medium text-charcoal">Μηνιαία / μεσοπρόθεσμη</p>
                 <label className="block">
                   <span className="text-xs text-muted uppercase">Τιμή ανά μήνα (€) *</span>
-                  <input type="number" min={1} value={priceMonthly} onChange={(e) => setPriceMonthly(e.target.value)} className={inputClass} />
-                </label>
-                <label className="block">
-                  <span className="text-xs text-muted uppercase">Μέγιστος αριθμός ατόμων *</span>
-                  <input type="number" min={1} value={maxGuests} onChange={(e) => setMaxGuests(e.target.value)} className={inputClass} />
+                  <input
+                    type="number"
+                    min={1}
+                    value={priceMonthly}
+                    onChange={(e) => setPriceMonthly(e.target.value)}
+                    className={inputClass}
+                  />
                 </label>
                 <label className="block">
                   <span className="text-xs text-muted uppercase">Ελάχιστη διάρκεια *</span>
-                  <select value={monthlyMinStay} onChange={(e) => setMonthlyMinStay(e.target.value)} className={inputClass}>
+                  <select
+                    value={monthlyMinStay}
+                    onChange={(e) => setMonthlyMinStay(e.target.value)}
+                    className={inputClass}
+                  >
                     <option value="">2 μήνες (ελάχιστο)</option>
                     {MONTHLY_MIN_STAY_OPTIONS.filter((o) => !o.startsWith("1+")).map((o) => (
-                      <option key={o} value={o}>{o}</option>
+                      <option key={o} value={o}>
+                        {o}
+                      </option>
                     ))}
                   </select>
                 </label>
                 <fieldset>
-                  <legend className="text-xs text-muted uppercase">Δέχεσαι διαμονές κάτω από 60 ημέρες;</legend>
+                  <legend className="text-xs text-muted uppercase">
+                    Δέχεσαι διαμονές κάτω από 60 ημέρες;
+                  </legend>
                   <div className="mt-2 flex gap-4 text-sm">
                     <label className="flex items-center gap-2">
-                      <input type="radio" checked={acceptsUnder60} onChange={() => setAcceptsUnder60(true)} /> Ναι
+                      <input
+                        type="radio"
+                        checked={acceptsUnder60}
+                        onChange={() => setAcceptsUnder60(true)}
+                      />{" "}
+                      Ναι
                     </label>
                     <label className="flex items-center gap-2">
-                      <input type="radio" checked={!acceptsUnder60} onChange={() => setAcceptsUnder60(false)} /> Όχι
+                      <input
+                        type="radio"
+                        checked={!acceptsUnder60}
+                        onChange={() => setAcceptsUnder60(false)}
+                      />{" "}
+                      Όχι
                     </label>
                   </div>
                 </fieldset>
@@ -1278,16 +1880,27 @@ export function NewListingWizard({ profile, email, initialListingId = null }: Pr
                 </label>
                 <label className="block">
                   <span className="text-xs text-muted uppercase">Διαθεσιμότητα</span>
-                  <select value={availabilityStatus} onChange={(e) => setAvailabilityStatus(e.target.value)} className={inputClass}>
+                  <select
+                    value={availabilityStatus}
+                    onChange={(e) => setAvailabilityStatus(e.target.value)}
+                    className={inputClass}
+                  >
                     {AVAIL_OPTS.map((o) => (
-                      <option key={o.value} value={o.value}>{o.label}</option>
+                      <option key={o.value} value={o.value}>
+                        {o.label}
+                      </option>
                     ))}
                   </select>
                 </label>
                 {availabilityStatus === "from_month" && (
                   <label className="block">
                     <span className="text-xs text-muted uppercase">Μήνας έναρξης</span>
-                    <input value={availabilityNote} onChange={(e) => setAvailabilityNote(e.target.value)} placeholder="π.χ. Σεπτέμβριος 2026" className={inputClass} />
+                    <input
+                      value={availabilityNote}
+                      onChange={(e) => setAvailabilityNote(e.target.value)}
+                      placeholder="π.χ. Σεπτέμβριος 2026"
+                      className={inputClass}
+                    />
                   </label>
                 )}
                 {needsAma && (
@@ -1304,13 +1917,13 @@ export function NewListingWizard({ profile, email, initialListingId = null }: Pr
           </div>
         )}
 
-        {step === 4 && draftSaving && (
+        {step === PHOTOS_STEP && draftSaving && (
           <div className="py-12 text-center">
             {renderStepHeading("Φωτογραφίες")}
             <p className="text-sm text-muted">Αποθήκευση πρόχειρης αγγελίας...</p>
           </div>
         )}
-        {step === 4 && resolveListingId() && !draftSaving && (
+        {step === PHOTOS_STEP && resolveListingId() && !draftSaving && (
           <ListingWizardPhotosStep
             listingId={resolveListingId()!}
             initialImages={[]}
@@ -1319,18 +1932,19 @@ export function NewListingWizard({ profile, email, initialListingId = null }: Pr
             onUploadBusyChange={setPhotosUploadBusy}
           />
         )}
-        {step === 4 && !resolveListingId() && !draftSaving && (
+        {step === PHOTOS_STEP && !resolveListingId() && !draftSaving && (
           <div className="py-8 text-center">
+            {renderStepHeading("Φωτογραφίες")}
             <p className="text-sm text-muted">
-              Δεν ήταν δυνατή η μετάβαση στο βήμα φωτογραφιών. Πάτα ξανά «Συνέχεια» ή
-              «Αποθήκευση πρόχειρης».
+              Δεν ήταν δυνατή η μετάβαση στο βήμα φωτογραφιών. Πάτα ξανά «Επόμενο» ή
+              «Αποθήκευση και έξοδος».
             </p>
           </div>
         )}
 
-        {step === 5 && (
+        {step === CONTACT_STEP && (
           <div className="space-y-4">
-            {renderStepHeading("Επικοινωνία για αυτή την αγγελία")}
+            {renderStepHeading("Πώς θα επικοινωνούν μαζί σου;")}
             <ListingWizardContactStep
               profile={profile}
               contactName={contactName}
@@ -1363,17 +1977,7 @@ export function NewListingWizard({ profile, email, initialListingId = null }: Pr
           </div>
         )}
 
-        {step === 4 && !resolveListingId() && !draftSaving && (
-          <div className="py-8 text-center">
-            {renderStepHeading("Φωτογραφίες")}
-            <p className="text-sm text-muted">
-              Δεν ήταν δυνατή η μετάβαση στο βήμα φωτογραφιών. Πάτα ξανά «Συνέχεια» ή
-              «Αποθήκευση πρόχειρης».
-            </p>
-          </div>
-        )}
-
-        {step === 6 && (
+        {step === DECLARATIONS_STEP && (
           <ListingWizardDeclarationsStep
             needsRegistryDeclaration={needsAma}
             ownerAccepted={ownerDeclarationAccepted}
@@ -1388,7 +1992,7 @@ export function NewListingWizard({ profile, email, initialListingId = null }: Pr
           />
         )}
 
-        {step === 7 && (
+        {step === REVIEW_STEP && (
           <ListingWizardReviewStep
             fields={parsePortalListingFields(buildFormData())}
             savedPhotoCount={savedPhotoCount}

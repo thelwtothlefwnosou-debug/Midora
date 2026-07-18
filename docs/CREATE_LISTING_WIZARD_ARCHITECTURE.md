@@ -1,8 +1,8 @@
 # Create listing wizard — Phase A architecture
 
-Status: **architecture only** (no premium UI rebuild yet).  
-Product: Midora = **listings + inquiry** (no bookings / checkout).  
-Reference: guided host UX inspiration only — **do not** copy Airbnb brand, colors, or copy.
+Status: **Phase C complete** (guided create wizard with optional amenities).  
+Product: Midora = **listings + inquiry** (no bookings / checkout / payments-as-host).  
+Reference: guided host UX quality inspiration only — **do not** copy Airbnb brand, colors, logos, or copy.
 
 ---
 
@@ -12,10 +12,11 @@ Reference: guided host UX inspiration only — **do not** copy Airbnb brand, col
 |--------|-------|----------|
 | New listing (canonical) | `/dashboard/listings/new` | Guided create wizard (`OWNER_LISTING_NEW_PATH`) |
 | Alias | `/dashboard/listings/create` | Redirect → `/dashboard/listings/new` |
-| Resume draft | `/dashboard/listings/new?draft=<id>` | Load existing draft into wizard |
-| Edit published / workspace | `/dashboard/listings/[id]/*` | Listing workspace tabs (edit, photos, pricing, publish…) — **not** the create wizard |
+| Resume draft (current) | `/dashboard/listings/new?draft=<id>` | Load existing draft into wizard |
+| Resume draft (optional later) | `/dashboard/listings/new/[draftId]` | Same as `?draft=` — nicer URL; **not required for Phase B** |
+| Edit published / workspace | `/dashboard/listings/[id]/*` | Listing workspace tabs — **not** the create wizard |
 
-CTAs (`Νέα αγγελία`, header, home empty state, nav) must keep pointing at `OWNER_LISTING_NEW_PATH`.
+CTAs (`Νέα αγγελία`, header, home empty state, nav, HostCTA, footer) must keep pointing at `OWNER_LISTING_NEW_PATH`.
 
 **Do not** merge create-wizard into workspace edit in Phase B without an explicit migration plan.
 
@@ -23,7 +24,7 @@ CTAs (`Νέα αγγελία`, header, home empty state, nav) must keep pointing
 
 ## Current vs target flow
 
-### Current (live)
+### Current (live on prod)
 
 `NewListingWizard` — **7 steps** in one page:
 
@@ -37,9 +38,11 @@ CTAs (`Νέα αγγελία`, header, home empty state, nav) must keep pointing
 
 Draft save on Continue (`ensureDraft` → `savePortalListingDraft`). Resume via `?draft=`.
 
+**Step-1 price bug (fixed):** Continue on step 1 called draft save with `price_monthly = 0` → DB `CHECK (price_monthly > 0)` → user saw price error while still on step 1. Fix: `withDraftSafePrices` (commits `6549896` / `d6bf501`). Deployed to https://midora.vercel.app.
+
 ### Target (premium guided)
 
-**3 phases · ~16 steps** — config in `src/lib/listing-wizard-steps.ts`.
+**3 phases · ~16 steps** — config in `src/lib/listing-wizard-steps.ts` (not wired into UI yet).
 
 | Phase | Steps |
 |-------|--------|
@@ -51,75 +54,113 @@ Legacy mapping: `LEGACY_STEP_TO_TARGET` in the same file.
 
 ---
 
-## Draft autosave model
+## Field mapping (target steps → existing schema)
+
+| Target step | Existing fields / tables | Gap |
+|-------------|--------------------------|-----|
+| welcome | — (UX only) | none |
+| rental_mode | `rental_type`, `supports_short_term`, `supports_monthly` | none |
+| property_type | `property_type` | optional later: `place_type` (whole/private/shared) — **not in DB** |
+| location | `city`, `area`, address_*, display names | optional: `address_visibility` — **not in DB** |
+| map_pin | lat/lng, location_confirmed_* | none |
+| capacity | `bedrooms`, `bathrooms`, `max_guests`, `sqm`, `floor` | optional: `beds` count — use `bedrooms` or workspace sleeping arrangements |
+| basics | `furnished`, `has_balcony`, `has_elevator`, heating… | none |
+| amenities | amenity join tables (workspace today) | wizard does not edit amenities yet |
+| photos | `listing_images` | none |
+| title / description | `title`, `description` | none |
+| pricing | `price_monthly`, `price_per_night`, guest fees, min stay | draft placeholder `1` until real price |
+| availability | `availability_status`, `availability_note` | none |
+| registry | AMA / legal_registry_* | none |
+| contact / declarations / review | existing contact + declaration flags | none |
+
+---
+
+## Draft autosave model (existing schema)
 
 ### Goals
 
-- Create a **DB draft early** (after first meaningful step / Continue), not only at the end.
-- One active draft per owner when possible (reuse by title / existing draft id — already partially done).
+- Create a **DB draft early** (after first Continue past welcome / first meaningful fields).
+- One active draft per owner session (`listingId` + `?draft=` + sessionStorage key).
 - Resume from `?draft=` or “continue incomplete listing” CTAs.
-- Debounced autosave on field blur / idle (Phase B+); Phase A keeps explicit Continue-save.
-- No duplicate spam drafts.
+- Debounced autosave on blur/idle = Phase C; Phase B keeps Continue-save (+ optional light debounce).
+- No duplicate spam drafts (reuse same-title draft already partially done).
 
-### Proposed fields (prefer existing first)
+### Hard constraint
 
-| Need | Existing today | Gap |
-|------|----------------|-----|
+`listings.price_monthly INTEGER NOT NULL CHECK (price_monthly > 0)`.
+
+| Need | Existing today | Approach |
+|------|----------------|----------|
 | Draft row | `approval_status = 'draft'`, `status = 'pending'` | OK |
-| Prices before step pricing | `price_monthly NOT NULL CHECK (> 0)` | **Hard** — drafts use placeholder `1` via `withDraftSafePrices` until real price set |
-| Current step | — | Optional: `wizard_step text` or store in client + URL only for Phase B |
-| Completion % | Computed client-side (`listing-completeness.ts`) | Optional: `completion_score smallint` cache later |
+| Prices before pricing step | CHECK > 0 | **`withDraftSafePrices`**: insert `1`, omit on update |
+| Current step | — | Client `step` + URL; optional `wizard_step` later |
+| Completion % | `listing-completeness.ts` | OK; watch placeholder price false-positive |
 | Last autosave | `updated_at` | OK |
 
-**Phase A decision:** do **not** apply risky migrations yet. Use:
-
-1. `withDraftSafePrices` for early drafts (already shipped).
-2. Client `step` state + `?draft=` + existing completeness helpers.
-3. Modal when opening `/new` if owner already has an incomplete draft: Continue / Start fresh (Phase B UI).
+**Phase A decision:** no risky migrations for Phase B MVP.
 
 ### Autosave rules (target)
 
 1. **Insert** draft on first successful Continue past welcome (or after location+title min).
 2. **Update** same `listingId` thereafter; never create a second row for the same session.
-3. Debounce ~800ms on text fields; immediate save on step advance / photo upload.
-4. If price unset on draft write: insert placeholder `price_monthly = 1`, omit price on update (preserve prior).
+3. Debounce ~800ms on text fields (Phase C); immediate save on step advance / photo upload.
+4. If price unset: insert placeholder `price_monthly = 1`, omit price on update.
 5. Real price validated only on **pricing** step and on submit (`validatePortalListingFields`).
 
 ---
 
-## Schema map (existing vs needed)
+## Schema gaps (defer migrations)
 
-### Already on `listings` (usable)
-
-- Identity / copy: `title`, `description`, `property_type`
-- Location: `city`, `area`, address_* , lat/lng, confirmation flags
-- Capacity: `bedrooms`, `bathrooms`, `sqm`, `floor`, `max_guests`
-- Rental mode: `rental_type`, `supports_short_term`, `supports_monthly`, stay labels
-- Pricing: `price_monthly`, `price_per_night`, guest fees
-- Availability: `availability_status`, `availability_note`
-- Registry: `ama_number`, `legal_registry_type`, `accepts_under_60_days`
-- Contact + declarations flags
-- Photos: `listing_images` table
-- Amenities: related amenity join tables (workspace)
-
-### Gaps (defer migrations)
-
-| Column / feature | Why | When |
-|------------------|-----|------|
-| `wizard_step` | Resume exact micro-step after refresh | Phase B if URL alone is insufficient |
-| Nullable / zero `price_monthly` for drafts | Cleaner than placeholder `1` | Only with careful CHECK change + backfill |
-| `completion_score` | Dashboard badges without recompute | Nice-to-have |
-| Welcome / amenities-only steps | Mostly UX, fields exist | Phase B UI |
+| Column / feature | Exists? | When |
+|------------------|---------|------|
+| `place_type` | **No** | Phase C+ if product wants whole/private/shared |
+| `wizard_step` | **No** | Phase B only if URL/`?draft=` insufficient |
+| `beds` (separate from bedrooms) | **No** | Prefer `bedrooms` + sleeping arrangements in workspace |
+| `address_visibility` | **No** | Prefer existing private_* + confirm flags |
+| Nullable / zero `price_monthly` for drafts | **No** (CHECK > 0) | Only with careful CHECK change + backfill; placeholder is OK for now |
+| `completion_score` | **No** | Nice-to-have |
 
 ---
 
-## Out of scope (this doc / Phase A)
+## Risks to existing flows
 
-- Full premium UI redesign
-- Public listing / search / map / calendar changes
+| Risk | Mitigation |
+|------|------------|
+| Dual edit surfaces (wizard vs `/dashboard/listings/[id]/edit`) | Keep wizard for create/resume draft; workspace for published/edit |
+| Completeness CTAs send to `/edit` not wizard | Phase B: draft → wizard `?draft=`; approved → workspace |
+| Placeholder `price_monthly = 1` looks “priced” | Completeness / public: treat `approval_status=draft` + unset real price as incomplete; never show €1 on public |
+| Amenity / beds only in workspace | Phase B MVP can skip amenities; Phase C wire amenity picker |
+| Public search / map / calendar unchanged | Do not touch public listing cards pricing display for drafts |
+| HostCTA `?rentalType=` | Preserve query when wiring new step shell |
+| Regression of 7-step Continue save | Keep `savePortalListingDraft` + `withDraftSafePrices` as single write path |
+
+---
+
+## Out of scope (explicit)
+
+- Full premium visual redesign (Phase D)
+- Public listing / search / map / calendar product changes
 - Owner dashboard chrome redesign
-- Booking / checkout (never Midora core)
-- Copying Airbnb visual system
+- **Bookings / checkout / Airbnb-style reservation**
+- Copying Airbnb visual system or marketing copy
+- Unnecessary new markdown beyond this plan
+
+---
+
+## Recommended Phase B MVP subset
+
+Wire a **thin step shell** on existing fields — Midora tokens only, no visual overhaul:
+
+1. rental_mode  
+2. property_type  
+3. location (+ map_pin can stay combined if faster)  
+4. capacity  
+5. title  
+6. pricing (first time real price is required)  
+7. photos (basic upload, existing `ListingWizardPhotosStep`)  
+8. review / publish (`submitPortalListingForReview`)
+
+Defer to Phase C: welcome polish, amenities, description-only step, availability split, registry/contact/declarations as separate micro-steps, debounce autosave, resume modal, `/new/[draftId]`.
 
 ---
 
@@ -127,10 +168,30 @@ Legacy mapping: `LEGACY_STEP_TO_TARGET` in the same file.
 
 | Phase | Deliverable |
 |-------|-------------|
-| **A (this)** | Routes decision, step config, autosave model, schema map, docs + `listing-wizard-steps.ts` |
-| **B** | Wire step config into wizard shell; split current 7 steps; fix validation per-step (pricing only on pricing) |
-| **C** | Autosave debounce, resume modal, progress UI polish |
+| **A (done)** | Routes decision, step config, autosave model, schema map, this doc + `listing-wizard-steps.ts` |
+| **B (done)** | Full-screen shell, rental-first split steps, per-step validation, `withDraftSafePrices` |
+| **C (done)** | 11 steps (+ optional Παροχές), autosave debounce, resume modal, live preview, amenity picker |
 | **D** | Visual premium pass (Midora tokens only) |
+
+### Phase C live step order (`NewListingWizard`)
+
+1. Τύπος μίσθωσης → 2. Τύπος ακινήτου → 3. Τοποθεσία → 4. Χωρητικότητα → 5. Τίτλος & περιγραφή → **6. Παροχές (optional)** → 7. Τιμή & διαθεσιμότητα → 8. Φωτογραφίες → 9. Επικοινωνία → 10. Δηλώσεις → 11. Έλεγχος
+
+Amenities: `popularFilterAmenities` + `saveOwnerListingAmenities` / `getOwnerListingAmenities`. Skip allowed; Continue always ok.
+
+---
+
+## Phase B kickoff checklist
+
+- [ ] Import `WIZARD_STEPS` / `WIZARD_PHASES` into a new thin shell (or evolve `NewListingWizard` behind a feature flag).
+- [ ] Implement **only** MVP steps listed above; map Continue → `savePortalListingDraft`.
+- [ ] Per-step validators: **no price check** until `pricing`; keep `withDraftSafePrices`.
+- [ ] Preserve `?draft=` resume + all `OWNER_LISTING_NEW_PATH` CTAs.
+- [ ] Do **not** change workspace routes or public listing pages.
+- [ ] Hide / ignore placeholder €1 in owner completeness and public surfaces for drafts.
+- [ ] Smoke: step 1 Continue creates draft without price error; pricing step accepts real price; submit still validates fully.
+- [ ] Run `npm run qa:all` before claiming DONE.
+- [ ] No Airbnb branding/copy; no booking/checkout UI.
 
 ---
 
@@ -142,3 +203,4 @@ Legacy mapping: `LEGACY_STEP_TO_TARGET` in the same file.
 - `src/lib/actions.ts` — `savePortalListingDraft`, `submitPortalListingForReview`
 - `src/lib/listing-completeness.ts` — completion checklist
 - `src/lib/listing-wizard-steps.ts` — Phase A step config
+- `src/lib/listing-workspace-nav.ts` — workspace tabs
