@@ -26,7 +26,6 @@ import {
   ListingWizardReviewStep,
 } from "@/components/listings/wizard/ListingWizardReviewStep";
 import {
-  getOwnerLatestDraftListingId,
   getSavedListingImageCount,
   getWizardListingDraft,
   savePortalListingDraft,
@@ -156,8 +155,6 @@ export function NewListingWizard({ profile, email, initialListingId = null }: Pr
   const [listingId, setListingId] = useState<string | null>(initialListingId);
   const [savedPhotoCount, setSavedPhotoCount] = useState(0);
   const [photosUploadBusy, setPhotosUploadBusy] = useState(false);
-  const [resumeDraftId, setResumeDraftId] = useState<string | null>(null);
-  const [resumeChecking, setResumeChecking] = useState(true);
 
   const wizardTopRef = useRef<HTMLDivElement>(null);
   const stepHeadingRef = useRef<HTMLHeadingElement>(null);
@@ -632,43 +629,22 @@ export function NewListingWizard({ profile, email, initialListingId = null }: Pr
     if (fresh) {
       clearWizardDraftSession(setListingId);
       window.history.replaceState(null, "", "/dashboard/listings/new");
-      setResumeChecking(false);
       return;
     }
 
+    // Resume only when explicitly requested via ?draft= or page initialListingId.
+    // Otherwise always start a fresh wizard — drafts stay in "Τα ακίνητά μου".
     if (draftId) {
-      setResumeChecking(false);
       loadDraftById(draftId);
       return;
     }
 
-    startTransition(async () => {
-      let sessionDraft: string | null = null;
-      try {
-        sessionDraft = sessionStorage.getItem(WIZARD_DRAFT_STORAGE_KEY)?.trim() || null;
-      } catch {
-        sessionDraft = null;
-      }
-
-      const latest = await getOwnerLatestDraftListingId();
-      const dbDraft =
-        !("error" in latest) && latest.listingId ? latest.listingId : null;
-      const candidate = sessionDraft || dbDraft;
-
-      if (candidate) {
-        setResumeDraftId(candidate);
-        setResumeChecking(false);
-        return;
-      }
-
-      clearWizardDraftSession(setListingId);
-      setResumeChecking(false);
-    });
+    clearWizardDraftSession(setListingId);
   }, [initialListingId, loadDraftById]);
 
   // Debounced autosave after draft exists (title / description / price / city).
   useEffect(() => {
-    if (!listingId || resumeDraftId || resumeChecking) return;
+    if (!listingId) return;
     if (autosaveSkipRef.current) {
       autosaveSkipRef.current = false;
       return;
@@ -703,8 +679,6 @@ export function NewListingWizard({ profile, email, initialListingId = null }: Pr
     pricePerNight,
     priceMonthly,
     city,
-    resumeDraftId,
-    resumeChecking,
     draftSaving,
     pending,
     buildFormData,
@@ -1160,23 +1134,6 @@ export function NewListingWizard({ profile, email, initialListingId = null }: Pr
     });
   }
 
-  function continueResumeDraft() {
-    if (!resumeDraftId) return;
-    const id = resumeDraftId;
-    setResumeDraftId(null);
-    loadDraftById(id);
-  }
-
-  function startFreshListing() {
-    clearWizardDraftSession(setListingId);
-    amenitiesHydratedForRef.current = null;
-    setSelectedAmenityKeys([]);
-    setResumeDraftId(null);
-    setStep(1);
-    setSaveStatus("idle");
-    window.history.replaceState(null, "", "/dashboard/listings/new");
-  }
-
   const displayPrice = (() => {
     if (supportsShortTerm) {
       const n = Number(pricePerNight);
@@ -1289,53 +1246,6 @@ export function NewListingWizard({ profile, email, initialListingId = null }: Pr
           termsPrivacyAccepted,
           listingPhoneReady
         );
-
-  if (resumeChecking) {
-    return (
-      <div className="fixed inset-0 z-40 flex items-center justify-center bg-white">
-        <p className="text-sm text-muted">Φόρτωση…</p>
-      </div>
-    );
-  }
-
-  if (resumeDraftId) {
-    return (
-      <div className="fixed inset-0 z-40 flex items-center justify-center bg-white/95 px-4">
-        <div
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="resume-draft-title"
-          className="w-full max-w-md rounded-2xl border border-border bg-white p-6 shadow-soft"
-        >
-          <h2
-            id="resume-draft-title"
-            className="font-display text-xl font-semibold text-charcoal"
-          >
-            Πρόχειρη αγγελία
-          </h2>
-          <p className="mt-2 text-sm leading-relaxed text-muted">
-            Έχεις ήδη μια πρόχειρη αγγελία. Θέλεις να συνεχίσεις ή να ξεκινήσεις νέα;
-          </p>
-          <div className="mt-6 flex flex-col gap-3 sm:flex-row-reverse">
-            <button
-              type="button"
-              onClick={continueResumeDraft}
-              className="rounded-full bg-gold px-5 py-2.5 text-sm font-semibold text-white hover:bg-gold-dark"
-            >
-              Συνέχεια πρόχειρης
-            </button>
-            <button
-              type="button"
-              onClick={startFreshListing}
-              className="rounded-full border border-border px-5 py-2.5 text-sm font-medium text-charcoal hover:bg-sand/50"
-            >
-              Νέα αγγελία
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <CreateListingWizardShell
