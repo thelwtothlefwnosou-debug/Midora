@@ -98,7 +98,7 @@ export function CreateListingWizardShell({
                 disabled={busy}
                 className="rounded-full border border-border px-3 py-1.5 text-xs font-medium text-charcoal transition hover:bg-sand/50 disabled:opacity-50 sm:px-4 sm:text-sm"
               >
-                Αποθήκευση και έξοδος
+                {busy ? "Αποθήκευση…" : "Αποθήκευση και έξοδος"}
               </button>
             )}
           </div>
@@ -180,7 +180,8 @@ export function CreateListingWizardShell({
             <button
               type="button"
               onClick={onBack}
-              disabled={busy || (!phaseIntroMode && stepIndex === 0)}
+              // Never block Back with busy/autosave — only first step has nowhere to go.
+              disabled={!phaseIntroMode && stepIndex === 0}
               className="inline-flex min-h-11 items-center gap-1.5 rounded-full px-3 py-2.5 text-sm font-medium text-charcoal hover:bg-sand/60 disabled:opacity-40"
             >
               <ChevronLeft className="h-4 w-4" />

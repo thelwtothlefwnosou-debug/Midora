@@ -1094,6 +1094,7 @@ export function NewListingWizard({ profile, email, initialListingId = null }: Pr
   }
 
   function back() {
+    // Always allow step/intro navigation — never gate on draftSaving / pending / autosave.
     setError(null);
     if (activePhaseIntro) {
       // Leave intro without marking seen — returning later can show it again.
@@ -1287,6 +1288,7 @@ export function NewListingWizard({ profile, email, initialListingId = null }: Pr
     </div>
   );
 
+  // Explicit nav/submit only — background autosave uses saveStatus in the header, not busy.
   const wizardBusy = pending || draftSaving;
   const showingPhaseIntro = activePhaseIntro != null;
   const photoRooms = useMemo(
@@ -1297,25 +1299,27 @@ export function NewListingWizard({ profile, email, initialListingId = null }: Pr
       }),
     [bedrooms, bathrooms]
   );
-  const nextDisabled =
-    showingPhaseIntro
-      ? wizardBusy
-      : step < TOTAL_STEPS
-        ? wizardBusy ||
-          (step === PHOTOS_STEP && photosUploadBusy) ||
-          (step === DECLARATIONS_STEP && !allDeclarationsChecked)
-        : wizardBusy ||
-          !allDeclarationsChecked ||
-          !isReviewReady(
-            parsePortalListingFields(buildFormData()),
-            savedPhotoCount,
-            needsAma,
-            ownerDeclarationAccepted,
-            registryDeclarationAccepted,
-            platformDeclarationAccepted,
-            termsPrivacyAccepted,
-            listingPhoneReady
-          );
+  // Keep Next label stable during autosave; only gate on validation / photo upload / review readiness.
+  // wizardBusy still disables Next via shell `busy` (explicit save / transition) — not Back.
+  const nextDisabled = showingPhaseIntro
+    ? false
+    : step < TOTAL_STEPS
+      ? (step === PHOTOS_STEP && photosUploadBusy) ||
+        (step === DECLARATIONS_STEP && !allDeclarationsChecked)
+      : !allDeclarationsChecked ||
+        !isReviewReady(
+          parsePortalListingFields(buildFormData()),
+          savedPhotoCount,
+          needsAma,
+          ownerDeclarationAccepted,
+          registryDeclarationAccepted,
+          platformDeclarationAccepted,
+          termsPrivacyAccepted,
+          listingPhoneReady
+        );
+
+  const nextLabel =
+    showingPhaseIntro || step < TOTAL_STEPS ? "Επόμενο" : "Υποβολή για έλεγχο";
 
   return (
     <CreateListingWizardShell
@@ -1327,14 +1331,12 @@ export function NewListingWizard({ profile, email, initialListingId = null }: Pr
       saveStatus={saveStatus}
       error={error}
       aside={showingPhaseIntro ? undefined : previewAside}
-      onBack={step > 1 ? back : undefined}
+      onBack={step > 1 || showingPhaseIntro ? back : undefined}
       onNext={handleShellNext}
       onSaveAndExit={saveDraft}
-      nextLabel={
-        showingPhaseIntro ? "Επόμενο" : step < TOTAL_STEPS ? "Επόμενο" : "Υποβολή για έλεγχο"
-      }
+      nextLabel={nextLabel}
       nextDisabled={nextDisabled}
-      showBack={step > 1}
+      showBack={step > 1 || showingPhaseIntro}
       isLastStep={!showingPhaseIntro && step === TOTAL_STEPS}
       busy={wizardBusy}
       phaseIntroMode={showingPhaseIntro}
