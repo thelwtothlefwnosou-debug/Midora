@@ -318,11 +318,11 @@ export function validatePortalListingFields(
  * before pricing is filled — use a placeholder on insert, and omit unset prices on
  * update so we don't wipe a previously saved price.
  */
-export function withDraftSafePrices<T extends Record<string, unknown>>(
-  row: T,
+export function withDraftSafePrices(
+  row: Record<string, unknown>,
   mode: "insert" | "update"
-): T {
-  const next = { ...row };
+): Record<string, unknown> {
+  const next: Record<string, unknown> = { ...row };
   const monthly = Number(next.price_monthly);
   const nightly = next.price_per_night == null ? null : Number(next.price_per_night);
 
