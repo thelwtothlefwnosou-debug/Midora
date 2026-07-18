@@ -44,6 +44,7 @@ import {
 import {
   buildPortalListingRow,
   parsePortalListingFields,
+  withDraftSafePrices,
   validatePortalListingFields,
 } from "@/lib/listing-portal-payload";
 import { insertListingRow, updateListingRow } from "@/lib/listing-db-write";
@@ -321,7 +322,7 @@ function toListingSaveError(error: { message?: string } | null): string {
     return "Δεν ήταν δυνατή η αποθήκευση. Συμπλήρωσε το προφίλ σου από τις Ρυθμίσεις και δοκίμασε ξανά.";
   }
   if (msg.includes("price_monthly") || msg.includes("price_per_night")) {
-    return "Η τιμή πρέπει να είναι μεγαλύτερη από 0.";
+    return "Συμπλήρωσε την τιμή ενοικίου στο βήμα «Τιμή & μίσθωση» (μεγαλύτερη από 0).";
   }
   if (msg.includes("max_guests")) {
     return "Ο μέγιστος αριθμός ατόμων πρέπει να είναι μεγαλύτερος από 0.";
@@ -528,7 +529,7 @@ export async function savePortalListingDraft(
   const verificationCode =
     draftFields.midora_verification_code ||
     `MIDORA-${Math.floor(10000 + Math.random() * 90000)}`;
-  const row = buildPortalListingRow(
+  const baseRow = buildPortalListingRow(
     draftFields,
     auth.user.id,
     verificationCode,
@@ -543,7 +544,7 @@ export async function savePortalListingDraft(
       owner.supabase,
       listingId,
       auth.user.id,
-      row
+      withDraftSafePrices(baseRow, "update")
     );
 
     if (error) return { error: toListingSaveError(error) };
@@ -569,7 +570,7 @@ export async function savePortalListingDraft(
         auth.supabase,
         existingDraft.id,
         auth.user.id,
-        row
+        withDraftSafePrices(baseRow, "update")
       );
       if (error) return { error: toListingSaveError(error) };
       if (!data?.id) return { error: LISTING_SAVE_ERROR_MSG };
@@ -578,7 +579,11 @@ export async function savePortalListingDraft(
     }
   }
 
-  const { data, error } = await insertListingRow(auth.supabase, row, auth.user.id);
+  const { data, error } = await insertListingRow(
+    auth.supabase,
+    withDraftSafePrices(baseRow, "insert"),
+    auth.user.id
+  );
 
   if (error) return { error: toListingSaveError(error) };
   if (!data?.id) return { error: LISTING_SAVE_ERROR_MSG };

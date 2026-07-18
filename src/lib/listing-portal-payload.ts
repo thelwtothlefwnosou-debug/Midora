@@ -313,6 +313,38 @@ export function validatePortalListingFields(
   return null;
 }
 
+/**
+ * DB requires listings.price_monthly > 0 (NOT NULL). Wizard steps 1–2 save drafts
+ * before pricing is filled — use a placeholder on insert, and omit unset prices on
+ * update so we don't wipe a previously saved price.
+ */
+export function withDraftSafePrices<T extends Record<string, unknown>>(
+  row: T,
+  mode: "insert" | "update"
+): T {
+  const next = { ...row };
+  const monthly = Number(next.price_monthly);
+  const nightly = next.price_per_night == null ? null : Number(next.price_per_night);
+
+  if (!Number.isFinite(monthly) || monthly <= 0) {
+    if (mode === "insert") {
+      next.price_monthly = 1;
+    } else {
+      delete next.price_monthly;
+    }
+  }
+
+  if (nightly != null && (!Number.isFinite(nightly) || nightly <= 0)) {
+    if (mode === "update") {
+      delete next.price_per_night;
+    } else {
+      next.price_per_night = null;
+    }
+  }
+
+  return next;
+}
+
 export function buildPortalListingRow(
   fields: PortalListingFields,
   userId: string,
