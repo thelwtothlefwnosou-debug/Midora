@@ -98,13 +98,13 @@ function buildReviewItems(
   });
 
   const items: ReviewCheckItem[] = [
-    { id: "basics", label: "Βασικά στοιχεία", step: 1, status: basicOk ? "complete" : "warning" },
-    { id: "location", label: "Περιοχή", step: 1, status: locationOk ? "complete" : "warning" },
-    { id: "address", label: "Διεύθυνση", step: 1, status: addressOk ? "complete" : "warning" },
+    { id: "basics", label: "Βασικά στοιχεία", step: 2, status: basicOk ? "complete" : "warning" },
+    { id: "location", label: "Περιοχή", step: 2, status: locationOk ? "complete" : "warning" },
+    { id: "address", label: "Διεύθυνση", step: 2, status: addressOk ? "complete" : "warning" },
     {
       id: "exact_pin",
       label: "Ακριβής τοποθεσία (pin)",
-      step: 1,
+      step: 2,
       status: exactPinOk ? "complete" : "warning",
     },
     {

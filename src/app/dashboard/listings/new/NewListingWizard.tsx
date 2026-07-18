@@ -2,9 +2,10 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Check, ChevronLeft, ChevronRight } from "lucide-react";
-import { AccountShell } from "@/components/account/AccountShell";
-import { GlassCard } from "@/components/ui/GlassCard";
+import {
+  CreateListingWizardShell,
+  WizardChoiceCard,
+} from "@/components/listings/wizard/CreateListingWizardShell";
 import { ListingCityField } from "@/components/listings/wizard/ListingCityField";
 import { ListingAreaField } from "@/components/listings/wizard/ListingAreaField";
 import { cityHasSubAreas, getCityAreaExamples } from "@/lib/data/greek-areas";
@@ -55,21 +56,31 @@ import {
 } from "@/lib/rental-types";
 import { LISTING_AVAILABILITY_STATUS_OPTIONS as AVAIL_OPTS } from "@/lib/listing-availability-status";
 import { hasCallablePhone, listingPhoneReadyForCalls } from "@/lib/listing-contact";
-import { cn } from "@/lib/utils";
 
 const STEPS = [
-  "Βασικά στοιχεία",
   "Τύπος μίσθωσης",
-  "Τιμή & μίσθωση",
+  "Το ακίνητό σου",
+  "Τιμή & διαθεσιμότητα",
   "Φωτογραφίες",
   "Επικοινωνία",
   "Δηλώσεις",
   "Έλεγχος πριν την υποβολή",
 ] as const;
 
+/** Host-facing phase labels (about / stand_out / finish) aligned to the 7 legacy steps. */
+const STEP_PHASES = [
+  "Το ακίνητό σου",
+  "Το ακίνητό σου",
+  "Ολοκλήρωση",
+  "Να ξεχωρίζει",
+  "Ολοκλήρωση",
+  "Ολοκλήρωση",
+  "Ολοκλήρωση",
+] as const;
+
 const STEP_HINTS = [
-  "Συμπλήρωσε τίτλο, τοποθεσία και βασικά χαρακτηριστικά του ακινήτου.",
   "Διάλεξε αν η αγγελία είναι βραχυχρόνια ή μηνιαία / μεσοπρόθεσμη.",
+  "Συμπλήρωσε τίτλο, τοποθεσία και βασικά χαρακτηριστικά του ακινήτου.",
   "Όρισε τιμές, διαθεσιμότητα και στοιχεία καταχώρισης αν χρειάζεται.",
   "Ανέβασε τουλάχιστον μία φωτογραφία — η πρώτη γίνεται κύρια.",
   "Πώς θα επικοινωνούν μαζί σου οι ενδιαφερόμενοι.",
@@ -80,10 +91,6 @@ const STEP_HINTS = [
 const TOTAL_STEPS = STEPS.length;
 const WIZARD_SCROLL_OFFSET = 112;
 const WIZARD_DRAFT_STORAGE_KEY = "midora_new_listing_draft_id";
-
-function formatDraftSavedAt(date: Date): string {
-  return date.toLocaleTimeString("el-GR", { hour: "2-digit", minute: "2-digit" });
-}
 
 function clearWizardDraftSession(setListingId: (id: string | null) => void) {
   setListingId(null);
@@ -573,6 +580,12 @@ export function NewListingWizard({ profile, email, initialListingId = null }: Pr
     dbPhotoCount = savedPhotoCount
   ): string | null {
     if (targetStep === 1) {
+      if (!rentalTypeChoice) {
+        return "Επίλεξε τύπο μίσθωσης για να συνεχίσεις.";
+      }
+      return null;
+    }
+    if (targetStep === 2) {
       const basicErr = validateBasicDetails({
         title,
         city,
@@ -593,9 +606,6 @@ export function NewListingWizard({ profile, email, initialListingId = null }: Pr
         return "Ορίσε την ακριβή θέση του ακινήτου στον χάρτη για να συνεχίσεις.";
       }
       return null;
-    }
-    if (targetStep === 2 && !rentalTypeChoice) {
-      return "Επίλεξε τύπο μίσθωσης για να συνεχίσεις.";
     }
     if (targetStep === 3) {
       const fields = parsePortalListingFields(buildFormData());
@@ -652,6 +662,7 @@ export function NewListingWizard({ profile, email, initialListingId = null }: Pr
 
   function mapErrorToStep(error: string): number | null {
     const msg = error.toLowerCase();
+    if (msg.includes("τύπο") && msg.includes("μίσθωσ")) return 1;
     if (
       msg.includes("τετραγων") ||
       msg.includes("τίτλ") ||
@@ -663,9 +674,8 @@ export function NewListingWizard({ profile, email, initialListingId = null }: Pr
       msg.includes("υπνοδωμάτ") ||
       msg.includes("ακινήτου")
     ) {
-      return 1;
+      return 2;
     }
-    if (msg.includes("τύπο") && msg.includes("μίσθωσ")) return 2;
     if (
       msg.includes("τιμ") ||
       msg.includes("βράδυ") ||
@@ -856,94 +866,60 @@ export function NewListingWizard({ profile, email, initialListingId = null }: Pr
     });
   }
 
+  const wizardBusy = pending || draftSaving;
+  const nextDisabled =
+    step < TOTAL_STEPS
+      ? wizardBusy ||
+        (step === 4 && photosUploadBusy) ||
+        (step === 6 && !allDeclarationsChecked)
+      : wizardBusy ||
+        !allDeclarationsChecked ||
+        !isReviewReady(
+          parsePortalListingFields(buildFormData()),
+          savedPhotoCount,
+          needsAma,
+          ownerDeclarationAccepted,
+          registryDeclarationAccepted,
+          platformDeclarationAccepted,
+          termsPrivacyAccepted,
+          listingPhoneReady
+        );
+  const saveStatus: "idle" | "saving" | "saved" | "error" = draftSaving
+    ? "saving"
+    : lastSavedAt
+      ? "saved"
+      : "idle";
+
   return (
-    <AccountShell
-      profile={profile}
-      email={email}
-      active="new-listing"
-      title="Νέα αγγελία"
-      subtitle={`Βήμα ${step} από ${TOTAL_STEPS} — ${STEPS[step - 1]}`}
+    <CreateListingWizardShell
+      stepIndex={step - 1}
+      stepCount={TOTAL_STEPS}
+      stepLabel={STEPS[step - 1]}
+      phaseLabel={STEP_PHASES[step - 1]}
+      saveStatus={saveStatus}
+      error={error}
+      onBack={back}
+      onNext={step < TOTAL_STEPS ? next : submit}
+      onSaveAndExit={saveDraft}
+      nextLabel={step < TOTAL_STEPS ? "Επόμενο" : "Υποβολή για έλεγχο"}
+      nextDisabled={nextDisabled}
+      showBack={step > 1}
+      isLastStep={step === TOTAL_STEPS}
+      busy={wizardBusy}
     >
-      <div ref={wizardTopRef}>
-        {(draftSaving || lastSavedAt) && (
-          <p className="mb-4 text-xs text-muted" aria-live="polite">
-            {draftSaving
-              ? "Αποθήκευση πρόχειρης..."
-              : `Αποθηκεύτηκε πρόχειρα στις ${formatDraftSavedAt(lastSavedAt!)}`}
-          </p>
-        )}
+      <div
+        ref={wizardTopRef}
+        onKeyDown={(e) => {
+          if ((step === 6 || step === 7) && e.key === "Enter") {
+            e.preventDefault();
+          }
+        }}
+      >
+        {success && <p className="mb-4 text-sm text-teal">{success}</p>}
 
-        <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:gap-8">
-          <nav
-            aria-label="Βήματα αγγελίας"
-            className="hidden lg:block lg:w-52 lg:shrink-0 lg:sticky lg:top-24 lg:self-start"
-          >
-            <ol className="space-y-1">
-              {STEPS.map((label, i) => {
-                const stepNum = i + 1;
-                const isCurrent = stepNum === step;
-                const isComplete = stepNum < step;
-                return (
-                  <li key={label}>
-                    <div
-                      className={cn(
-                        "flex items-start gap-2.5 rounded-xl px-3 py-2.5 text-sm transition-colors",
-                        isCurrent && "bg-gold/10 font-medium text-charcoal",
-                        isComplete && !isCurrent && "text-muted",
-                        !isCurrent && !isComplete && "text-muted/70"
-                      )}
-                    >
-                      <span
-                        className={cn(
-                          "flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-semibold",
-                          isCurrent && "bg-gold text-white",
-                          isComplete && !isCurrent && "bg-teal/15 text-teal",
-                          !isCurrent && !isComplete && "bg-border/80 text-muted"
-                        )}
-                      >
-                        {isComplete ? <Check className="h-3.5 w-3.5" /> : stepNum}
-                      </span>
-                      <span className="pt-0.5 leading-snug">{label}</span>
-                    </div>
-                  </li>
-                );
-              })}
-            </ol>
-          </nav>
-
-          <div className="min-w-0 flex-1 pb-2">
-            <div className="mb-5 lg:hidden">
-              <div className="mb-2 flex items-center justify-between gap-2 text-xs text-muted">
-                <span>
-                  Βήμα {step} από {TOTAL_STEPS}
-                </span>
-                <span className="truncate font-medium text-charcoal">{STEPS[step - 1]}</span>
-              </div>
-              <div className="flex gap-1">
-                {STEPS.map((label, i) => (
-                  <div
-                    key={label}
-                    className={cn(
-                      "h-1 flex-1 rounded-full",
-                      i + 1 <= step ? "bg-gold" : "bg-border"
-                    )}
-                    title={label}
-                  />
-                ))}
-              </div>
-            </div>
-
-            <GlassCard
-              className="p-6 sm:p-8"
-              onKeyDown={(e) => {
-                if ((step === 6 || step === 7) && e.key === "Enter") {
-                  e.preventDefault();
-                }
-              }}
-            >
-        {step === 1 && (
+        {step === 2 && (
           <div className="space-y-4">
-            {renderStepHeading("Βασικά στοιχεία")}
+            {renderStepHeading("Το ακίνητό σου")}
             <label className="block">
               <span className="text-xs text-muted uppercase">Τίτλος αγγελίας *</span>
               <input value={title} onChange={(e) => setTitle(e.target.value)} className={inputClass} />
@@ -1171,55 +1147,33 @@ export function NewListingWizard({ profile, email, initialListingId = null }: Pr
           </div>
         )}
 
-        {step === 2 && (
+        {step === 1 && (
           <div>
-            {renderStepHeading("Τι τύπο μίσθωσης είναι αυτή η αγγελία;")}
-
-            <p className="mt-2 text-sm text-muted">
+            <p className="text-sm text-muted">
               Κάθε αγγελία είναι είτε βραχυχρόνια είτε μηνιαία. Αν θέλεις και τους δύο τρόπους,
               δημιούργησε ξεχωριστή αγγελία για κάθε τύπο.
             </p>
 
-            <div className="mt-5 grid gap-4 sm:grid-cols-2">
-              {MVP_LISTING_TYPE_OPTIONS.map((opt) => {
-                const selected = rentalTypeChoice === opt.value;
-                return (
-                  <label
-                    key={opt.value}
-                    className={cn(
-                      "flex cursor-pointer gap-3 rounded-2xl border p-5 transition-colors",
-                      selected ? "border-gold bg-gold/10" : "border-border hover:border-gold/30"
-                    )}
-                  >
-                    <input
-                      type="radio"
-                      name="rental_type_choice"
-                      checked={selected}
-                      onChange={() => {
-                        setRentalTypeChoice(opt.value);
-                        setError(null);
-                      }}
-                      className="mt-1 h-4 w-4 shrink-0 accent-gold"
-                    />
-                    <span>
-                      <span className="block font-semibold text-charcoal">{opt.label}</span>
-                      <span className="mt-2 block text-sm leading-relaxed text-charcoal/80">
-                        {opt.description}
-                      </span>
-                      <span className="mt-2 block text-xs leading-relaxed text-muted">
-                        {opt.helper}
-                      </span>
-                    </span>
-                  </label>
-                );
-              })}
+            <div className="mt-6 grid gap-4">
+              {MVP_LISTING_TYPE_OPTIONS.map((opt) => (
+                <WizardChoiceCard
+                  key={opt.value}
+                  selected={rentalTypeChoice === opt.value}
+                  title={opt.label}
+                  description={`${opt.description} ${opt.helper}`}
+                  onSelect={() => {
+                    setRentalTypeChoice(opt.value);
+                    setError(null);
+                  }}
+                />
+              ))}
             </div>
           </div>
         )}
 
         {step === 3 && (
           <div className="space-y-4">
-            {renderStepHeading("Τιμή και μίσθωση")}
+            {renderStepHeading("Τιμή & διαθεσιμότητα")}
             {supportsShortTerm && (
               <div className="space-y-4 rounded-xl border border-border bg-white/60 p-4">
                 <p className="text-sm font-medium text-charcoal">Βραχυχρόνια τιμολόγηση</p>
@@ -1450,81 +1404,7 @@ export function NewListingWizard({ profile, email, initialListingId = null }: Pr
             }}
           />
         )}
-
-        {error && <p className="mt-4 text-sm text-red-500">{error}</p>}
-        {success && <p className="mt-4 text-sm text-teal">{success}</p>}
-            </GlassCard>
-
-            <div
-              className="sticky bottom-0 z-20 -mx-3 mt-6 border-t border-border bg-cream/95 px-3 py-4 shadow-[0_-8px_24px_rgba(26,26,26,0.06)] backdrop-blur-md sm:-mx-5 sm:px-5"
-              role="toolbar"
-              aria-label="Ενέργειες οδηγού"
-            >
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <div className="flex flex-wrap gap-2">
-                  {step > 1 ? (
-                    <button
-                      type="button"
-                      onClick={back}
-                      className="inline-flex items-center gap-1 rounded-xl border border-border bg-white px-4 py-2.5 text-sm font-medium"
-                    >
-                      <ChevronLeft className="h-4 w-4" /> Πίσω
-                    </button>
-                  ) : (
-                    <span className="hidden sm:block" aria-hidden />
-                  )}
-                  <button
-                    type="button"
-                    onClick={saveDraft}
-                    disabled={pending || draftSaving}
-                    className="rounded-xl border border-border bg-white px-4 py-2.5 text-sm font-medium text-muted hover:text-charcoal disabled:opacity-60"
-                  >
-                    {draftSaving ? "Αποθήκευση..." : "Αποθήκευση πρόχειρης"}
-                  </button>
-                </div>
-                {step < TOTAL_STEPS ? (
-                  <button
-                    type="button"
-                    onClick={next}
-                    disabled={
-                      pending ||
-                      draftSaving ||
-                      (step === 4 && photosUploadBusy) ||
-                      (step === 6 && !allDeclarationsChecked)
-                    }
-                    className="inline-flex items-center gap-1 rounded-xl bg-gold px-5 py-2.5 text-sm font-semibold text-white disabled:opacity-60"
-                  >
-                    {draftSaving ? "Αποθήκευση..." : "Συνέχεια"}{" "}
-                    <ChevronRight className="h-4 w-4" />
-                  </button>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={submit}
-                    disabled={
-                      pending ||
-                      !allDeclarationsChecked ||
-                      !isReviewReady(
-                        parsePortalListingFields(buildFormData()),
-                        savedPhotoCount,
-                        needsAma,
-                        ownerDeclarationAccepted,
-                        registryDeclarationAccepted,
-                        platformDeclarationAccepted,
-                        termsPrivacyAccepted,
-                        listingPhoneReady
-                      )
-                    }
-                    className="rounded-xl bg-charcoal px-5 py-2.5 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-45"
-                  >
-                    {pending ? "Υποβολή..." : "Υποβολή για έλεγχο"}
-                  </button>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
       </div>
-    </AccountShell>
+    </CreateListingWizardShell>
   );
 }
