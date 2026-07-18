@@ -1,6 +1,6 @@
 # Create listing wizard — Phase A architecture
 
-Status: **Phase C complete** (guided create wizard with optional amenities).  
+Status: **Phase D complete** (premium polish: phase intros, address visibility UX, room photo tags).  
 Product: Midora = **listings + inquiry** (no bookings / checkout / payments-as-host).  
 Reference: guided host UX quality inspiration only — **do not** copy Airbnb brand, colors, logos, or copy.
 
@@ -138,12 +138,13 @@ Legacy mapping: `LEGACY_STEP_TO_TARGET` in the same file.
 
 ## Out of scope (explicit)
 
-- Full premium visual redesign (Phase D)
+- Broader owner-dashboard redesign (beyond create wizard)
 - Public listing / search / map / calendar product changes
 - Owner dashboard chrome redesign
 - **Bookings / checkout / Airbnb-style reservation**
 - Copying Airbnb visual system or marketing copy
 - Unnecessary new markdown beyond this plan
+- Full house-tour / sleeping-arrangement editor inside create wizard (workspace remains canonical for deep photo tour)
 
 ---
 
@@ -171,13 +172,20 @@ Defer to Phase C: welcome polish, amenities, description-only step, availability
 | **A (done)** | Routes decision, step config, autosave model, schema map, this doc + `listing-wizard-steps.ts` |
 | **B (done)** | Full-screen shell, rental-first split steps, per-step validation, `withDraftSafePrices` |
 | **C (done)** | 11 steps (+ optional Παροχές), autosave debounce, resume modal, live preview, amenity picker |
-| **D** | Visual premium pass (Midora tokens only) |
+| **D (done)** | Phase intros (Το ακίνητό σου / Να ξεχωρίζει / Ολοκλήρωση), shell polish + STEP_HINTS, address visibility checkbox (`location_confirmed_by_owner`, default area-only), light room tags on photos via existing `room_key` APIs |
 
 ### Phase C live step order (`NewListingWizard`)
 
 1. Τύπος μίσθωσης → 2. Τύπος ακινήτου → 3. Τοποθεσία → 4. Χωρητικότητα → 5. Τίτλος & περιγραφή → **6. Παροχές (optional)** → 7. Τιμή & διαθεσιμότητα → 8. Φωτογραφίες → 9. Επικοινωνία → 10. Δηλώσεις → 11. Έλεγχος
 
 Amenities: `popularFilterAmenities` + `saveOwnerListingAmenities` / `getOwnerListingAmenities`. Skip allowed; Continue always ok.
+
+### Phase D notes
+
+- Phase intros skip on `?draft=` resume; skippable with Επόμενο on fresh create.
+- Address visibility: no new DB column — uses `location_confirmed_by_owner` (map geocode no longer auto-sets public exact).
+- Room organization: `suggestPhotoRooms` + existing assign APIs in wizard; deep tour stays in listing workspace.
+- Save and Exit → `/dashboard/listings?draftSaved=1` unchanged; no draft-resume modal on fresh `/new`.
 
 ---
 

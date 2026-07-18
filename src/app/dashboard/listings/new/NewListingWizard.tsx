@@ -15,6 +15,11 @@ import {
   type PropertyLocationState,
 } from "@/components/listings/wizard/PropertyAddressLocationSection";
 import { ListingWizardPhotosStep } from "@/components/listings/wizard/ListingWizardPhotosStep";
+import {
+  phaseIdForWizardStep,
+  WizardPhaseIntro,
+  WIZARD_PHASE_INTROS,
+} from "@/components/listings/wizard/WizardPhaseIntro";
 import { ShortTermRegistryComplianceCard } from "@/components/listings/wizard/ShortTermRegistryComplianceCard";
 import {
   areWizardDeclarationsComplete,
@@ -24,6 +29,8 @@ import {
   isReviewReady,
   ListingWizardReviewStep,
 } from "@/components/listings/wizard/ListingWizardReviewStep";
+import type { WizardPhaseId } from "@/lib/listing-wizard-steps";
+import { suggestPhotoRooms } from "@/lib/photo-rooms-catalog";
 import {
   getSavedListingImageCount,
   getWizardListingDraft,
@@ -153,6 +160,13 @@ export function NewListingWizard({ profile, email, initialListingId = null }: Pr
   const [listingId, setListingId] = useState<string | null>(initialListingId);
   const [savedPhotoCount, setSavedPhotoCount] = useState(0);
   const [photosUploadBusy, setPhotosUploadBusy] = useState(false);
+  /** Phase D: calm interstitial when first entering a phase (skipped on ?draft= resume). */
+  const [activePhaseIntro, setActivePhaseIntro] = useState<WizardPhaseId | null>(() =>
+    initialListingId ? null : "about"
+  );
+  const [seenPhaseIntros, setSeenPhaseIntros] = useState<Set<WizardPhaseId>>(() =>
+    initialListingId ? new Set(["about", "stand_out", "finish"]) : new Set()
+  );
 
   const wizardTopRef = useRef<HTMLDivElement>(null);
   const stepHeadingRef = useRef<HTMLHeadingElement>(null);
@@ -682,16 +696,23 @@ export function NewListingWizard({ profile, email, initialListingId = null }: Pr
     buildFormData,
   ]);
 
-  function renderStepHeading(_heading: string, hint?: string) {
-    // Shell already shows step title as h1 — keep a focus/scroll target + hint only.
+  function renderStepHeading(_heading: string) {
+    // Shell shows step title + STEP_HINTS — keep a focus/scroll target only.
     return (
-      <div className="mb-5">
-        <span ref={stepHeadingRef} tabIndex={-1} className="sr-only outline-none">
-          {_heading}
-        </span>
-        <p className="text-sm text-muted">{hint ?? STEP_HINTS[step - 1]}</p>
-      </div>
+      <span ref={stepHeadingRef} tabIndex={-1} className="sr-only outline-none">
+        {_heading}
+      </span>
     );
+  }
+
+  function dismissPhaseIntro() {
+    if (!activePhaseIntro) return;
+    setSeenPhaseIntros((prev) => {
+      const next = new Set(prev);
+      next.add(activePhaseIntro);
+      return next;
+    });
+    setActivePhaseIntro(null);
   }
 
   function markDraftSaved() {
@@ -736,14 +757,14 @@ export function NewListingWizard({ profile, email, initialListingId = null }: Pr
     if (patch.longitude !== undefined) setLongitude(patch.longitude);
     if (patch.suggestedLat !== undefined) setSuggestedLat(patch.suggestedLat);
     if (patch.suggestedLng !== undefined) setSuggestedLng(patch.suggestedLng);
-    if (patch.locationConfirmedByOwner !== undefined) {
-      setLocationConfirmedByOwner(patch.locationConfirmedByOwner);
+    if (patch.locationConfirmedByOwner === false) {
+      // Phase D: address edits clear public exact-address opt-in.
+      // Map/geocode must not auto-set confirmed=true (opt-in via visibility checkbox).
+      setLocationConfirmedByOwner(false);
+      setLocationConfirmedAt(null);
     }
     if (patch.locationPinMovedManually !== undefined) {
       setLocationPinMovedManually(patch.locationPinMovedManually);
-    }
-    if (patch.locationConfirmedAt !== undefined) {
-      setLocationConfirmedAt(patch.locationConfirmedAt);
     }
     if (patch.areaLockedByUser !== undefined) {
       setAreaLockedByUser(patch.areaLockedByUser);
@@ -988,6 +1009,14 @@ export function NewListingWizard({ profile, email, initialListingId = null }: Pr
     })();
   }
 
+  function advanceToStep(target: number) {
+    const phase = phaseIdForWizardStep(target);
+    setStep(target);
+    if (!seenPhaseIntros.has(phase)) {
+      setActivePhaseIntro(phase);
+    }
+  }
+
   function next() {
     if (pending || draftSaving) return;
 
@@ -1012,7 +1041,7 @@ export function NewListingWizard({ profile, email, initialListingId = null }: Pr
           setSaveStatus("error");
         } else {
           markDraftSaved();
-          setStep(CONTACT_STEP);
+          advanceToStep(CONTACT_STEP);
         }
       });
       return;
@@ -1033,7 +1062,7 @@ export function NewListingWizard({ profile, email, initialListingId = null }: Pr
             setError(amenityResult.error);
             return;
           }
-          setStep((s) => Math.min(s + 1, TOTAL_STEPS));
+          advanceToStep(Math.min(step + 1, TOTAL_STEPS));
         });
       });
       return;
@@ -1041,7 +1070,7 @@ export function NewListingWizard({ profile, email, initialListingId = null }: Pr
 
     // Save draft on advance for early steps (1–5) and pricing.
     if (step >= 1 && step <= PRICING_STEP) {
-      ensureDraft(() => setStep((s) => Math.min(s + 1, TOTAL_STEPS)));
+      ensureDraft(() => advanceToStep(Math.min(step + 1, TOTAL_STEPS)));
       return;
     }
 
@@ -1056,21 +1085,42 @@ export function NewListingWizard({ profile, email, initialListingId = null }: Pr
           setSaveStatus("error");
         } else {
           markDraftSaved();
-          setStep((s) => Math.min(s + 1, TOTAL_STEPS));
+          advanceToStep(Math.min(step + 1, TOTAL_STEPS));
         }
       });
       return;
     }
-    setStep((s) => Math.min(s + 1, TOTAL_STEPS));
+    advanceToStep(Math.min(step + 1, TOTAL_STEPS));
   }
 
   function back() {
     setError(null);
+    if (activePhaseIntro) {
+      // Leave intro without marking seen — returning later can show it again.
+      setActivePhaseIntro(null);
+      if (step > 1) {
+        const nextStep = step - 1;
+        setStep(nextStep);
+        if (resolveListingId() && (nextStep >= PHOTOS_STEP || step >= PHOTOS_STEP)) {
+          void refreshSavedPhotoCount();
+        }
+      }
+      return;
+    }
     const nextStep = Math.max(step - 1, 1);
     setStep(nextStep);
     if (resolveListingId() && (nextStep >= PHOTOS_STEP || step >= PHOTOS_STEP)) {
       void refreshSavedPhotoCount();
     }
+  }
+
+  function handleShellNext() {
+    if (activePhaseIntro) {
+      dismissPhaseIntro();
+      return;
+    }
+    if (step < TOTAL_STEPS) next();
+    else submit();
   }
 
   function saveDraft() {
@@ -1238,41 +1288,56 @@ export function NewListingWizard({ profile, email, initialListingId = null }: Pr
   );
 
   const wizardBusy = pending || draftSaving;
+  const showingPhaseIntro = activePhaseIntro != null;
+  const photoRooms = useMemo(
+    () =>
+      suggestPhotoRooms({
+        bedrooms: Math.max(0, parseInt(bedrooms, 10) || 0),
+        bathrooms: Math.max(0, parseInt(bathrooms, 10) || 0),
+      }),
+    [bedrooms, bathrooms]
+  );
   const nextDisabled =
-    step < TOTAL_STEPS
-      ? wizardBusy ||
-        (step === PHOTOS_STEP && photosUploadBusy) ||
-        (step === DECLARATIONS_STEP && !allDeclarationsChecked)
-      : wizardBusy ||
-        !allDeclarationsChecked ||
-        !isReviewReady(
-          parsePortalListingFields(buildFormData()),
-          savedPhotoCount,
-          needsAma,
-          ownerDeclarationAccepted,
-          registryDeclarationAccepted,
-          platformDeclarationAccepted,
-          termsPrivacyAccepted,
-          listingPhoneReady
-        );
+    showingPhaseIntro
+      ? wizardBusy
+      : step < TOTAL_STEPS
+        ? wizardBusy ||
+          (step === PHOTOS_STEP && photosUploadBusy) ||
+          (step === DECLARATIONS_STEP && !allDeclarationsChecked)
+        : wizardBusy ||
+          !allDeclarationsChecked ||
+          !isReviewReady(
+            parsePortalListingFields(buildFormData()),
+            savedPhotoCount,
+            needsAma,
+            ownerDeclarationAccepted,
+            registryDeclarationAccepted,
+            platformDeclarationAccepted,
+            termsPrivacyAccepted,
+            listingPhoneReady
+          );
 
   return (
     <CreateListingWizardShell
       stepIndex={step - 1}
       stepCount={TOTAL_STEPS}
       stepLabel={STEPS[step - 1]}
+      stepHint={showingPhaseIntro ? null : STEP_HINTS[step - 1]}
       phaseLabel={STEP_PHASES[step - 1]}
       saveStatus={saveStatus}
       error={error}
-      aside={previewAside}
-      onBack={back}
-      onNext={step < TOTAL_STEPS ? next : submit}
+      aside={showingPhaseIntro ? undefined : previewAside}
+      onBack={step > 1 ? back : undefined}
+      onNext={handleShellNext}
       onSaveAndExit={saveDraft}
-      nextLabel={step < TOTAL_STEPS ? "Επόμενο" : "Υποβολή για έλεγχο"}
+      nextLabel={
+        showingPhaseIntro ? "Επόμενο" : step < TOTAL_STEPS ? "Επόμενο" : "Υποβολή για έλεγχο"
+      }
       nextDisabled={nextDisabled}
       showBack={step > 1}
-      isLastStep={step === TOTAL_STEPS}
+      isLastStep={!showingPhaseIntro && step === TOTAL_STEPS}
       busy={wizardBusy}
+      phaseIntroMode={showingPhaseIntro}
     >
       <div
         ref={wizardTopRef}
@@ -1282,9 +1347,13 @@ export function NewListingWizard({ profile, email, initialListingId = null }: Pr
           }
         }}
       >
-        {success && <p className="mb-4 text-sm text-teal">{success}</p>}
+        {showingPhaseIntro && activePhaseIntro ? (
+          <WizardPhaseIntro intro={WIZARD_PHASE_INTROS[activePhaseIntro]} />
+        ) : null}
 
-        {step === 1 && (
+        {!showingPhaseIntro && success && <p className="mb-4 text-sm text-teal">{success}</p>}
+
+        {!showingPhaseIntro && step === 1 && (
           <div>
             <p className="text-sm text-muted">
               Κάθε αγγελία είναι είτε βραχυχρόνια είτε μηνιαία. Αν θέλεις και τους δύο τρόπους,
@@ -1308,7 +1377,7 @@ export function NewListingWizard({ profile, email, initialListingId = null }: Pr
           </div>
         )}
 
-        {step === 2 && (
+        {!showingPhaseIntro && step === 2 && (
           <div>
             {renderStepHeading("Τι είδους ακίνητο είναι;")}
             <div className="mt-2 grid gap-3 sm:grid-cols-2">
@@ -1341,7 +1410,7 @@ export function NewListingWizard({ profile, email, initialListingId = null }: Pr
           </div>
         )}
 
-        {step === 3 && (
+        {!showingPhaseIntro && step === 3 && (
           <div className="space-y-4">
             {renderStepHeading("Πού βρίσκεται το ακίνητο;")}
             <label className="block">
@@ -1452,13 +1521,13 @@ export function NewListingWizard({ profile, email, initialListingId = null }: Pr
               </p>
             ) : null}
 
-            <div className="rounded-xl border border-border bg-sand/25 p-4">
-              <p className="text-sm font-semibold text-charcoal">Τοποθεσία ακινήτου</p>
-              <p className="mt-1 text-xs leading-relaxed text-muted">
-                Η ακριβής διεύθυνση και pin εμφανίζονται δημόσια μόνο αφού επιβεβαιώσεις τη θέση
-                στον χάρτη.
+            <div className="rounded-2xl border border-border bg-sand/25 p-5 sm:p-6">
+              <p className="font-display text-base font-semibold text-charcoal">Τοποθεσία ακινήτου</p>
+              <p className="mt-1.5 text-sm leading-relaxed text-muted">
+                Συμπλήρωσε οδό και θέση στον χάρτη για εσωτερική χρήση και έλεγχο. Η δημόσια
+                εμφάνιση ρυθμίζεται παρακάτω.
               </p>
-              <div className="mt-4">
+              <div className="mt-5">
                 <PropertyAddressLocationSection
                   state={locationState()}
                   onChange={patchLocationState}
@@ -1496,10 +1565,49 @@ export function NewListingWizard({ profile, email, initialListingId = null }: Pr
                 </label>
               </div>
             </div>
+
+            <div className="rounded-2xl border border-border/80 bg-white p-5 sm:p-6">
+              <p className="font-display text-base font-semibold text-charcoal">
+                Ορατότητα διεύθυνσης
+              </p>
+              <p className="mt-1.5 text-sm leading-relaxed text-muted">
+                Προεπιλογή: στη δημόσια αγγελία εμφανίζονται μόνο πόλη και περιοχή. Η ακριβής
+                διεύθυνση και το pin μένουν ιδιωτικά μέχρι να το επιβεβαιώσεις εσύ.
+              </p>
+              <label className="mt-5 flex cursor-pointer items-start gap-3 rounded-xl border border-border bg-sand/20 px-4 py-3.5">
+                <input
+                  type="checkbox"
+                  className="mt-1 h-4 w-4 shrink-0 accent-[var(--gold)]"
+                  checked={locationConfirmedByOwner}
+                  onChange={(e) => {
+                    const on = e.target.checked;
+                    setLocationConfirmedByOwner(on);
+                    setLocationConfirmedAt(on ? new Date().toISOString() : null);
+                    setError(null);
+                  }}
+                />
+                <span className="text-sm leading-relaxed text-charcoal">
+                  <span className="font-medium">
+                    Επιβεβαιώνω ότι θέλω να εμφανίζεται δημόσια η ακριβής διεύθυνση και η θέση στον
+                    χάρτη.
+                  </span>
+                  <span className="mt-1 block text-xs text-muted">
+                    Χωρίς αυτό το κουτάκι, οι επισκέπτες βλέπουν μόνο περιοχή — η πλήρης διεύθυνση
+                    κοινοποιείται μετά την επικοινωνία μαζί σου.
+                  </span>
+                </span>
+              </label>
+              {!locationConfirmedByOwner && (latitude != null || addressStreet.trim()) && (
+                <p className="mt-3 text-xs text-muted">
+                  Η διεύθυνση αποθηκεύεται για εσένα και τον έλεγχο Midora· δεν εμφανίζεται δημόσια
+                  ακόμα.
+                </p>
+              )}
+            </div>
           </div>
         )}
 
-        {step === 4 && (
+        {!showingPhaseIntro && step === 4 && (
           <div className="space-y-4">
             {renderStepHeading("Πόσα άτομα και τι μέγεθος;")}
             <WizardCounter
@@ -1551,7 +1659,7 @@ export function NewListingWizard({ profile, email, initialListingId = null }: Pr
           </div>
         )}
 
-        {step === 5 && (
+        {!showingPhaseIntro && step === 5 && (
           <div className="space-y-4">
             {renderStepHeading("Πώς θα φαίνεται η αγγελία σου;")}
             <label className="block">
@@ -1576,7 +1684,7 @@ export function NewListingWizard({ profile, email, initialListingId = null }: Pr
           </div>
         )}
 
-        {step === AMENITIES_STEP && (
+        {!showingPhaseIntro && step === AMENITIES_STEP && (
           <div className="space-y-4">
             {renderStepHeading("Τι παρέχει το ακίνητο;")}
             <p className="text-sm text-muted">
@@ -1636,7 +1744,7 @@ export function NewListingWizard({ profile, email, initialListingId = null }: Pr
           </div>
         )}
 
-        {step === PRICING_STEP && (
+        {!showingPhaseIntro && step === PRICING_STEP && (
           <div className="space-y-4">
             {renderStepHeading("Τιμή & διαθεσιμότητα")}
             {supportsShortTerm && (
@@ -1836,22 +1944,23 @@ export function NewListingWizard({ profile, email, initialListingId = null }: Pr
           </div>
         )}
 
-        {step === PHOTOS_STEP && draftSaving && (
+        {!showingPhaseIntro && step === PHOTOS_STEP && draftSaving && (
           <div className="py-12 text-center">
             {renderStepHeading("Φωτογραφίες")}
             <p className="text-sm text-muted">Αποθήκευση πρόχειρης αγγελίας...</p>
           </div>
         )}
-        {step === PHOTOS_STEP && resolveListingId() && !draftSaving && (
+        {!showingPhaseIntro && step === PHOTOS_STEP && resolveListingId() && !draftSaving && (
           <ListingWizardPhotosStep
             listingId={resolveListingId()!}
             initialImages={[]}
             stepHeadingRef={stepHeadingRef}
             onPhotoCountChange={handlePhotoCountChange}
             onUploadBusyChange={setPhotosUploadBusy}
+            rooms={photoRooms}
           />
         )}
-        {step === PHOTOS_STEP && !resolveListingId() && !draftSaving && (
+        {!showingPhaseIntro && step === PHOTOS_STEP && !resolveListingId() && !draftSaving && (
           <div className="py-8 text-center">
             {renderStepHeading("Φωτογραφίες")}
             <p className="text-sm text-muted">
@@ -1861,7 +1970,7 @@ export function NewListingWizard({ profile, email, initialListingId = null }: Pr
           </div>
         )}
 
-        {step === CONTACT_STEP && (
+        {!showingPhaseIntro && step === CONTACT_STEP && (
           <div className="space-y-4">
             {renderStepHeading("Πώς θα επικοινωνούν μαζί σου;")}
             <ListingWizardContactStep
@@ -1896,7 +2005,7 @@ export function NewListingWizard({ profile, email, initialListingId = null }: Pr
           </div>
         )}
 
-        {step === DECLARATIONS_STEP && (
+        {!showingPhaseIntro && step === DECLARATIONS_STEP && (
           <ListingWizardDeclarationsStep
             needsRegistryDeclaration={needsAma}
             ownerAccepted={ownerDeclarationAccepted}
@@ -1911,7 +2020,7 @@ export function NewListingWizard({ profile, email, initialListingId = null }: Pr
           />
         )}
 
-        {step === REVIEW_STEP && (
+        {!showingPhaseIntro && step === REVIEW_STEP && (
           <ListingWizardReviewStep
             fields={parsePortalListingFields(buildFormData())}
             savedPhotoCount={savedPhotoCount}

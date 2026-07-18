@@ -10,6 +10,8 @@ type Props = {
   stepIndex: number;
   stepCount: number;
   stepLabel: string;
+  /** Calm hint under the step title (STEP_HINTS). Hidden during phase intros. */
+  stepHint?: string | null;
   phaseLabel?: string;
   saveStatus?: "idle" | "saving" | "saved" | "error";
   error?: string | null;
@@ -24,12 +26,15 @@ type Props = {
   showBack?: boolean;
   isLastStep?: boolean;
   busy?: boolean;
+  /** When true, hide step chrome title/hint (phase intro supplies its own). */
+  phaseIntroMode?: boolean;
 };
 
 export function CreateListingWizardShell({
   stepIndex,
   stepCount,
   stepLabel,
+  stepHint,
   phaseLabel,
   saveStatus = "idle",
   error,
@@ -43,10 +48,11 @@ export function CreateListingWizardShell({
   showBack = true,
   isLastStep = false,
   busy = false,
+  phaseIntroMode = false,
 }: Props) {
   const progress = Math.max(4, Math.round(((stepIndex + 1) / stepCount) * 100));
-  const layoutMax = aside ? "max-w-[1100px]" : "max-w-[820px]";
-  const chromeMax = aside ? "max-w-[1100px]" : "max-w-5xl";
+  const layoutMax = aside && !phaseIntroMode ? "max-w-[1100px]" : "max-w-[720px]";
+  const chromeMax = aside && !phaseIntroMode ? "max-w-[1100px]" : "max-w-5xl";
 
   const saveLabel =
     saveStatus === "saving"
@@ -59,7 +65,7 @@ export function CreateListingWizardShell({
 
   return (
     <div className="fixed inset-0 z-40 flex flex-col bg-white text-charcoal">
-      <header className="shrink-0 border-b border-border/80 bg-white/95 backdrop-blur-sm">
+      <header className="shrink-0 border-b border-border/70 bg-white/95 backdrop-blur-sm">
         <div
           className={cn(
             "mx-auto flex h-14 items-center justify-between gap-3 px-4 sm:h-16 sm:px-6",
@@ -106,30 +112,55 @@ export function CreateListingWizardShell({
       </header>
 
       <main className="min-h-0 flex-1 overflow-y-auto">
-        <div className={cn("mx-auto w-full px-4 py-8 sm:px-6 sm:py-12", layoutMax)}>
-          <div className={cn(aside && "lg:flex lg:items-start lg:gap-10")}>
+        <div
+          className={cn(
+            "mx-auto w-full px-4 py-10 sm:px-6 sm:py-14",
+            layoutMax,
+            phaseIntroMode && "sm:py-16"
+          )}
+        >
+          <div className={cn(aside && !phaseIntroMode && "lg:flex lg:items-start lg:gap-12")}>
             <div className="min-w-0 flex-1">
-              <p className="text-xs font-medium uppercase tracking-[0.14em] text-muted">
-                {phaseLabel ? `${phaseLabel} · ` : ""}
-                Βήμα {stepIndex + 1} από {stepCount}
-              </p>
-              <h1 className="mt-2 font-display text-2xl font-semibold tracking-tight text-charcoal sm:text-3xl">
-                {stepLabel}
-              </h1>
+              {!phaseIntroMode && (
+                <>
+                  <p className="text-xs font-medium uppercase tracking-[0.14em] text-muted">
+                    {phaseLabel ? (
+                      <>
+                        <span className="text-gold">{phaseLabel}</span>
+                        <span className="text-muted"> · </span>
+                      </>
+                    ) : null}
+                    Βήμα {stepIndex + 1} από {stepCount}
+                  </p>
+                  <h1 className="mt-3 font-display text-2xl font-semibold tracking-tight text-charcoal sm:text-3xl">
+                    {stepLabel}
+                  </h1>
+                  {stepHint ? (
+                    <p className="mt-3 max-w-xl text-sm leading-relaxed text-muted sm:text-[15px]">
+                      {stepHint}
+                    </p>
+                  ) : null}
+                </>
+              )}
 
               {error && (
                 <div
                   role="alert"
-                  className="mt-5 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800"
+                  className={cn(
+                    "rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800",
+                    phaseIntroMode ? "mt-0" : "mt-6"
+                  )}
                 >
                   {error}
                 </div>
               )}
 
-              <div className="mt-8 pb-28">{children}</div>
+              <div className={cn(phaseIntroMode ? "mt-0" : "mt-10", "pb-32 sm:pb-28")}>
+                {children}
+              </div>
             </div>
 
-            {aside ? (
+            {aside && !phaseIntroMode ? (
               <aside className="sticky top-8 hidden w-[280px] shrink-0 lg:block">
                 {aside}
               </aside>
@@ -138,10 +169,10 @@ export function CreateListingWizardShell({
         </div>
       </main>
 
-      <footer className="shrink-0 border-t border-border/80 bg-white">
+      <footer className="shrink-0 border-t border-border/70 bg-white/95 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur-sm">
         <div
           className={cn(
-            "mx-auto flex items-center justify-between gap-3 px-4 py-3 sm:px-6 sm:py-4",
+            "mx-auto flex items-center justify-between gap-3 px-4 py-3.5 sm:px-6 sm:py-4",
             chromeMax
           )}
         >
@@ -149,8 +180,8 @@ export function CreateListingWizardShell({
             <button
               type="button"
               onClick={onBack}
-              disabled={busy || stepIndex === 0}
-              className="inline-flex items-center gap-1.5 rounded-full px-3 py-2.5 text-sm font-medium text-charcoal hover:bg-sand/60 disabled:opacity-40"
+              disabled={busy || (!phaseIntroMode && stepIndex === 0)}
+              className="inline-flex min-h-11 items-center gap-1.5 rounded-full px-3 py-2.5 text-sm font-medium text-charcoal hover:bg-sand/60 disabled:opacity-40"
             >
               <ChevronLeft className="h-4 w-4" />
               Πίσω
@@ -164,12 +195,12 @@ export function CreateListingWizardShell({
               onClick={onNext}
               disabled={busy || nextDisabled}
               className={cn(
-                "inline-flex items-center gap-2 rounded-full bg-gold px-5 py-2.5 text-sm font-semibold text-white shadow-soft transition hover:bg-gold-dark disabled:cursor-not-allowed disabled:opacity-50 sm:px-6",
-                isLastStep && "bg-charcoal hover:bg-charcoal/90"
+                "inline-flex min-h-11 items-center gap-2 rounded-full bg-gold px-5 py-2.5 text-sm font-semibold text-white shadow-soft transition hover:bg-gold-dark disabled:cursor-not-allowed disabled:opacity-50 sm:px-7",
+                isLastStep && !phaseIntroMode && "bg-charcoal hover:bg-charcoal/90"
               )}
             >
               {nextLabel}
-              {!isLastStep && <ChevronRight className="h-4 w-4" />}
+              {!(isLastStep && !phaseIntroMode) && <ChevronRight className="h-4 w-4" />}
             </button>
           )}
         </div>
@@ -245,7 +276,7 @@ export function WizardCounter({
           aria-label={`Μείωση ${label}`}
           disabled={value <= min}
           onClick={() => onChange(Math.max(min, value - 1))}
-          className="flex h-10 w-10 items-center justify-center rounded-full border border-border text-lg text-charcoal hover:bg-sand/50 disabled:opacity-40"
+          className="flex h-11 w-11 items-center justify-center rounded-full border border-border text-lg text-charcoal hover:bg-sand/50 disabled:opacity-40"
         >
           −
         </button>
@@ -255,7 +286,7 @@ export function WizardCounter({
           aria-label={`Αύξηση ${label}`}
           disabled={value >= max}
           onClick={() => onChange(Math.min(max, value + 1))}
-          className="flex h-10 w-10 items-center justify-center rounded-full border border-border text-lg text-charcoal hover:bg-sand/50 disabled:opacity-40"
+          className="flex h-11 w-11 items-center justify-center rounded-full border border-border text-lg text-charcoal hover:bg-sand/50 disabled:opacity-40"
         >
           +
         </button>

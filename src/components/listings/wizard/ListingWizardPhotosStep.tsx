@@ -588,6 +588,12 @@ export function ListingWizardPhotosStep({
               ? "Ανέβασε, ταξινόμησε και όρισε εξώφυλλο. Η σειρά εδώ καθορίζει πώς θα εμφανίζονται οι φωτογραφίες στη δημόσια αγγελία."
               : "Ως ιδιοκτήτης, πρόσθεσε τουλάχιστον μία καθαρή φωτογραφία του ακινήτου. Η πρώτη επιτυχημένη φωτογραφία γίνεται κύρια· μπορείς να αλλάξεις κύρια ή σειρά ανά πάσα στιγμή."}
           </p>
+          {!isManager && rooms.length > 0 && (
+            <p className="mt-2 text-xs text-muted">
+              Προαιρετικά: όρισε χώρο σε κάθε φωτογραφία (σαλόνι, υπνοδωμάτιο κ.λπ.) — μπορείς να το
+              συμπληρώσεις και αργότερα.
+            </p>
+          )}
           <p className="mt-2 text-xs text-muted">
             Επίλεξε από τη βιβλιοθήκη ή σύρε έως 30 αρχεία (JPG, PNG, WebP — έως 10 MB).
           </p>
@@ -713,7 +719,7 @@ export function ListingWizardPhotosStep({
           <span className="text-sm font-medium text-charcoal">
             {selectedIds.size} επιλεγμένες
           </span>
-          {isManager && rooms.length > 0 && (
+          {rooms.length > 0 && (
             <select
               defaultValue=""
               onChange={(e) => {
@@ -840,30 +846,29 @@ export function ListingWizardPhotosStep({
                       </button>
                     )}
                     {isManager && (
-                      <>
-                        <button
-                          type="button"
-                          disabled={pending || isProcessingQueue}
-                          onClick={() => handleCaption(img.id, img.caption)}
-                          className="rounded px-2 py-1 text-[11px] text-charcoal hover:bg-sand disabled:opacity-40"
-                        >
-                          Λεζάντα
-                        </button>
-                        {rooms.length > 0 && (
-                          <select
-                            value={img.room_key ?? ""}
-                            onChange={(e) => handleAssignRoom(img.id, e.target.value)}
-                            className="max-w-[7rem] rounded border border-border px-1 py-0.5 text-[10px]"
-                          >
-                            <option value="">Χωρίς χώρο</option>
-                            {rooms.map((r) => (
-                              <option key={r.key} value={r.key}>
-                                {r.label}
-                              </option>
-                            ))}
-                          </select>
-                        )}
-                      </>
+                      <button
+                        type="button"
+                        disabled={pending || isProcessingQueue}
+                        onClick={() => handleCaption(img.id, img.caption)}
+                        className="rounded px-2 py-1 text-[11px] text-charcoal hover:bg-sand disabled:opacity-40"
+                      >
+                        Λεζάντα
+                      </button>
+                    )}
+                    {rooms.length > 0 && (
+                      <select
+                        value={img.room_key ?? ""}
+                        onChange={(e) => handleAssignRoom(img.id, e.target.value)}
+                        className="max-w-[8.5rem] rounded border border-border px-1 py-0.5 text-[10px]"
+                        aria-label="Χώρος φωτογραφίας"
+                      >
+                        <option value="">Χωρίς χώρο</option>
+                        {rooms.map((r) => (
+                          <option key={r.key} value={r.key}>
+                            {r.label}
+                          </option>
+                        ))}
+                      </select>
                     )}
                     <button
                       type="button"
