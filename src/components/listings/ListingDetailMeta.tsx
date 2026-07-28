@@ -1,8 +1,8 @@
 "use client";
 
 import { Bed, Bath, Maximize, Car, PawPrint, Sparkles, Zap, Building2 } from "lucide-react";
+import { useTranslations, useLocale } from "next-intl";
 import type { ListingWithImages } from "@/lib/types";
-import { COPY } from "@/lib/copy";
 import {
   formatFloorLabel,
   resolveListingBathrooms,
@@ -28,10 +28,17 @@ import {
 import { cn } from "@/lib/utils";
 
 export function ListingDetailMeta({ listing }: { listing: ListingWithImages }) {
+  const tCommon = useTranslations("Common");
+  const tListing = useTranslations("Listing");
+  const tLabels = useTranslations("Listing.labels");
+  const locale = useLocale();
   const { mode, showBoth, showMonthly } = useListingRentalMode();
   const bathrooms = resolveListingBathrooms(listing.bathrooms, listing.bedrooms);
   const floorLabel = formatFloorLabel(listing.floor);
-  const price = publicPricePrimary(listing, mode);
+  const price = publicPricePrimary(listing, mode, undefined, {
+    perNight: tCommon("perNight"),
+    perMonth: tCommon("perMonth"),
+  }, locale);
   const secondaryHint = publicPriceSecondaryHint(listing, mode);
   const rentalBadges = publicModeBadgeLabels(listing, mode);
   const badges = getListingBadges(listing).filter(
@@ -83,6 +90,9 @@ export function ListingDetailMeta({ listing }: { listing: ListingWithImages }) {
         {secondaryHint && (
           <p className="text-sm text-muted">{secondaryHint}</p>
         )}
+        {mode === "monthly" && (
+          <p className="text-sm text-muted">{tCommon("finalPriceOwner")}</p>
+        )}
       </div>
 
       {mode === "short_term" && <LegalRegistryBlock listing={listing} />}
@@ -93,16 +103,19 @@ export function ListingDetailMeta({ listing }: { listing: ListingWithImages }) {
 
       {showMonthly && mode === "monthly" && (
         <p className="text-sm text-muted">
-          Διαθεσιμότητα: {formatListingAvailabilityText(listing)}
+          {tListing("availability")}:{" "}
+          {formatListingAvailabilityText(listing, (key, values) =>
+            tListing(key, values)
+          )}
         </p>
       )}
 
       <div className="flex flex-wrap gap-x-4 gap-y-2 text-sm text-charcoal/70">
         <span className="flex items-center gap-1">
-          <Bed className="h-4 w-4" /> {formatPublicBedroomsLabel(listing.bedrooms)}
+          <Bed className="h-4 w-4" /> {formatPublicBedroomsLabel(listing.bedrooms, tLabels)}
         </span>
         <span className="flex items-center gap-1">
-          <Bath className="h-4 w-4" /> {formatPublicBathroomsLabel(bathrooms)}
+          <Bath className="h-4 w-4" /> {formatPublicBathroomsLabel(bathrooms, tLabels)}
         </span>
         {floorLabel && (
           <span className="flex items-center gap-1">
@@ -111,30 +124,30 @@ export function ListingDetailMeta({ listing }: { listing: ListingWithImages }) {
         )}
         {listing.sqm && (
           <span className="flex items-center gap-1">
-            <Maximize className="h-4 w-4" /> {formatPublicSqmLabel(listing.sqm)}
+            <Maximize className="h-4 w-4" /> {formatPublicSqmLabel(listing.sqm, tLabels)}
           </span>
         )}
         {mode === "short_term" && (
-          <span>{listing.furnished ? "Επιπλωμένο" : "Αμίπλωτο"}</span>
+          <span>{listing.furnished ? tListing("furnished") : tListing("unfurnished")}</span>
         )}
         {listing.has_parking && (
           <span className="flex items-center gap-1 text-gold">
-            <Car className="h-4 w-4" /> Πάρκινγκ
+            <Car className="h-4 w-4" /> {tListing("parking")}
           </span>
         )}
         {listing.pets_allowed && (
           <span className="flex items-center gap-1 text-teal">
-            <PawPrint className="h-4 w-4" /> Κατοικίδια επιτρέπονται
+            <PawPrint className="h-4 w-4" /> {tListing("petsAllowed")}
           </span>
         )}
         {mode === "short_term" && listing.cleaning_included && (
           <span className="flex items-center gap-1">
-            <Sparkles className="h-4 w-4" /> {COPY.cleaningIncluded}
+            <Sparkles className="h-4 w-4" /> {tCommon("cleaningIncluded")}
           </span>
         )}
         {mode === "short_term" && listing.utilities_included && (
           <span className="flex items-center gap-1 text-teal">
-            <Zap className="h-4 w-4" /> {COPY.allIncluded}
+            <Zap className="h-4 w-4" /> {tCommon("allIncluded")}
           </span>
         )}
       </div>

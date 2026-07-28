@@ -3,6 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { X } from "lucide-react";
+import { useTranslations } from "next-intl";
 import type { MapMarker } from "@/components/map/types";
 import { cn } from "@/lib/utils";
 
@@ -13,6 +14,8 @@ type Props = {
 };
 
 export function MapListingPreviewSheet({ marker, onClose, className }: Props) {
+  const t = useTranslations("Listings");
+  const tCommon = useTranslations("Common");
   if (!marker) return null;
 
   const detailHref = marker.href ?? `/listings/${marker.id}`;
@@ -29,7 +32,7 @@ export function MapListingPreviewSheet({ marker, onClose, className }: Props) {
         type="button"
         onClick={onClose}
         className="absolute top-3 right-3 flex h-8 w-8 items-center justify-center rounded-full border border-border bg-white text-muted"
-        aria-label="Κλείσιμο"
+        aria-label={t("close")}
       >
         <X className="h-4 w-4" />
       </button>
@@ -60,7 +63,7 @@ export function MapListingPreviewSheet({ marker, onClose, className }: Props) {
         href={detailHref}
         className="mt-3 flex min-h-11 w-full items-center justify-center rounded-xl bg-gold text-sm font-semibold text-white"
       >
-        Δες αγγελία
+        {tCommon("viewListing")}
       </Link>
     </div>
   );

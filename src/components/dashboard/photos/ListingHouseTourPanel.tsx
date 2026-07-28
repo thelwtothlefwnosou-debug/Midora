@@ -3,13 +3,14 @@
 import { useMemo, useState, useTransition } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { Bed, Camera, Plus } from "lucide-react";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { uploadListingRoomPhotos } from "@/lib/listing-photo-rooms";
 import { roomBedSummary } from "@/lib/listing-photo-room-details";
 import {
+  getSuggestPhotoRooms,
   groupImagesByRoom,
-  suggestPhotoRooms,
   type PhotoRoomDef,
 } from "@/lib/photo-rooms-catalog";
 import type {
@@ -33,16 +34,25 @@ export function ListingHouseTourPanel({
   onEditRoom,
 }: Props) {
   const router = useRouter();
+  const t = useTranslations("Workspace.houseTour");
+  const tPhotoRooms = useTranslations("Listing.photoRooms");
   const [pending, startTransition] = useTransition();
   const [activeRoom, setActiveRoom] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const rooms = useMemo(
-    () => suggestPhotoRooms({ bedrooms: listing.bedrooms, bathrooms: listing.bathrooms }),
-    [listing.bedrooms, listing.bathrooms]
+    () =>
+      getSuggestPhotoRooms(
+        { bedrooms: listing.bedrooms, bathrooms: listing.bathrooms },
+        (key) => tPhotoRooms(key as Parameters<typeof tPhotoRooms>[0])
+      ),
+    [listing.bedrooms, listing.bathrooms, tPhotoRooms]
   );
 
-  const grouped = useMemo(() => groupImagesByRoom(images, rooms), [images, rooms]);
+  const grouped = useMemo(
+    () => groupImagesByRoom(images, rooms, tPhotoRooms("generalPhotos")),
+    [images, rooms, tPhotoRooms]
+  );
 
   const countByRoom = useMemo(() => {
     const map = new Map<string, number>();
@@ -68,10 +78,8 @@ export function ListingHouseTourPanel({
 
   return (
     <GlassCard className="p-4 sm:p-5">
-      <h2 className="font-display text-base font-semibold text-charcoal">Περιήγηση σπιτιού</h2>
-      <p className="mt-1 max-w-2xl text-sm text-muted">
-        Οργάνωσε το ακίνητο ανά χώρο — εμφανίζεται στη δημόσια αγγελία.
-      </p>
+      <h2 className="font-display text-base font-semibold text-charcoal">{t("title")}</h2>
+      <p className="mt-1 max-w-2xl text-sm text-muted">{t("subtitle")}</p>
 
       <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
         {rooms.map((room) => (
@@ -116,6 +124,7 @@ function RoomCard({
   onOpen: () => void;
   onUpload: (files: FileList | null) => void;
 }) {
+  const t = useTranslations("Workspace.houseTour");
   const isEmpty = photoCount === 0;
 
   return (
@@ -132,7 +141,7 @@ function RoomCard({
           <div className="flex h-full flex-col items-center justify-center gap-1 px-3 text-center">
             <Bed className="h-5 w-5 text-gold/40" />
             <span className="text-[10px] leading-snug text-muted">
-              Δεν υπάρχουν φωτογραφίες για αυτόν τον χώρο.
+              {t("noPhotosForRoom")}
             </span>
           </div>
         )}
@@ -147,7 +156,7 @@ function RoomCard({
         {detail && <p className="mt-0.5 text-xs text-muted">{detail}</p>}
         {!isEmpty && (
           <p className="mt-0.5 text-[11px] text-muted">
-            {photoCount === 1 ? "1 φωτογραφία" : `${photoCount} φωτογραφίες`}
+            {photoCount === 1 ? t("photoCountOne") : t("photoCountMany", { count: photoCount })}
           </p>
         )}
         <div className="mt-2.5 flex flex-wrap gap-2">
@@ -157,19 +166,19 @@ function RoomCard({
               onClick={onOpen}
               className="rounded-lg border border-border px-2.5 py-1.5 text-[11px] font-medium text-charcoal hover:bg-sand"
             >
-              Επεξεργασία χώρου
+              {t("editRoom")}
             </button>
           )}
           <label className="inline-flex cursor-pointer items-center gap-1 rounded-lg bg-charcoal px-2.5 py-1.5 text-[11px] font-semibold text-white hover:bg-charcoal/90">
             {isEmpty ? (
               <>
                 <Camera className="h-3 w-3" />
-                Πρόσθεσε φωτογραφίες
+                {t("addPhotos")}
               </>
             ) : (
               <>
                 <Plus className="h-3 w-3" />
-                {pending ? "Ανέβασμα…" : "Πρόσθεσε"}
+                {pending ? t("uploading") : t("add")}
               </>
             )}
             <input

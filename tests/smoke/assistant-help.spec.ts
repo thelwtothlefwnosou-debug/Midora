@@ -5,7 +5,9 @@ test.describe("Midora help assistant", () => {
     await page.goto("/listings?rentalType=short_term");
     await page.waitForLoadState("domcontentloaded");
 
-    await page.getByRole("button", { name: "Βοηθός Midora" }).click();
+    await page
+      .getByRole("button", { name: "Βοηθός Midora", description: "Ρώτησέ με για το Midora" })
+      .click();
     await expect(page.getByRole("heading", { name: "Βοηθός Midora" })).toBeVisible();
 
     await page.getByPlaceholder("Γράψε την ερώτησή σου…").fill("Πώς κάνω αναζήτηση;");
@@ -19,7 +21,9 @@ test.describe("Midora help assistant", () => {
     await page.goto("/");
     await page.waitForLoadState("domcontentloaded");
 
-    await page.getByRole("button", { name: "Βοηθός Midora" }).click();
+    await page
+      .getByRole("button", { name: "Βοηθός Midora", description: "Ρώτησέ με για το Midora" })
+      .click();
     await page.getByPlaceholder("Γράψε την ερώτησή σου…").fill("τι καιρό κάνει;");
     await page.getByLabel("Αποστολή").click();
 

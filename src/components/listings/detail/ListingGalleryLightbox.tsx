@@ -3,10 +3,11 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import { ArrowLeft, Share2 } from "lucide-react";
+import { useLocale, useTranslations } from "next-intl";
 import {
   availableGalleryFilters,
   filterPhotosByGalleryTab,
-  PHOTO_GALLERY_FILTERS,
+  photoGalleryFilterLabel,
   sortListingPhotosForDisplay,
   type PhotoGalleryFilterId,
 } from "@/lib/listing-photo-display";
@@ -31,6 +32,9 @@ export function ListingGalleryLightbox({
   favoriteSlot,
   initialFilter = "all",
 }: Props) {
+  const t = useTranslations("Listing");
+  const tGallery = useTranslations("Listing.gallery");
+  const locale = useLocale();
   const sorted = useMemo(() => sortListingPhotosForDisplay(photos), [photos]);
   const [filter, setFilter] = useState<PhotoGalleryFilterId>(initialFilter);
   const tabs = useMemo(() => availableGalleryFilters(sorted), [sorted]);
@@ -43,22 +47,28 @@ export function ListingGalleryLightbox({
 
   const groupedSections = useMemo(() => {
     if (filter !== "all") {
-      return [{ id: filter, label: PHOTO_GALLERY_FILTERS.find((t) => t.id === filter)?.label ?? "Φωτογραφίες", photos: filtered }];
+      return [
+        {
+          id: filter,
+          label: photoGalleryFilterLabel(filter, locale),
+          photos: filtered,
+        },
+      ];
     }
 
     const hasRooms = tabs.length > 1;
     if (!hasRooms) {
-      return [{ id: "all", label: "Όλες οι φωτογραφίες", photos: sorted }];
+      return [{ id: "all", label: tGallery("allPhotos"), photos: sorted }];
     }
 
-    return PHOTO_GALLERY_FILTERS.filter((t) => tabs.includes(t.id) && t.id !== "all").map(
-      (tab) => ({
-        id: tab.id,
-        label: tab.label,
-        photos: filterPhotosByGalleryTab(sorted, tab.id),
-      })
-    );
-  }, [filter, filtered, sorted, tabs]);
+    return tabs
+      .filter((id) => id !== "all")
+      .map((id) => ({
+        id,
+        label: photoGalleryFilterLabel(id, locale),
+        photos: filterPhotosByGalleryTab(sorted, id),
+      }));
+  }, [filter, filtered, sorted, tabs, locale, tGallery]);
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -91,12 +101,12 @@ export function ListingGalleryLightbox({
               type="button"
               onClick={onClose}
               className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-charcoal/10 text-charcoal transition-colors hover:bg-charcoal/[0.04]"
-              aria-label="Κλείσιμο"
+              aria-label={tGallery("closeAria")}
             >
               <ArrowLeft className="h-5 w-5" />
             </button>
             <div className="min-w-0">
-              <p className="font-display text-base font-semibold text-charcoal">Φωτογραφίες</p>
+              <p className="font-display text-base font-semibold text-charcoal">{t("photos")}</p>
               <p className="truncate text-xs text-muted">{title}</p>
             </div>
           </div>
@@ -108,7 +118,7 @@ export function ListingGalleryLightbox({
                 className="inline-flex min-h-10 items-center gap-1.5 rounded-lg px-3 text-sm font-medium text-charcoal/75 transition-colors hover:bg-charcoal/[0.04] hover:text-charcoal"
               >
                 <Share2 className="h-4 w-4" />
-                <span className="hidden sm:inline">Κοινοποίηση</span>
+                <span className="hidden sm:inline">{t("share")}</span>
               </button>
             ) : null}
             {favoriteSlot}
@@ -117,19 +127,19 @@ export function ListingGalleryLightbox({
 
         {tabs.length > 1 && (
           <div className="mx-auto flex max-w-6xl gap-2 overflow-x-auto px-4 pb-3 sm:px-6">
-            {PHOTO_GALLERY_FILTERS.filter((t) => tabs.includes(t.id)).map((tab) => (
+            {tabs.map((tabId) => (
               <button
-                key={tab.id}
+                key={tabId}
                 type="button"
-                onClick={() => handleTabClick(tab.id)}
+                onClick={() => handleTabClick(tabId)}
                 className={cn(
                   "shrink-0 rounded-full px-3.5 py-1.5 text-xs font-medium transition-colors",
-                  filter === tab.id
+                  filter === tabId
                     ? "bg-charcoal text-white"
                     : "bg-sand/60 text-charcoal/75 hover:bg-sand"
                 )}
               >
-                {tab.label}
+                {tabId === "all" ? tGallery("allPhotos") : photoGalleryFilterLabel(tabId, locale)}
               </button>
             ))}
           </div>
@@ -148,7 +158,7 @@ export function ListingGalleryLightbox({
               className="scroll-mt-36 not-first:mt-10"
             >
               <h2 className="font-display text-lg font-semibold text-charcoal sm:text-xl">
-                {section.id === "all" ? "Όλες οι φωτογραφίες" : section.label}
+                {section.id === "all" ? tGallery("allPhotos") : section.label}
               </h2>
               <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
                 {section.photos.map((photo, index) => {
@@ -178,7 +188,7 @@ export function ListingGalleryLightbox({
           ))}
 
           {filtered.length === 0 && (
-            <p className="py-16 text-center text-sm text-muted">Δεν υπάρχουν φωτογραφίες σε αυτή την κατηγορία.</p>
+            <p className="py-16 text-center text-sm text-muted">{tGallery("emptyCategory")}</p>
           )}
         </div>
       </div>

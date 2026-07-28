@@ -31,15 +31,29 @@ function sortImages(listing: ListingWithImages): ListingWithImages {
   };
 }
 
-/** Search/map cards need only a cover photo — keeps catalog under Next cache limits. */
+/** Search/map cards: keep a short ordered photo set for in-card carousel (cache-safe). */
+const SEARCH_CARD_PHOTO_LIMIT = 8;
+
 function slimCatalogListing(listing: ListingWithImages): ListingWithImages {
   const images = listing.listing_images ?? [];
-  const cover =
-    images.find((img) => img.is_cover && img.media_type !== "video") ??
-    images.find((img) => img.media_type !== "video");
+  const photos = [...images]
+    .filter((img) => img.media_type !== "video")
+    .sort((a, b) => {
+      const aCover = a.is_cover ? 1 : 0;
+      const bCover = b.is_cover ? 1 : 0;
+      if (aCover !== bCover) return bCover - aCover;
+      return (a.sort_order ?? 0) - (b.sort_order ?? 0);
+    })
+    .slice(0, SEARCH_CARD_PHOTO_LIMIT)
+    .map((img) => ({
+      ...img,
+      media_type: img.media_type ?? ("image" as const),
+      is_cover: Boolean(img.is_cover),
+    }));
+
   return {
     ...listing,
-    listing_images: cover ? [cover] : [],
+    listing_images: photos,
   };
 }
 
@@ -185,7 +199,7 @@ async function loadSearchCatalogSnapshot(): Promise<ListingWithImages[] | null> 
 
 const getSearchCatalogSnapshotCached = unstable_cache(
   loadSearchCatalogSnapshot,
-  ["midora-search-catalog-slim-catalog-v1"],
+  ["midora-search-catalog-slim-carousel-v3"],
   { revalidate: 60, tags: [LISTINGS_CATALOG_TAG] }
 );
 
@@ -302,7 +316,11 @@ export async function getSearchCatalogListings(
     return shouldUseSeedListings() ? filterSeedListings(filters, limit) : [];
   }
   const snapshot = await getSearchCatalogSnapshot();
-  return resolveCatalogListings(snapshot, filters, limit);
+  const listings = await resolveCatalogListings(snapshot, filters, limit);
+  const { attachMonthlyPriceTiersToListings } = await import(
+    "@/lib/listing-monthly-tiers-db"
+  );
+  return attachMonthlyPriceTiersToListings(listings);
 }
 
 async function loadHomepageRecentListings(): Promise<ListingWithImages[]> {

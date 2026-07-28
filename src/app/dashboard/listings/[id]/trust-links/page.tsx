@@ -1,3 +1,4 @@
+import { getTranslations } from "next-intl/server";
 import { ListingExternalLinksEditor } from "@/components/dashboard/ListingExternalLinksEditor";
 import { requireDashboardContext } from "@/lib/dashboard-context";
 import { getOwnerListingExternalLinks } from "@/lib/listing-external-links-db";
@@ -11,19 +12,14 @@ export default async function ListingTrustLinksPage({
   const { id } = await params;
   const { profile } = await requireDashboardContext("/dashboard/listings");
   await loadListingWorkspace(id, profile.id);
+  const t = await getTranslations("Workspace.trustLinksPage");
   const externalLinks = await getOwnerListingExternalLinks(id, profile.id);
 
   return (
     <div className="max-w-2xl">
       <div className="mb-4">
-        <h2 className="font-display text-lg font-semibold text-charcoal">
-          Σύνδεσμοι αξιοπιστίας
-        </h2>
-        <p className="mt-1 text-sm text-muted">
-          Πρόσθεσε προαιρετικά HTTPS σύνδεσμο από άλλη πλατφόρμα όπου υπάρχει το ίδιο ακίνητο.
-          Βοηθά τον επισκέπτη να διασταυρώσει την αγγελία — χωρίς να σημαίνει επαλήθευση από το
-          Midora.
-        </p>
+        <h2 className="font-display text-lg font-semibold text-charcoal">{t("title")}</h2>
+        <p className="mt-1 text-sm text-muted">{t("subtitle")}</p>
       </div>
       <ListingExternalLinksEditor
         listingId={id}

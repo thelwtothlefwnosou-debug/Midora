@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { MapPin } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { LocationConfirmMap } from "@/components/listings/wizard/LocationConfirmMap";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { updateListingLocation } from "@/lib/actions";
@@ -14,6 +15,7 @@ type Props = {
 };
 
 export function ListingLocationEditor({ listing }: Props) {
+  const t = useTranslations("Workspace.locationEditor");
   const router = useRouter();
   const center = getListingMapCenter(
     listing.id,
@@ -43,7 +45,7 @@ export function ListingLocationEditor({ listing }: Props) {
         setError(result.error);
         return;
       }
-      setMessage("Η θέση του ακινήτου αποθηκεύτηκε.");
+      setMessage(t("saved"));
       router.refresh();
     });
   }
@@ -53,13 +55,9 @@ export function ListingLocationEditor({ listing }: Props) {
       <div className="flex items-start gap-3">
         <MapPin className="mt-0.5 h-5 w-5 shrink-0 text-gold" />
         <div>
-          <h2 className="font-display text-lg font-semibold text-charcoal">
-            Τοποθεσία στον χάρτη
-          </h2>
+          <h2 className="font-display text-lg font-semibold text-charcoal">{t("title")}</h2>
           <p className="mt-2 max-w-2xl text-sm leading-relaxed text-muted">
-            {hasCoords
-              ? "Σύρε το pin ή κάνε κλικ στον χάρτη αν η θέση δεν είναι σωστή."
-              : "Τοποθέτησε το pin στο σωστό σημείο — εμφανίζεται στην αγγελία και στις αναζητήσεις."}
+            {hasCoords ? t("hintHasCoords") : t("hintNoCoords")}
           </p>
           <p className="mt-1 text-xs text-muted">
             {listing.area}, {listing.city}
@@ -85,7 +83,7 @@ export function ListingLocationEditor({ listing }: Props) {
 
       <p className="mt-2 font-mono text-[11px] text-muted">
         {lat.toFixed(6)}, {lng.toFixed(6)}
-        {hasChanges && <span className="ml-2 text-amber-700">(τροποποιημένο)</span>}
+        {hasChanges && <span className="ml-2 text-amber-700">{t("modified")}</span>}
       </p>
 
       <div className="mt-4 flex flex-wrap items-center gap-2">
@@ -95,7 +93,7 @@ export function ListingLocationEditor({ listing }: Props) {
           onClick={handleSave}
           className="rounded-xl bg-charcoal px-4 py-2.5 text-sm font-semibold text-white hover:bg-charcoal/90 disabled:cursor-not-allowed disabled:opacity-40"
         >
-          {pending ? "Αποθήκευση…" : "Αποθήκευση θέσης"}
+          {pending ? t("saving") : t("savePosition")}
         </button>
         {hasChanges && (
           <button
@@ -109,7 +107,7 @@ export function ListingLocationEditor({ listing }: Props) {
             }}
             className="rounded-xl border border-border px-4 py-2.5 text-sm text-muted hover:text-charcoal disabled:opacity-40"
           >
-            Επαναφορά
+            {t("reset")}
           </button>
         )}
       </div>

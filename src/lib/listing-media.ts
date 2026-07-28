@@ -29,15 +29,33 @@ export function resolveListingImageUrl(url?: string | null): string | null {
   return `${base}/storage/v1/object/public/listing-photos/${trimmed.replace(/^\//, "")}`;
 }
 
-/** Prefer cover photo; returns null when no valid listing photo exists. */
+type CoverPhotoSource = {
+  listing_images?: Array<{
+    url: string;
+    media_type?: string | null;
+    is_cover?: boolean | null;
+    sort_order?: number | null;
+  }> | null;
+};
+
+/** Prefer lowest sort_order (owner’s first photo); is_cover is a sync’d flag, not a override. */
 export function pickListingCoverPhotoUrl(
-  listing: Pick<ListingWithImages, "listing_images">
+  listing: CoverPhotoSource | Pick<ListingWithImages, "listing_images">
 ): string | null {
-  const images = listing.listing_images ?? [];
-  const candidate =
-    images.find((img) => img.is_cover && img.media_type !== "video") ??
-    images.find((img) => img.media_type !== "video");
-  return resolveListingImageUrl(candidate?.url);
+  const photos = (listing.listing_images ?? []).filter(
+    (img) => img.media_type !== "video"
+  );
+  if (photos.length === 0) return null;
+
+  const sorted = [...photos].sort((a, b) => {
+    const orderDiff = (a.sort_order ?? 0) - (b.sort_order ?? 0);
+    if (orderDiff !== 0) return orderDiff;
+    const aCover = a.is_cover ? 1 : 0;
+    const bCover = b.is_cover ? 1 : 0;
+    return bCover - aCover;
+  });
+
+  return resolveListingImageUrl(sorted[0]?.url);
 }
 
 export function getListingCoverImage(listing: ListingWithImages): string {

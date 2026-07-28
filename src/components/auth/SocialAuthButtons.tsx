@@ -1,23 +1,12 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { createClient, isSupabaseConfigured } from "@/lib/supabase/client";
 import { safePostAuthPath } from "@/lib/auth-redirect";
+import { mapOAuthErrorCode, resolveAuthError } from "@/components/auth/auth-errors";
 
 type Provider = "google" | "facebook";
-
-const OAUTH_ERRORS: Record<string, string> = {
-  "Invalid login credentials": "Λάθος email ή κωδικός.",
-  "Email not confirmed": "Επιβεβαίωσε πρώτα το email σου.",
-  "Provider is not enabled": "Ο πάροχος δεν είναι ενεργοποιημένος ακόμα.",
-};
-
-function mapOAuthError(message: string): string {
-  for (const [key, value] of Object.entries(OAUTH_ERRORS)) {
-    if (message.includes(key)) return value;
-  }
-  return message;
-}
 
 function authRedirectUrl(next = "/dashboard/profile") {
   const safeNext = safePostAuthPath(next);
@@ -37,12 +26,14 @@ export function SocialAuthButtons({
   redirectTo?: string;
   disabled?: boolean;
 }) {
+  const t = useTranslations("Auth");
+  const tErrors = useTranslations("Auth.errors");
   const [loading, setLoading] = useState<Provider | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   async function signInWith(provider: Provider) {
     if (!isSupabaseConfigured()) {
-      setError("Το Supabase δεν είναι ρυθμισμένο ακόμα.");
+      setError(tErrors("supabaseNotConfigured"));
       return;
     }
 
@@ -62,7 +53,8 @@ export function SocialAuthButtons({
     });
 
     if (oauthError) {
-      setError(mapOAuthError(oauthError.message));
+      const code = mapOAuthErrorCode(oauthError.message);
+      setError(code ? resolveAuthError(tErrors, code) : oauthError.message);
       setLoading(null);
     }
   }
@@ -76,7 +68,7 @@ export function SocialAuthButtons({
         className="flex min-h-11 w-full items-center justify-center gap-3 rounded-xl border border-border bg-white px-4 py-3 text-sm font-medium text-[#1f1f1f] transition-colors hover:bg-sand/50 disabled:opacity-50"
       >
         <GoogleIcon />
-        {loading === "google" ? "Σύνδεση..." : "Σύνδεση με Google"}
+        {loading === "google" ? t("signingIn") : t("continueWithGoogle")}
       </button>
 
       {facebookEnabled ? (
@@ -87,7 +79,7 @@ export function SocialAuthButtons({
           className="flex min-h-11 w-full items-center justify-center gap-3 rounded-xl border border-[#1877F2]/30 bg-[#1877F2] px-4 py-3 text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-50"
         >
           <FacebookIcon />
-          {loading === "facebook" ? "Σύνδεση..." : "Σύνδεση με Facebook"}
+          {loading === "facebook" ? t("signingIn") : t("continueWithFacebook")}
         </button>
       ) : null}
 

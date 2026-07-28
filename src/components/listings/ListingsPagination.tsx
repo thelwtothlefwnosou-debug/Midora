@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { listingsPageHref } from "@/lib/listings-pagination";
 import { cn } from "@/lib/utils";
 
@@ -38,6 +39,7 @@ export function ListingsPagination({
   rangeEnd,
   onPageChange,
 }: Props) {
+  const t = useTranslations("Listings.pagination");
   const searchParams = useSearchParams();
 
   if (totalCount <= 0 || totalPages <= 1) return null;
@@ -63,14 +65,13 @@ export function ListingsPagination({
   return (
     <nav
       className="border-t border-border bg-white px-4 py-6 pb-8 sm:px-6 lg:pb-10"
-      aria-label="Σελιδοποίηση αποτελεσμάτων"
+      aria-label={t("ariaLabel")}
     >
       <p className="mb-3 text-center text-sm text-muted">
-        {rangeStart}–{rangeEnd} από {totalCount}{" "}
-        {totalCount === 1 ? "ακίνητο" : "ακίνητα"}
+        {t("rangeSummary", { start: rangeStart, end: rangeEnd, total: totalCount })}
         <span className="hidden sm:inline">
           {" "}
-          · Σελίδα {currentPage} από {totalPages}
+          · {t("pageOfTotal", { current: currentPage, total: totalPages })}
         </span>
       </p>
 
@@ -80,24 +81,24 @@ export function ListingsPagination({
             type="button"
             onClick={() => onPageChange(currentPage - 1)}
             className="inline-flex min-h-10 min-w-10 items-center justify-center gap-1 rounded-lg border border-border px-3 text-sm font-medium text-charcoal hover:bg-sand sm:min-w-0"
-            aria-label="Προηγούμενη σελίδα"
+            aria-label={t("previousAria")}
           >
             <ChevronLeft className="h-4 w-4" />
-            <span className="hidden sm:inline">Προηγούμενη</span>
+            <span className="hidden sm:inline">{t("previous")}</span>
           </button>
         ) : prevHref ? (
           <Link
             href={prevHref}
             className="inline-flex min-h-10 min-w-10 items-center justify-center gap-1 rounded-lg border border-border px-3 text-sm font-medium text-charcoal hover:bg-sand sm:min-w-0"
-            aria-label="Προηγούμενη σελίδα"
+            aria-label={t("previousAria")}
           >
             <ChevronLeft className="h-4 w-4" />
-            <span className="hidden sm:inline">Προηγούμενη</span>
+            <span className="hidden sm:inline">{t("previous")}</span>
           </Link>
         ) : (
           <span className="inline-flex min-h-10 min-w-10 items-center justify-center gap-1 rounded-lg border border-border px-3 text-sm text-muted opacity-40 sm:min-w-0">
             <ChevronLeft className="h-4 w-4" />
-            <span className="hidden sm:inline">Προηγούμενη</span>
+            <span className="hidden sm:inline">{t("previous")}</span>
           </span>
         )}
 
@@ -135,23 +136,23 @@ export function ListingsPagination({
             type="button"
             onClick={() => onPageChange(currentPage + 1)}
             className="inline-flex min-h-10 min-w-10 items-center justify-center gap-1 rounded-lg border border-border px-3 text-sm font-medium text-charcoal hover:bg-sand sm:min-w-0"
-            aria-label="Επόμενη σελίδα"
+            aria-label={t("nextAria")}
           >
-            <span className="hidden sm:inline">Επόμενη</span>
+            <span className="hidden sm:inline">{t("next")}</span>
             <ChevronRight className="h-4 w-4" />
           </button>
         ) : nextHref ? (
           <Link
             href={nextHref}
             className="inline-flex min-h-10 min-w-10 items-center justify-center gap-1 rounded-lg border border-border px-3 text-sm font-medium text-charcoal hover:bg-sand sm:min-w-0"
-            aria-label="Επόμενη σελίδα"
+            aria-label={t("nextAria")}
           >
-            <span className="hidden sm:inline">Επόμενη</span>
+            <span className="hidden sm:inline">{t("next")}</span>
             <ChevronRight className="h-4 w-4" />
           </Link>
         ) : (
           <span className="inline-flex min-h-10 min-w-10 items-center justify-center gap-1 rounded-lg border border-border px-3 text-sm text-muted opacity-40 sm:min-w-0">
-            <span className="hidden sm:inline">Επόμενη</span>
+            <span className="hidden sm:inline">{t("next")}</span>
             <ChevronRight className="h-4 w-4" />
           </span>
         )}

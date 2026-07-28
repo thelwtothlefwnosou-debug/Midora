@@ -1,5 +1,6 @@
 "use server";
 
+import { actionError, authActionError, mustSignInError } from "@/lib/action-error-i18n";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { LISTING_SAVE_ERROR_MSG } from "@/lib/listing-wizard-validation";
@@ -14,12 +15,12 @@ function isMissingTable(error: { code?: string } | null): boolean {
 }
 async function requireListingOwner(listingId: string) {
   const supabase = await createClient();
-  if (!supabase) return { error: "Η υπηρεσία δεν είναι διαθέσιμη." } as const;
+  if (!supabase) return { error: await actionError("serviceUnavailable") } as const;
 
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) return { error: "Πρέπει να συνδεθείς." } as const;
+  if (!user) return await mustSignInError();
 
   const { data: listing } = await supabase
     .from("listings")
@@ -28,7 +29,7 @@ async function requireListingOwner(listingId: string) {
     .eq("user_id", user.id)
     .maybeSingle();
 
-  if (!listing) return { error: "Η αγγελία δεν βρέθηκε." } as const;
+  if (!listing) return { error: await actionError("listingNotFound") } as const;
   return { supabase, user } as const;
 }
 
@@ -116,10 +117,10 @@ export async function saveListingPriceRule(listingId: string, formData: FormData
   const extraFee = parseInt((formData.get("extra_guest_fee_per_night") as string) || "", 10);
   const minStay = parseInt((formData.get("min_stay_nights") as string) || "", 10);
 
-  if (!startDate || !endDate) return { error: "Συμπλήρωσε ημερομηνίες έναρξης και λήξης." };
-  if (endDate < startDate) return { error: "Η ημερομηνία λήξης πρέπει να είναι μετά την έναρξη." };
+  if (!startDate || !endDate) return { error: await actionError("pricingDatesStartEndRequired") };
+  if (endDate < startDate) return { error: await actionError("pricingEndAfterStart") };
   if (!Number.isFinite(pricePerNight) || pricePerNight <= 0) {
-    return { error: "Συμπλήρωσε έγκυρη τιμή ανά βράδυ." };
+    return { error: await actionError("pricingNightPriceRequired") };
   }
 
   const { data: existingRules } = await auth.supabase
@@ -133,7 +134,7 @@ export async function saveListingPriceRule(listingId: string, formData: FormData
       rangesOverlap(startDate, endDate, r.start_date, r.end_date)
   );
   if (overlap) {
-    return { error: "Υπάρχει επικάλυψη με άλλη περίοδο τιμολόγησης." };
+    return { error: await actionError("pricingOverlap") };
   }
 
   const row = {
@@ -219,12 +220,12 @@ export async function saveCalendarPriceRule(
   const auth = await requireListingOwner(listingId);
   if ("error" in auth) return { error: auth.error };
 
-  if (!startDate || !endDate) return { error: "Συμπλήρωσε ημερομηνίες." };
+  if (!startDate || !endDate) return { error: await actionError("pricingDatesRequired") };
   if (endDate < startDate) {
-    return { error: "Η ημερομηνία λήξης πρέπει να είναι μετά την έναρξη." };
+    return { error: await actionError("pricingEndAfterStart") };
   }
   if (!Number.isFinite(pricePerNight) || pricePerNight <= 0) {
-    return { error: "Συμπλήρωσε έγκυρη τιμή ανά βράδυ." };
+    return { error: await actionError("pricingNightPriceRequired") };
   }
 
   const { data: existingRules, error: rulesError } = await auth.supabase
@@ -236,8 +237,7 @@ export async function saveCalendarPriceRule(
     const autoLabel =
       label?.trim() ||
       (startDate === endDate
-        ? `Ειδική τιμή ${startDate}`
-        : `Ειδική τιμή ${startDate} – ${endDate}`);
+        ? await actionError("specialPriceLabel", { start: startDate }) : await actionError("specialPriceRangeLabel", { start: startDate, end: endDate }));
     const stored = await saveCalendarPriceRuleToStorage(
       listingId,
       auth.user.id,
@@ -268,8 +268,7 @@ export async function saveCalendarPriceRule(
   const autoLabel =
     label?.trim() ||
     (startDate === endDate
-      ? `Ειδική τιμή ${startDate}`
-      : `Ειδική τιμή ${startDate} – ${endDate}`);
+      ? await actionError("specialPriceLabel", { start: startDate }) : await actionError("specialPriceRangeLabel", { start: startDate, end: endDate }));
 
   const { error } = await auth.supabase.from("listing_price_rules").insert({
     listing_id: listingId,

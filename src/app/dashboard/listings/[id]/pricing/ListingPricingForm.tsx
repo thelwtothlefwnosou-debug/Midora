@@ -4,6 +4,7 @@ import { useActionState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Plus, Trash2 } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { GlassCard } from "@/components/ui/GlassCard";
 import {
   deleteListingPriceRule,
@@ -23,6 +24,7 @@ type Props = {
 
 export function ListingPricingForm({ listing, rules, profile, email }: Props) {
   const router = useRouter();
+  const t = useTranslations("Workspace.pricingForm");
   const [deletePending, startDelete] = useTransition();
   const [state, formAction, pending] = useActionState(
     async (_prev: { error?: string; success?: boolean } | null, formData: FormData) => {
@@ -34,66 +36,65 @@ export function ListingPricingForm({ listing, rules, profile, email }: Props) {
   return (
     <div>
       <div className="mb-4">
-        <h2 className="font-display text-lg font-semibold text-charcoal">Τιμές και διαθεσιμότητα</h2>
+        <h2 className="font-display text-lg font-semibold text-charcoal">{t("title")}</h2>
         <p className="mt-1 text-sm text-muted">{listing.title}</p>
       </div>
       <Link
         href={`/dashboard/listings/${listing.id}`}
         className="mb-6 inline-flex items-center gap-1 text-sm text-muted hover:text-charcoal"
       >
-        <ArrowLeft className="h-4 w-4" /> Πίσω στη διαχείριση
+        <ArrowLeft className="h-4 w-4" /> {t("backToManage")}
       </Link>
 
       <GlassCard className="space-y-6 p-6 sm:p-8">
         <div>
           <h2 className="font-display text-lg font-semibold text-charcoal">
-            Βασική τιμολόγηση
+            {t("basePricingTitle")}
           </h2>
           <p className="mt-2 text-sm text-muted">
-            Βασική τιμή: €{listing.price_per_night ?? "—"} / βράδυ
-            {listing.included_guests != null && ` · έως ${listing.included_guests} άτομα`}
+            {t("basePriceLabel", { price: listing.price_per_night ?? "—" })}
+            {listing.included_guests != null && ` · ${t("includedGuestsSuffix", { count: listing.included_guests })}`}
             {listing.extra_guest_fee_per_night != null &&
               listing.extra_guest_fee_per_night > 0 &&
-              ` · + €${listing.extra_guest_fee_per_night} / επιπλέον άτομο`}
+              ` · ${t("extraGuestSuffix", { amount: listing.extra_guest_fee_per_night })}`}
           </p>
           <p className="mt-1 text-xs text-muted">
-            Η βασική τιμή ορίζεται κατά τη δημιουργία της αγγελίας. Εδώ προσθέτεις
-            εποχιακές ή ειδικές περιόδους.
+            {t("basePricingHint")}
           </p>
         </div>
 
         <div>
           <h3 className="flex items-center gap-2 font-display text-base font-semibold text-charcoal">
             <Plus className="h-4 w-4 text-gold" />
-            Νέα περίοδος τιμολόγησης
+            {t("newPeriodTitle")}
           </h3>
           <form action={formAction} className="mt-4 grid gap-4 sm:grid-cols-2">
             <label className="block sm:col-span-2">
-              <span className="text-xs text-muted uppercase">Ετικέτα</span>
-              <input name="label" placeholder="π.χ. Χριστούγεννα, Καλοκαίρι" className={inputClass} />
+              <span className="text-xs text-muted uppercase">{t("periodLabel")}</span>
+              <input name="label" placeholder={t("periodLabelPlaceholder")} className={inputClass} />
             </label>
             <label className="block">
-              <span className="text-xs text-muted uppercase">Από *</span>
+              <span className="text-xs text-muted uppercase">{t("from")}</span>
               <input type="date" name="start_date" required className={inputClass} />
             </label>
             <label className="block">
-              <span className="text-xs text-muted uppercase">Έως *</span>
+              <span className="text-xs text-muted uppercase">{t("to")}</span>
               <input type="date" name="end_date" required className={inputClass} />
             </label>
             <label className="block">
-              <span className="text-xs text-muted uppercase">Τιμή / βράδυ (€) *</span>
+              <span className="text-xs text-muted uppercase">{t("pricePerNight")}</span>
               <input type="number" name="price_per_night" min={1} required className={inputClass} />
             </label>
             <label className="block">
-              <span className="text-xs text-muted uppercase">Περιλαμβάνονται άτομα</span>
+              <span className="text-xs text-muted uppercase">{t("includedGuests")}</span>
               <input type="number" name="included_guests" min={1} className={inputClass} />
             </label>
             <label className="block">
-              <span className="text-xs text-muted uppercase">Επιπλέον άτομο / βράδυ (€)</span>
+              <span className="text-xs text-muted uppercase">{t("extraGuestFee")}</span>
               <input type="number" name="extra_guest_fee_per_night" min={0} className={inputClass} />
             </label>
             <label className="block">
-              <span className="text-xs text-muted uppercase">Ελάχ. νύχτες</span>
+              <span className="text-xs text-muted uppercase">{t("minNights")}</span>
               <input type="number" name="min_stay_nights" min={1} className={inputClass} />
             </label>
             <div className="sm:col-span-2">
@@ -102,18 +103,18 @@ export function ListingPricingForm({ listing, rules, profile, email }: Props) {
                 disabled={pending}
                 className="rounded-xl bg-gold px-5 py-2.5 text-sm font-semibold text-white disabled:opacity-60"
               >
-                {pending ? "Αποθήκευση..." : "Προσθήκη περιόδου"}
+                {pending ? t("saving") : t("addPeriod")}
               </button>
             </div>
           </form>
           {state?.error && <p className="mt-2 text-sm text-red-500">{state.error}</p>}
-          {state?.success && <p className="mt-2 text-sm text-teal">Η περίοδος αποθηκεύτηκε.</p>}
+          {state?.success && <p className="mt-2 text-sm text-teal">{t("periodSaved")}</p>}
         </div>
 
         {rules.length > 0 && (
           <div>
             <h3 className="font-display text-base font-semibold text-charcoal">
-              Ενεργές περίοδοι
+              {t("activePeriods")}
             </h3>
             <ul className="mt-4 space-y-3">
               {rules.map((rule) => (
@@ -123,10 +124,13 @@ export function ListingPricingForm({ listing, rules, profile, email }: Props) {
                 >
                   <div>
                     <p className="font-medium text-charcoal">
-                      {rule.label || "Περίοδος τιμολόγησης"}
+                      {rule.label || t("pricingPeriodFallback")}
                     </p>
                     <p className="text-sm text-muted">
-                      {rule.start_date} — {rule.end_date} · €{rule.price_per_night} / βράδυ
+                      {rule.start_date} — {rule.end_date} ·{" "}
+                      {t("rulePriceSuffix", {
+                        price: rule.price_per_night ?? 0,
+                      })}
                     </p>
                   </div>
                   <button
@@ -139,7 +143,7 @@ export function ListingPricingForm({ listing, rules, profile, email }: Props) {
                       });
                     }}
                     className="rounded-lg p-2 text-red-500 hover:bg-red-50 disabled:opacity-50"
-                    aria-label="Διαγραφή"
+                    aria-label={t("delete")}
                   >
                       <Trash2 className="h-4 w-4" />
                   </button>
@@ -150,8 +154,7 @@ export function ListingPricingForm({ listing, rules, profile, email }: Props) {
         )}
 
         <p className="text-xs leading-relaxed text-muted">
-          Οι τιμές εμφανίζονται ενδεικτικά στην αγγελία. Η τελική τιμή και συμφωνία
-          επιβεβαιώνονται απευθείας με τον αγγελιοδότη.
+          {t("disclaimer")}
         </p>
       </GlassCard>
     </div>

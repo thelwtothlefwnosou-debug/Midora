@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Gift, TrendingUp, Users } from "lucide-react";
+import { getTranslations } from "next-intl/server";
 import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
 import { GlassCard } from "@/components/ui/GlassCard";
@@ -10,6 +11,7 @@ import { generateReferralCode } from "@/lib/referrals";
 import { ReferralShareButton } from "@/components/referrals/ReferralShareButton";
 
 export default async function ReferPage() {
+  const t = await getTranslations("Refer");
   const profile = await getCurrentProfile();
   const supabase = await createClient();
 
@@ -27,41 +29,33 @@ export default async function ReferPage() {
     ? `${appUrl}/register?ref=${referralCode}`
     : `${appUrl}/register`;
 
+  const steps = [
+    { icon: Users, title: t("step1Title"), text: t("step1Text") },
+    { icon: Gift, title: t("step2Title"), text: t("step2Text") },
+    { icon: TrendingUp, title: t("step3Title"), text: t("step3Text") },
+  ] as const;
+
   return (
     <>
       <Navbar />
       <main className="min-h-screen pt-24 pb-16">
         <div className="mx-auto max-w-3xl px-6">
           <h1 className="font-display text-3xl font-bold text-charcoal sm:text-4xl">
-            Σύστησε ιδιοκτήτη, κέρδισε δωρεάν μήνες
+            {t("title")}
           </h1>
           <p className="mt-3 text-muted">
-            Μοιράσου τον σύνδεσμό σου. Όταν ο φίλος σου ανεβάσει και εγκριθεί η
-            πρώτη του αγγελία, κερδίζεις{" "}
-            <strong className="text-charcoal">1 δωρεάν μήνα</strong> στις δικές
-            σου αγγελίες και{" "}
-            <strong className="text-charcoal">boost στην αναζήτηση</strong> για
-            30 ημέρες.
+            {t.rich("subtitle", {
+              freeMonth: (chunks) => (
+                <strong className="text-charcoal">{chunks}</strong>
+              ),
+              boost: (chunks) => (
+                <strong className="text-charcoal">{chunks}</strong>
+              ),
+            })}
           </p>
 
           <div className="mt-10 grid gap-4 sm:grid-cols-3">
-            {[
-              {
-                icon: Users,
-                title: "Σύστησε",
-                text: "Στείλε τον σύνδεσμο σε ιδιοκτήτη που θέλει να νοικιάσει",
-              },
-              {
-                icon: Gift,
-                title: "Κέρδισε μήνα",
-                text: "Δωρεάν επέκταση στις δικές σου ενεργές αγγελίες",
-              },
-              {
-                icon: TrendingUp,
-                title: "Boost",
-                text: "Οι αγγελίες σου εμφανίζονται πιο πάνω στα αποτελέσματα",
-              },
-            ].map(({ icon: Icon, title, text }) => (
+            {steps.map(({ icon: Icon, title, text }) => (
               <GlassCard key={title} className="p-5">
                 <Icon className="h-6 w-6 text-gold" />
                 <h3 className="mt-3 font-semibold text-charcoal">{title}</h3>
@@ -73,9 +67,7 @@ export default async function ReferPage() {
           <GlassCard glow className="mt-10 p-6">
             {profile ? (
               <>
-                <p className="text-sm font-medium text-charcoal">
-                  Ο σύνδεσμός σου σύστασης
-                </p>
+                <p className="text-sm font-medium text-charcoal">{t("yourReferralLink")}</p>
                 <div className="mt-3 flex flex-wrap items-center gap-3">
                   <code className="flex-1 rounded-xl border border-border bg-sand/50 px-4 py-3 text-sm text-charcoal break-all">
                     {shareUrl}
@@ -85,20 +77,18 @@ export default async function ReferPage() {
               </>
             ) : (
               <>
-                <p className="text-sm text-muted">
-                  Κάνε σύνδεση για να πάρεις τον προσωπικό σου σύνδεσμο σύστασης.
-                </p>
+                <p className="text-sm text-muted">{t("loginPrompt")}</p>
                 <Button href="/login?next=/refer" className="mt-4">
-                  Σύνδεση / Εγγραφή
+                  {t("loginCta")}
                 </Button>
               </>
             )}
           </GlassCard>
 
           <p className="mt-8 text-center text-sm text-muted">
-            Θέλεις να ανεβάσεις εσύ αγγελία;{" "}
+            {t("wantToList")}{" "}
             <Link href="/dashboard/listings/new" className="text-gold hover:underline">
-              Γίνε ιδιοκτήτης →
+              {t("becomeOwner")}
             </Link>
           </p>
         </div>

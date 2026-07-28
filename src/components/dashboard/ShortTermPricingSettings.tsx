@@ -1,15 +1,16 @@
 "use client";
 
-import { useActionState, useState, useTransition } from "react";
+import { useActionState, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { saveShortTermPricingSettings } from "@/lib/listing-pricing-actions";
 import type { ListingWithImages } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 const WEEKDAY_OPTIONS = [
-  { value: 5, label: "Παρασκευή" },
-  { value: 6, label: "Σάββατο" },
-  { value: 0, label: "Κυριακή" },
+  { value: 5, labelKey: "weekdayFriday" },
+  { value: 6, labelKey: "weekdaySaturday" },
+  { value: 0, labelKey: "weekdaySunday" },
 ] as const;
 
 type Props = {
@@ -23,6 +24,7 @@ function fieldClass() {
 
 export function ShortTermPricingSettings({ listing, onSaved }: Props) {
   const router = useRouter();
+  const t = useTranslations("Workspace.pricingSettings");
   const [dirty, setDirty] = useState(false);
   const [weekendDays, setWeekendDays] = useState<number[]>(
     listing.weekend_days?.length ? listing.weekend_days : [5, 6]
@@ -50,14 +52,14 @@ export function ShortTermPricingSettings({ listing, onSaved }: Props) {
   return (
     <form action={formAction} onChange={() => setDirty(true)} className="space-y-4">
       <div>
-        <h3 className="font-display text-sm font-semibold text-charcoal">Τιμές και κανόνες</h3>
+        <h3 className="font-display text-sm font-semibold text-charcoal">{t("title")}</h3>
         <p className="mt-1 text-xs text-muted">
-          Η βασική τιμή εφαρμόζεται σε όλες τις ημέρες χωρίς ειδική τιμή.
+          {t("subtitle")}
         </p>
       </div>
 
       <div>
-        <label className="text-xs font-medium text-muted uppercase">Βασική τιμή / βράδυ</label>
+        <label className="text-xs font-medium text-muted uppercase">{t("basePrice")}</label>
         <input
           name="price_per_night"
           type="number"
@@ -69,17 +71,17 @@ export function ShortTermPricingSettings({ listing, onSaved }: Props) {
       </div>
 
       <div>
-        <label className="text-xs font-medium text-muted uppercase">Τιμή Σαββατοκύριακου</label>
+        <label className="text-xs font-medium text-muted uppercase">{t("weekendPrice")}</label>
         <input
           name="weekend_price_per_night"
           type="number"
           min={1}
           defaultValue={listing.weekend_price_per_night ?? ""}
-          placeholder={listing.price_per_night ? String(listing.price_per_night) : "π.χ. 110"}
+          placeholder={listing.price_per_night ? String(listing.price_per_night) : t("weekendPricePlaceholder")}
           className={fieldClass()}
         />
         <p className="mt-1 text-[11px] text-muted">
-          Οι ειδικές τιμές υπερισχύουν της τιμής Σαββατοκύριακου.
+          {t("specialOverride")}
         </p>
         <div className="mt-2 flex flex-wrap gap-2">
           {WEEKDAY_OPTIONS.map((opt) => (
@@ -100,14 +102,14 @@ export function ShortTermPricingSettings({ listing, onSaved }: Props) {
                 onChange={() => toggleWeekendDay(opt.value)}
                 className="sr-only"
               />
-              {opt.label}
+              {t(opt.labelKey)}
             </label>
           ))}
         </div>
       </div>
 
       <div>
-        <label className="text-xs font-medium text-muted uppercase">Ελάχιστη διαμονή (νύχτες)</label>
+        <label className="text-xs font-medium text-muted uppercase">{t("minStay")}</label>
         <input
           name="minimum_stay_nights"
           type="number"
@@ -119,55 +121,55 @@ export function ShortTermPricingSettings({ listing, onSaved }: Props) {
 
       <div>
         <label className="text-xs font-medium text-muted uppercase">
-          Χρέωση καθαρισμού <span className="font-normal normal-case">(προαιρετικό)</span>
+          {t("cleaningFee")} <span className="font-normal normal-case">{t("optional")}</span>
         </label>
         <input
           name="cleaning_fee_note"
           type="text"
           defaultValue={listing.cleaning_fee_note ?? ""}
-          placeholder="π.χ. €40 — επιβεβαιώνεται από εσένα"
+          placeholder={t("cleaningFeePlaceholder")}
           className={fieldClass()}
         />
         <p className="mt-1 text-[11px] text-muted">
-          Ενημερωτικό πεδίο — δεν χρεώνεται μέσω Midora.
+          {t("cleaningFeeHint")}
         </p>
       </div>
 
       <div className="border-t border-border pt-4">
-        <p className="text-xs font-medium text-muted uppercase">Προσφορές και εκπτώσεις</p>
+        <p className="text-xs font-medium text-muted uppercase">{t("discountsTitle")}</p>
         <div className="mt-3 grid gap-3 sm:grid-cols-2">
           <div>
-            <label className="text-[11px] text-muted">Εβδομαδιαία (7+ νύχτες) %</label>
+            <label className="text-[11px] text-muted">{t("weeklyDiscount")}</label>
             <input
               name="weekly_discount_percent"
               type="number"
               min={0}
               max={90}
               defaultValue={listing.weekly_discount_percent ?? ""}
-              placeholder="π.χ. 10"
+              placeholder={t("weeklyDiscountPlaceholder")}
               className={fieldClass()}
             />
           </div>
           <div>
-            <label className="text-[11px] text-muted">Μηνιαία (28+ νύχτες) %</label>
+            <label className="text-[11px] text-muted">{t("monthlyDiscount")}</label>
             <input
               name="monthly_discount_percent"
               type="number"
               min={0}
               max={90}
               defaultValue={listing.monthly_discount_percent ?? ""}
-              placeholder="π.χ. 20"
+              placeholder={t("monthlyDiscountPlaceholder")}
               className={fieldClass()}
             />
           </div>
         </div>
         {!listing.weekly_discount_percent && !listing.monthly_discount_percent && (
           <p className="mt-2 text-[11px] text-muted">
-            Πρόσθεσε έκπτωση για μεγαλύτερες διαμονές.
+            {t("discountHint")}
           </p>
         )}
         <p className="mt-2 text-[11px] text-muted">
-          Οι εκπτώσεις εφαρμόζονται μόνο όταν η διάρκεια πληροί τους όρους.
+          {t("discountConditions")}
         </p>
       </div>
 
@@ -175,7 +177,7 @@ export function ShortTermPricingSettings({ listing, onSaved }: Props) {
         <p className="text-xs text-red-500">{state.error}</p>
       )}
       {state?.success && !dirty && (
-        <p className="text-xs text-teal">Οι ρυθμίσεις αποθηκεύτηκαν.</p>
+        <p className="text-xs text-teal">{t("saved")}</p>
       )}
 
       <button
@@ -183,7 +185,7 @@ export function ShortTermPricingSettings({ listing, onSaved }: Props) {
         disabled={pending}
         className="w-full rounded-xl bg-gold py-2.5 text-sm font-semibold text-white hover:bg-gold-dark disabled:opacity-60"
       >
-        {pending ? "Αποθήκευση…" : "Αποθήκευση ρυθμίσεων"}
+        {pending ? t("saving") : t("saveSettings")}
       </button>
     </form>
   );

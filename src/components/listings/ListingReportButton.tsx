@@ -2,17 +2,20 @@
 
 import { useState, useTransition } from "react";
 import { Flag } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { submitListingReport } from "@/lib/actions";
-import { COPY } from "@/lib/copy";
 import { cn } from "@/lib/utils";
 
-const REPORT_REASONS = [
-  "Ψεύτικη αγγελία",
-  "Λάθος στοιχεία",
-  "Ύποπτη συμπεριφορά",
-  "Πρόβλημα με ΑΜΑ",
-  "Άλλο",
+const LISTING_REASON_KEYS = [
+  "suspicious",
+  "wrongInfo",
+  "photosMismatch",
+  "wrongLocation",
+  "suspiciousComm",
+  "other",
 ] as const;
+
+type ListingReasonKey = (typeof LISTING_REASON_KEYS)[number];
 
 type Props = {
   listingTitle: string;
@@ -21,8 +24,10 @@ type Props = {
 };
 
 export function ListingReportButton({ listingTitle, listingId, className }: Props) {
+  const t = useTranslations("Legal.reports");
+  const tCommon = useTranslations("Common");
   const [open, setOpen] = useState(false);
-  const [reason, setReason] = useState<string>(REPORT_REASONS[0]);
+  const [reasonKey, setReasonKey] = useState<ListingReasonKey>(LISTING_REASON_KEYS[0]);
   const [description, setDescription] = useState("");
   const [email, setEmail] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -35,7 +40,7 @@ export function ListingReportButton({ listingTitle, listingId, className }: Prop
     setError(null);
     setDescription("");
     setEmail("");
-    setReason(REPORT_REASONS[0]);
+    setReasonKey(LISTING_REASON_KEYS[0]);
   }
 
   function handleSubmit(e: React.FormEvent) {
@@ -45,7 +50,7 @@ export function ListingReportButton({ listingTitle, listingId, className }: Prop
     const fd = new FormData();
     fd.set("listing_id", listingId);
     fd.set("listing_title", listingTitle);
-    fd.set("reason", reason);
+    fd.set("reason", t(`listingReasons.${reasonKey}`));
     if (description.trim()) fd.set("description", description.trim());
     if (email.trim()) fd.set("reporter_email", email.trim());
 
@@ -70,7 +75,7 @@ export function ListingReportButton({ listingTitle, listingId, className }: Prop
         )}
       >
         <Flag className="h-3.5 w-3.5" />
-        Αναφορά αγγελίας
+        {t("reportListing")}
       </button>
 
       {open && (
@@ -83,12 +88,12 @@ export function ListingReportButton({ listingTitle, listingId, className }: Prop
           <button
             type="button"
             className="absolute inset-0 bg-charcoal/45"
-            aria-label="Κλείσιμο"
+            aria-label={t("close")}
             onClick={resetAndClose}
           />
           <div className="relative w-full max-w-md rounded-t-2xl bg-white p-6 shadow-2xl sm:rounded-2xl">
             <h2 id="report-modal-title" className="font-display text-lg font-semibold text-charcoal">
-              {sent ? "Η αναφορά καταχωρήθηκε" : "Αναφορά αγγελίας"}
+              {sent ? t("reportFiled") : t("reportListing")}
             </h2>
             {!sent && (
               <p className="mt-1 text-sm text-muted line-clamp-1">{listingTitle}</p>
@@ -96,33 +101,35 @@ export function ListingReportButton({ listingTitle, listingId, className }: Prop
 
             {sent ? (
               <div className="mt-4">
-                <p className="text-sm leading-relaxed text-charcoal/75">{COPY.reportSuccessText}</p>
+                <p className="text-sm leading-relaxed text-charcoal/75">
+                  {tCommon("reportSuccessText")}
+                </p>
                 <button
                   type="button"
                   onClick={resetAndClose}
                   className="mt-5 w-full rounded-xl bg-charcoal py-3 text-sm font-semibold text-white"
                 >
-                  Κλείσιμο
+                  {t("close")}
                 </button>
               </div>
             ) : (
               <form onSubmit={handleSubmit} className="mt-4 space-y-4">
                 <fieldset>
                   <legend className="text-xs font-medium tracking-wide text-muted uppercase">
-                    Λόγος αναφοράς
+                    {t("reason")}
                   </legend>
                   <div className="mt-2 space-y-2">
-                    {REPORT_REASONS.map((r) => (
-                      <label key={r} className="flex cursor-pointer items-center gap-2 text-sm">
+                    {LISTING_REASON_KEYS.map((key) => (
+                      <label key={key} className="flex cursor-pointer items-center gap-2 text-sm">
                         <input
                           type="radio"
                           name="reason"
-                          value={r}
-                          checked={reason === r}
-                          onChange={() => setReason(r)}
+                          value={key}
+                          checked={reasonKey === key}
+                          onChange={() => setReasonKey(key)}
                           className="accent-gold"
                         />
-                        {r}
+                        {t(`listingReasons.${key}`)}
                       </label>
                     ))}
                   </div>
@@ -130,7 +137,7 @@ export function ListingReportButton({ listingTitle, listingId, className }: Prop
 
                 <label className="block">
                   <span className="text-xs font-medium tracking-wide text-muted uppercase">
-                    Περιγραφή προβλήματος
+                    {t("description")}
                   </span>
                   <textarea
                     rows={3}
@@ -142,7 +149,7 @@ export function ListingReportButton({ listingTitle, listingId, className }: Prop
 
                 <label className="block">
                   <span className="text-xs font-medium tracking-wide text-muted uppercase">
-                    Email επικοινωνίας (προαιρετικά)
+                    {t("emailOptional")}
                   </span>
                   <input
                     type="email"
@@ -160,14 +167,14 @@ export function ListingReportButton({ listingTitle, listingId, className }: Prop
                     onClick={resetAndClose}
                     className="min-h-10 flex-1 rounded-xl border border-border text-sm font-medium"
                   >
-                    Ακύρωση
+                    {t("dismiss")}
                   </button>
                   <button
                     type="submit"
                     disabled={pending}
                     className="min-h-10 flex-1 rounded-xl bg-charcoal text-sm font-semibold text-white disabled:opacity-60"
                   >
-                    {pending ? "Αποστολή..." : "Υποβολή αναφοράς"}
+                    {pending ? t("submitting") : t("submitReport")}
                   </button>
                 </div>
               </form>

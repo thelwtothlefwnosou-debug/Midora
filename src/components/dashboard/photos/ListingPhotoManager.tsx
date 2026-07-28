@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useRef } from "react";
+import { useTranslations } from "next-intl";
 import { Upload } from "lucide-react";
 import { ListingWizardPhotosStep } from "@/components/listings/wizard/ListingWizardPhotosStep";
 import { ListingPublicGalleryPreview } from "@/components/dashboard/photos/ListingPublicGalleryPreview";
@@ -13,7 +14,7 @@ import {
   photoManagerSummary,
   sortListingPhotosForDisplay,
 } from "@/lib/listing-photo-display";
-import { suggestPhotoRooms } from "@/lib/photo-rooms-catalog";
+import { getSuggestPhotoRooms } from "@/lib/photo-rooms-catalog";
 import { listingRentalType } from "@/lib/rental-types";
 import { getListingPublicId } from "@/lib/utils";
 import type {
@@ -36,10 +37,16 @@ export function ListingPhotoManager({
   const uploadRef = useRef<HTMLDivElement>(null);
   const isShortTerm = listingRentalType(listing) === "short_term";
   const publicId = getListingPublicId(listing);
+  const t = useTranslations("Workspace.photoManager");
+  const tPhotoRooms = useTranslations("Listing.photoRooms");
 
   const rooms = useMemo(
-    () => suggestPhotoRooms({ bedrooms: listing.bedrooms, bathrooms: listing.bathrooms }),
-    [listing.bedrooms, listing.bathrooms]
+    () =>
+      getSuggestPhotoRooms(
+        { bedrooms: listing.bedrooms, bathrooms: listing.bathrooms },
+        (key) => tPhotoRooms(key as Parameters<typeof tPhotoRooms>[0])
+      ),
+    [listing.bedrooms, listing.bathrooms, tPhotoRooms]
   );
 
   const photos = useMemo(
@@ -64,10 +71,8 @@ export function ListingPhotoManager({
       <header className="rounded-xl border border-border bg-white px-4 py-3 shadow-soft">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h2 className="font-display text-base font-semibold text-charcoal">Φωτογραφίες</h2>
-            <p className="mt-0.5 text-xs text-muted">
-              Εξώφυλλο, σειρά, χώροι — αποθηκεύονται αμέσως.
-            </p>
+            <h2 className="font-display text-base font-semibold text-charcoal">{t("title")}</h2>
+            <p className="mt-0.5 text-xs text-muted">{t("subtitle")}</p>
           </div>
           <button
             type="button"
@@ -75,20 +80,20 @@ export function ListingPhotoManager({
             className="inline-flex min-h-9 items-center gap-2 rounded-xl bg-charcoal px-3.5 text-sm font-semibold text-white hover:bg-charcoal/90"
           >
             <Upload className="h-4 w-4" />
-            Ανέβασε
+            {t("upload")}
           </button>
         </div>
 
         <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
-          <SummaryChip label="Φωτογραφίες" value={String(summary.total)} />
-          <SummaryChip label="Εξώφυλλο" value={summary.coverCount ? "1" : "—"} />
-          <SummaryChip label="Χώροι με φωτό" value={String(summary.roomsWithPhotos)} />
-          <SummaryChip label="Χωρίς χώρο" value={String(summary.unassigned)} />
+          <SummaryChip label={t("chipPhotos")} value={String(summary.total)} />
+          <SummaryChip label={t("chipCover")} value={summary.coverCount ? "1" : "—"} />
+          <SummaryChip label={t("chipRoomsWithPhotos")} value={String(summary.roomsWithPhotos)} />
+          <SummaryChip label={t("chipUnassigned")} value={String(summary.unassigned)} />
         </div>
 
         {!hasCover && summary.total > 0 && (
           <p className="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
-            Επίλεξε φωτογραφία εξωφύλλου για να εμφανίζεται σωστά η αγγελία.
+            {t("noCoverWarning")}
           </p>
         )}
       </header>

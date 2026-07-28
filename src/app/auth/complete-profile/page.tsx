@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import { getTranslations } from "next-intl/server";
 import { getCurrentProfile } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { safePostAuthPath } from "@/lib/auth-redirect";
@@ -9,6 +10,7 @@ export default async function CompleteProfilePage({
 }: {
   searchParams: Promise<{ next?: string }>;
 }) {
+  const t = await getTranslations("Auth.completeProfile");
   const profile = await getCurrentProfile();
   if (!profile) redirect("/login");
 
@@ -24,7 +26,7 @@ export default async function CompleteProfilePage({
     <Suspense
       fallback={
         <div className="flex min-h-screen items-center justify-center text-muted">
-          Φόρτωση...
+          {t("loading")}
         </div>
       }
     >

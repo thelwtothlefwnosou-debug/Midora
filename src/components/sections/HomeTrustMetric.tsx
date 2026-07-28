@@ -1,8 +1,10 @@
+import { getTranslations } from "next-intl/server";
 import { createClient } from "@/lib/supabase/server";
 import { getEffectiveListingStatus } from "@/lib/listing-status";
 import type { ListingWithImages } from "@/lib/types";
 
 export async function HomeTrustMetric() {
+  const t = await getTranslations("Home");
   const supabase = await createClient();
   let count = 0;
 
@@ -28,15 +30,17 @@ export async function HomeTrustMetric() {
   if (count < 1) return null;
 
   const label =
-    count === 1 ? "1 δημοσιευμένη αγγελία" : `${count.toLocaleString("el-GR")} δημοσιευμένες αγγελίες`;
+    count === 1
+      ? t("trustMetricOne")
+      : t("trustMetricMany", { count: count.toLocaleString("el-GR") });
 
   return (
-    <section className="border-b border-border bg-white py-3" aria-label="Στατιστικά πλατφόρμας">
+    <section className="border-b border-border bg-white py-3" aria-label={t("trustMetricAria")}>
       <div className="mx-auto max-w-6xl px-4 text-center sm:px-6">
         <p className="text-sm text-charcoal/75">
           <span className="font-semibold text-charcoal">{label}</span>
           <span className="mx-2 text-muted">·</span>
-          <span>Έλεγχος αγγελιών πριν τη δημοσίευση</span>
+          <span>{t("trustReviewNote")}</span>
         </p>
       </div>
     </section>

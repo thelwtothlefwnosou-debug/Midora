@@ -1,3 +1,5 @@
+"use client";
+
 import Link from "next/link";
 import {
   Eye,
@@ -10,7 +12,9 @@ import {
   BarChart3,
   Link2,
 } from "lucide-react";
+import { useLocale, useTranslations } from "next-intl";
 import { Button } from "@/components/ui/Button";
+import { AadeGuideHelperCard } from "@/components/aade/AadeGuideHelperCard";
 import { DashboardEmptyState } from "@/components/dashboard/DashboardEmptyState";
 import { PropertyLeadRow } from "@/components/dashboard/PropertyLeadRow";
 import { ListingCompletenessCard } from "@/components/dashboard/ListingCompletenessCard";
@@ -23,8 +27,12 @@ import {
   hasListingPerformanceData,
 } from "@/lib/owner-listing-analytics";
 import { formatOwnerListingDate } from "@/lib/dashboard-listings";
-import { formatListingPrice } from "@/lib/rental-types";
+import { getFormattedListingPrice } from "@/lib/rental-types";
 import { getListingPublicId } from "@/lib/utils";
+import {
+  resolveOwnerListingUiStatus,
+} from "@/lib/owner-listing-ui-status";
+import { buildOwnerListingRowModel } from "@/lib/owner-listings-page";
 
 type Props = {
   ctx: ListingWorkspaceContext;
@@ -33,7 +41,9 @@ type Props = {
 };
 
 function activeUntilLabel(
-  ctx: ListingWorkspaceContext
+  ctx: ListingWorkspaceContext,
+  t: ReturnType<typeof useTranslations<"Workspace.overview">>,
+  dateLocale: string
 ): { text: string; tone: string } | null {
   const { listing, ownerStatusKey } = ctx;
   if (
@@ -45,53 +55,62 @@ function activeUntilLabel(
   }
 
   if (!listing.expires_at) {
-    return { text: "Ενεργή χωρίς ημερομηνία λήξης", tone: "text-charcoal/80" };
+    return { text: t("activeNoExpiry"), tone: "text-charcoal/80" };
   }
 
   const days = Math.ceil(
     (new Date(listing.expires_at).getTime() - Date.now()) / 86400000
   );
-  const formatted = formatOwnerListingDate(listing.expires_at);
+  const formatted = formatOwnerListingDate(listing.expires_at, dateLocale);
 
   if (days < 0) {
-    return { text: formatted ? `Έληξε στις ${formatted}` : "Έληξε", tone: "text-charcoal/60" };
+    return {
+      text: formatted ? t("expiredOn", { date: formatted }) : t("expired"),
+      tone: "text-charcoal/60",
+    };
   }
   if (days <= 6) {
     return {
-      text: `Λήγει σε ${days} ${days === 1 ? "ημέρα" : "ημέρες"}`,
+      text:
+        days === 1
+          ? t("expiresInDay", { count: days })
+          : t("expiresInDays", { count: days }),
       tone: "text-orange-700",
     };
   }
   if (days <= 14) {
     return {
-      text: formatted ? `Ενεργή έως ${formatted}` : `Λήγει σε ${days} ημέρες`,
+      text: formatted
+        ? t("activeUntil", { date: formatted })
+        : t("expiresInDays", { count: days }),
       tone: "text-gold-dark",
     };
   }
   return {
-    text: formatted ? `Ενεργή έως ${formatted}` : "Ενεργή",
+    text: formatted ? t("activeUntil", { date: formatted }) : t("active"),
     tone: "text-teal",
   };
 }
 
 function nextAction(
-  ctx: ListingWorkspaceContext
+  ctx: ListingWorkspaceContext,
+  t: ReturnType<typeof useTranslations<"Workspace.overview">>
 ): { label: string; href: string } | null {
   const { listing, ownerStatusKey } = ctx;
   const id = listing.id;
 
   switch (ownerStatusKey) {
     case "draft":
-      return { label: "Συνέχισε τη συμπλήρωση", href: `/dashboard/listings/new?draft=${id}` };
+      return { label: t("continueDraft"), href: `/dashboard/listings/new?draft=${id}` };
     case "needs_fixes":
-      return { label: "Διόρθωσε την αγγελία", href: `/dashboard/listings/${id}/edit` };
+      return { label: t("fixListing"), href: `/dashboard/listings/${id}/edit` };
     case "review":
-      return { label: "Δες κατάσταση δημοσίευσης", href: `/dashboard/listings/${id}/publish` };
+      return { label: t("seePublishStatus"), href: `/dashboard/listings/${id}/publish` };
     case "expired":
-      return { label: "Ανανέωση αγγελίας", href: `/dashboard/listings/${id}/pay` };
+      return { label: t("renewListing"), href: `/dashboard/listings/${id}/pay` };
     case "published":
     case "paused":
-      return { label: "Διαχείριση ημερολογίου", href: `/dashboard/listings/${id}/availability` };
+      return { label: t("manageCalendar"), href: `/dashboard/listings/${id}/availability` };
     default:
       return null;
   }
@@ -102,18 +121,27 @@ export function ListingOverviewPanel({
   recentLeads = [],
   externalLinkCount = 0,
 }: Props) {
-  const { listing, ownerStatusKey, ownerStatusLabel, photoCount, rentalType } = ctx;
+  const locale = useLocale();
+  const t = useTranslations("Workspace.overview");
+  const tUi = useTranslations("Owner.uiStatus");
+  const tCommon = useTranslations("Common");
+  const dateLocale = locale.startsWith("el") ? "el-GR" : "en-US";
+  const { listing, ownerStatusKey, photoCount, rentalType } = ctx;
+  const row = buildOwnerListingRowModel(listing, ctx.effectiveStatus);
+  const ui = resolveOwnerListingUiStatus(row, locale);
+  const statusLabel = tUi(ui.labelKey);
   const analytics = buildListingAnalytics(
     listing,
     ctx.effectiveStatus,
     ownerStatusKey
   );
-  const lifecycle = activeUntilLabel(ctx);
-  const action = nextAction(ctx);
+  const lifecycle = activeUntilLabel(ctx, t, dateLocale);
+  const action = nextAction(ctx, t);
   const publicId = getListingPublicId(listing);
+
   const showCompleteness = listingNeedsCompletenessPanel(ownerStatusKey);
   const hasPerformance = hasListingPerformanceData(analytics);
-  const price = formatListingPrice(listing);
+  const price = getFormattedListingPrice(listing, tCommon);
   const isShortTerm = rentalType === "short_term";
   const showTrustRecommendation = externalLinkCount === 0;
 
@@ -125,19 +153,15 @@ export function ListingOverviewPanel({
             <div className="min-w-0 flex-1">
               <p className="flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-wide text-gold-dark">
                 <Link2 className="h-3.5 w-3.5" />
-                Σύσταση
+                {t("recommendation")}
               </p>
               <h3 className="mt-1 font-display text-sm font-semibold text-charcoal">
-                Πρόσθεσε συνδέσμους αξιοπιστίας
+                {t("trustTitle")}
               </h3>
-              <p className="mt-1 text-sm text-muted">
-                Αν η αγγελία υπάρχει και αλλού (Airbnb, Booking κ.ά.), πρόσθεσε το HTTPS link.
-                Βοηθά τους επισκέπτες να διασταυρώσουν το ακίνητο — χωρίς να σημαίνει έλεγχο από
-                το Midora.
-              </p>
+              <p className="mt-1 text-sm text-muted">{t("trustBody")}</p>
             </div>
             <Button href={`/dashboard/listings/${listing.id}/trust-links`} size="sm">
-              Προσθήκη
+              {t("add")}
             </Button>
           </div>
         </section>
@@ -146,10 +170,10 @@ export function ListingOverviewPanel({
       <section className="grid gap-3 lg:grid-cols-2">
         <div className="rounded-xl border border-border bg-white p-4 shadow-soft">
           <p className="text-[11px] font-medium uppercase tracking-wide text-muted">
-            Κατάσταση αγγελίας
+            {t("listingStatus")}
           </p>
           <p className="mt-1 font-display text-lg font-semibold text-charcoal">
-            {ownerStatusLabel}
+            {statusLabel}
           </p>
           {lifecycle && (
             <p className={`mt-1 text-sm font-medium ${lifecycle.tone}`}>{lifecycle.text}</p>
@@ -167,14 +191,14 @@ export function ListingOverviewPanel({
 
         <div className="rounded-xl border border-border bg-white p-4 shadow-soft">
           <p className="text-[11px] font-medium uppercase tracking-wide text-muted">
-            Απόδοση
+            {t("performance")}
           </p>
           {hasPerformance ? (
             <div className="mt-2 flex flex-wrap gap-4">
               <div>
                 <p className="flex items-center gap-1 text-xs text-muted">
                   <Eye className="h-3 w-3" />
-                  Προβολές
+                  {t("views")}
                 </p>
                 <p className="font-display text-2xl font-semibold tabular-nums text-charcoal">
                   {formatAnalyticsMetric(analytics.viewsTotal)}
@@ -183,7 +207,7 @@ export function ListingOverviewPanel({
               <div>
                 <p className="flex items-center gap-1 text-xs text-muted">
                   <MessageSquare className="h-3 w-3" />
-                  Αιτήματα
+                  {t("requests")}
                 </p>
                 <p className="font-display text-2xl font-semibold tabular-nums text-charcoal">
                   {recentLeads.length}
@@ -194,8 +218,8 @@ export function ListingOverviewPanel({
             <DashboardEmptyState
               compact
               icon={BarChart3}
-              title="Χωρίς στατιστικά ακόμα"
-              text="Τα στατιστικά θα εμφανιστούν όταν η αγγελία λάβει επισκέψεις."
+              title={t("noStatsTitle")}
+              text={t("noStatsBody")}
               className="mt-2 border-0 bg-transparent px-0 py-0"
             />
           )}
@@ -206,21 +230,18 @@ export function ListingOverviewPanel({
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <p className="text-[11px] font-medium uppercase tracking-wide text-muted">
-              Διαθεσιμότητα
+              {t("availability")}
             </p>
             {isShortTerm ? (
               <>
                 <p className="mt-1 text-sm text-charcoal">
-                  Βασική τιμή:{" "}
-                  <span className="font-semibold">
-                    {listing.price_per_night
-                      ? `€${listing.price_per_night.toLocaleString("el-GR")} / βράδυ`
-                      : "—"}
-                  </span>
+                  {listing.price_per_night
+                    ? t("basePriceNight", {
+                        price: listing.price_per_night.toLocaleString(dateLocale),
+                      })
+                    : t("basePriceDash")}
                 </p>
-                <p className="mt-0.5 text-xs text-muted">
-                  Διαχείριση τιμών και κλεισμένων ημερομηνιών στο ημερολόγιο.
-                </p>
+                <p className="mt-0.5 text-xs text-muted">{t("calendarHint")}</p>
               </>
             ) : (
               <>
@@ -229,7 +250,9 @@ export function ListingOverviewPanel({
                 </p>
                 {listing.available_from && (
                   <p className="mt-0.5 text-xs text-muted">
-                    Διαθέσιμο από {formatOwnerListingDate(listing.available_from)}
+                    {t("availableFrom", {
+                      date: formatOwnerListingDate(listing.available_from, dateLocale) ?? "",
+                    })}
                   </p>
                 )}
               </>
@@ -241,7 +264,7 @@ export function ListingOverviewPanel({
             variant="outline"
           >
             <CalendarDays className="h-3.5 w-3.5" />
-            {isShortTerm ? "Ημερολόγιο" : "Διαθεσιμότητα"}
+            {isShortTerm ? t("calendar") : t("availability")}
           </Button>
         </div>
       </section>
@@ -249,14 +272,14 @@ export function ListingOverviewPanel({
       <section className="rounded-xl border border-border bg-white p-4 shadow-soft">
         <div className="flex items-center justify-between gap-2">
           <h3 className="font-display text-sm font-semibold text-charcoal">
-            Πρόσφατα αιτήματα
+            {t("recentRequests")}
           </h3>
           {recentLeads.length > 0 && (
             <Link
               href={`/dashboard/listings/${listing.id}/inquiries`}
               className="text-xs font-medium text-gold-dark hover:text-charcoal"
             >
-              Όλα
+              {t("all")}
             </Link>
           )}
         </div>
@@ -264,8 +287,8 @@ export function ListingOverviewPanel({
           <DashboardEmptyState
             compact
             icon={MessageSquare}
-            title="Χωρίς αιτήματα"
-            text="Δεν υπάρχουν ακόμη αιτήματα ενδιαφέροντος για αυτό το ακίνητο."
+            title={t("noRequestsTitle")}
+            text={t("noRequestsBody")}
             className="mt-3"
           />
         ) : (
@@ -277,16 +300,27 @@ export function ListingOverviewPanel({
         )}
       </section>
 
-      {showCompleteness && (
-        <ListingCompletenessCard listing={listing} photoCount={photoCount} />
+      {showCompleteness ? (
+        <div className="space-y-3">
+          <ListingCompletenessCard listing={listing} photoCount={photoCount} />
+          <AadeGuideHelperCard
+            variant="dashboard"
+            defaultTab={isShortTerm ? "short_term" : "monthly"}
+          />
+        </div>
+      ) : (
+        <AadeGuideHelperCard
+          variant="dashboard"
+          defaultTab={isShortTerm ? "short_term" : "monthly"}
+        />
       )}
 
       <section className="rounded-xl border border-border bg-white p-4 shadow-soft">
-        <h3 className="font-display text-sm font-semibold text-charcoal">Γρήγορες ενέργειες</h3>
+        <h3 className="font-display text-sm font-semibold text-charcoal">{t("quickActions")}</h3>
         <div className="mt-3 flex flex-wrap gap-2">
           <Button href={`/dashboard/listings/${listing.id}/edit`} size="sm" variant="outline">
             <Pencil className="h-3.5 w-3.5" />
-            Επεξεργασία
+            {t("edit")}
           </Button>
           <Button
             href={`/dashboard/listings/${listing.id}/trust-links`}
@@ -294,11 +328,11 @@ export function ListingOverviewPanel({
             variant="outline"
           >
             <Link2 className="h-3.5 w-3.5" />
-            Αξιοπιστία
+            {t("trust")}
           </Button>
           <Button href={`/dashboard/listings/${listing.id}/photos`} size="sm" variant="outline">
             <Camera className="h-3.5 w-3.5" />
-            Φωτογραφίες
+            {t("photos")}
           </Button>
           <Button
             href={`/dashboard/listings/${listing.id}/availability`}
@@ -306,15 +340,15 @@ export function ListingOverviewPanel({
             variant="outline"
           >
             <CalendarDays className="h-3.5 w-3.5" />
-            Διαθεσιμότητα
+            {t("availability")}
           </Button>
           <Button href={`/dashboard/listings/${listing.id}/view`} size="sm" variant="outline">
             <ExternalLink className="h-3.5 w-3.5" />
-            Προβολή
+            {t("preview")}
           </Button>
           {(ownerStatusKey === "published" || ownerStatusKey === "paused") && (
             <Button href={`/listings/${publicId}`} size="sm" variant="outline">
-              Δημόσια σελίδα
+              {t("publicPage")}
             </Button>
           )}
         </div>

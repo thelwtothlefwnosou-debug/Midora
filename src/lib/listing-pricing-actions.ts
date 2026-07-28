@@ -1,27 +1,23 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { createClient } from "@/lib/supabase/server";
+import { actionError } from "@/lib/action-error-i18n";
+import { requireServiceUser } from "@/lib/require-auth";
 import { LISTING_SAVE_ERROR_MSG } from "@/lib/listing-wizard-validation";
 
 async function requireListingOwner(listingId: string) {
-  const supabase = await createClient();
-  if (!supabase) return { error: "Η υπηρεσία δεν είναι διαθέσιμη." } as const;
+  const auth = await requireServiceUser();
+  if ("error" in auth) return auth;
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return { error: "Πρέπει να συνδεθείς." } as const;
-
-  const { data: listing } = await supabase
+  const { data: listing } = await auth.supabase
     .from("listings")
     .select("id")
     .eq("id", listingId)
-    .eq("user_id", user.id)
+    .eq("user_id", auth.user.id)
     .maybeSingle();
 
-  if (!listing) return { error: "Η αγγελία δεν βρέθηκε." } as const;
-  return { supabase, user } as const;
+  if (!listing) return { error: await actionError("listingNotFound") } as const;
+  return { supabase: auth.supabase, user: auth.user } as const;
 }
 
 function parseWeekendDays(raw: FormData): number[] {
@@ -52,13 +48,13 @@ export async function saveShortTermPricingSettings(
   const weekendDays = parseWeekendDays(formData);
 
   if (!Number.isFinite(basePrice) || basePrice <= 0) {
-    return { error: "Συμπλήρωσε έγκυρη βασική τιμή ανά βράδυ." };
+    return { error: await actionError("pricingBaseRequired") };
   }
   if (weeklyDiscount != null && (weeklyDiscount < 0 || weeklyDiscount > 90)) {
-    return { error: "Η εβδομαδιαία έκπτωση πρέπει να είναι 0–90%." };
+    return { error: await actionError("weeklyDiscountRange") };
   }
   if (monthlyDiscount != null && (monthlyDiscount < 0 || monthlyDiscount > 90)) {
-    return { error: "Η μηνιαία έκπτωση πρέπει να είναι 0–90%." };
+    return { error: await actionError("monthlyDiscountRange") };
   }
 
   const row: Record<string, unknown> = {
@@ -81,7 +77,7 @@ export async function saveShortTermPricingSettings(
         .from("listings")
         .update(fallback)
         .eq("id", listingId);
-      if (fbError) return { error: LISTING_SAVE_ERROR_MSG };
+      if (fbError) return { error: await actionError("listingSaveFailed") };
     } else {
       return { error: error.message };
     }
@@ -107,9 +103,9 @@ export async function saveSpecialPricingPeriod(
   const minStay = parseOptionalInt(formData.get("min_stay_nights") as string);
   const blocked = formData.get("blocked") === "on";
 
-  if (!name) return { error: "Συμπλήρωσε όνομα περιόδου." };
-  if (!startDate || !endDate) return { error: "Συμπλήρωσε ημερομηνίες." };
-  if (endDate < startDate) return { error: "Η λήξη πρέπει να είναι μετά την έναρξη." };
+  if (!name) return { error: await actionError("periodNameRequired") };
+  if (!startDate || !endDate) return { error: await actionError("pricingDatesRequired") };
+  if (endDate < startDate) return { error: await actionError("pricingEndBeforeStart") };
 
   if (blocked) {
     const fd = new FormData();
@@ -123,7 +119,7 @@ export async function saveSpecialPricingPeriod(
     if (result?.error) return { error: result.error };
   } else {
     if (!Number.isFinite(pricePerNight) || pricePerNight <= 0) {
-      return { error: "Συμπλήρωσε έγκυρη τιμή." };
+      return { error: await actionError("periodPriceRequired") };
     }
     const { saveCalendarPriceRule } = await import("@/lib/listing-price-rules");
     const result = await saveCalendarPriceRule(

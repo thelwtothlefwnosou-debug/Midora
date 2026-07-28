@@ -1,35 +1,15 @@
 "use client";
 
 import { Bed, Bath, Users } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { RentalTypeSearchFields } from "@/components/search/RentalTypeSearchFields";
-import { MVP_SEARCH_RENTAL_TYPE_OPTIONS } from "@/lib/rental-types";
+import {
+  getSearchRentalTypeOptionLabel,
+  MVP_SEARCH_RENTAL_TYPE_OPTIONS,
+} from "@/lib/rental-types";
 import type { RentalType } from "@/lib/rental-types";
 import type { ListingsFilterValues } from "@/components/listings/ListingsFilters";
 import { cn } from "@/lib/utils";
-
-const FILTER_PROPERTY_TYPES = [
-  { value: "apartment", label: "Διαμέρισμα" },
-  { value: "house", label: "Μονοκατοικία" },
-  { value: "villa", label: "Βίλα" },
-  { value: "studio", label: "Στούντιο" },
-  { value: "other", label: "Άλλο" },
-] as const;
-
-const BEDROOM_OPTIONS = [
-  { value: "", label: "Όλα" },
-  ...Array.from({ length: 10 }, (_, i) => {
-    const n = i + 1;
-    return { value: String(n), label: n === 10 ? "10+" : String(n) };
-  }),
-];
-
-const BATHROOM_OPTIONS = [
-  { value: "", label: "Όλα" },
-  { value: "1", label: "1+" },
-  { value: "2", label: "2+" },
-  { value: "3", label: "3+" },
-  { value: "4", label: "4+" },
-];
 
 function Section({
   title,
@@ -119,9 +99,39 @@ export function ListingsFilterPanel({
   setField,
   setBoolField,
 }: Props) {
+  const t = useTranslations("Listings");
+  const tf = useTranslations("Listings.filter");
+  const tSearch = useTranslations("Search");
+  const tListing = useTranslations("Listing");
+  const tCommon = useTranslations("Common");
+
   const isShort = rentalType === "short_term";
   const isMonthly = rentalType === "monthly";
-  const priceUnit = isShort ? "/ βράδυ" : "/ μήνα";
+  const priceUnit = isShort ? tCommon("perNight") : tCommon("perMonth");
+
+  const filterPropertyTypes = [
+    { value: "apartment", label: tf("typeApartment") },
+    { value: "house", label: tf("typeHouse") },
+    { value: "villa", label: tf("typeVilla") },
+    { value: "studio", label: tf("typeStudio") },
+    { value: "other", label: tf("typeOther") },
+  ] as const;
+
+  const bedroomOptions = [
+    { value: "", label: tSearch("allTypes") },
+    ...Array.from({ length: 10 }, (_, i) => {
+      const n = i + 1;
+      return { value: String(n), label: n === 10 ? "10+" : String(n) };
+    }),
+  ];
+
+  const bathroomOptions = [
+    { value: "", label: tSearch("allTypes") },
+    { value: "1", label: "1+" },
+    { value: "2", label: "2+" },
+    { value: "3", label: "3+" },
+    { value: "4", label: "4+" },
+  ];
 
   const minPrice = isShort
     ? (values.minPriceNight ?? values.minPrice ?? "")
@@ -157,7 +167,7 @@ export function ListingsFilterPanel({
   return (
     <div className="space-y-6">
       {!hideRentalTypeSection && (
-        <Section title="Τύπος μίσθωσης">
+        <Section title={tSearch("rentalType")}>
           <div className="grid gap-2">
             {MVP_SEARCH_RENTAL_TYPE_OPTIONS.filter((o) => o.value).map((opt) => {
               const active = rentalType === opt.value;
@@ -172,7 +182,7 @@ export function ListingsFilterPanel({
                       : "border-border bg-white text-charcoal/80 hover:border-gold/25"
                   )}
                 >
-                  {opt.label}
+                  {getSearchRentalTypeOptionLabel(opt.value, tListing)}
                 </button>
               );
             })}
@@ -181,7 +191,7 @@ export function ListingsFilterPanel({
       )}
 
       {rentalType && !hideRentalTypeSection && (
-        <Section title="Περίοδος ενδιαφέροντος">
+        <Section title={t("interestPeriod")}>
           <div className="grid gap-3 sm:grid-cols-2">
             <RentalTypeSearchFields
               rentalType={rentalType}
@@ -198,26 +208,26 @@ export function ListingsFilterPanel({
         </Section>
       )}
 
-      <Section title="Τιμή">
+      <Section title={t("price")}>
         <div className="grid gap-3 sm:grid-cols-2">
           <NumberField
-            label={`Ελάχιστη τιμή ${priceUnit}`}
+            label={`${tf("minPrice")} ${priceUnit}`}
             name={isShort ? "minPriceNight" : "minMonthly"}
             value={minPrice}
-            placeholder="π.χ. 50"
+            placeholder={tf("placeholderPriceMin")}
             onChange={(_, v) => setMinPrice(v)}
           />
           <NumberField
-            label={`Μέγιστη τιμή ${priceUnit}`}
+            label={`${tf("maxPrice")} ${priceUnit}`}
             name={isShort ? "maxPriceNight" : "maxMonthly"}
             value={maxPrice}
-            placeholder="π.χ. 120"
+            placeholder={tf("placeholderPriceMax")}
             onChange={(_, v) => setMaxPrice(v)}
           />
         </div>
       </Section>
 
-      <Section title="Τύπος ακινήτου">
+      <Section title={t("propertyType")}>
         <div className="grid grid-cols-2 gap-2">
           <button
             type="button"
@@ -229,31 +239,31 @@ export function ListingsFilterPanel({
                 : "border-border bg-white hover:border-gold/25"
             )}
           >
-            Όλα
+            {tSearch("allTypes")}
           </button>
-          {FILTER_PROPERTY_TYPES.map((t) => (
+          {filterPropertyTypes.map((pt) => (
             <button
-              key={t.value}
+              key={pt.value}
               type="button"
-              onClick={() => setField("type", t.value)}
+              onClick={() => setField("type", pt.value)}
               className={cn(
                 "rounded-xl border px-3 py-2 text-sm transition-colors",
-                values.type === t.value
+                values.type === pt.value
                   ? "border-gold/40 bg-[#f7f0e6]"
                   : "border-border bg-white hover:border-gold/25"
               )}
             >
-              {t.label}
+              {pt.label}
             </button>
           ))}
         </div>
       </Section>
 
-      <Section title="Χώροι">
+      <Section title={tf("roomsBeds")}>
         <div className="grid gap-3 sm:grid-cols-3">
           <label className="flex flex-col gap-1">
             <span className="flex items-center gap-1 text-[10px] font-medium tracking-wider text-muted uppercase">
-              <Bed className="h-3 w-3" /> Υπνοδωμάτια
+              <Bed className="h-3 w-3" /> {t("bedrooms")}
             </span>
             <select
               name="bedrooms"
@@ -261,7 +271,7 @@ export function ListingsFilterPanel({
               onChange={(e) => setField("bedrooms", e.target.value)}
               className="rounded-xl border border-border bg-white px-3 py-2 text-sm text-charcoal outline-none focus:border-gold/50"
             >
-              {BEDROOM_OPTIONS.map((o) => (
+              {bedroomOptions.map((o) => (
                 <option key={o.value || "all"} value={o.value}>
                   {o.label}
                 </option>
@@ -270,7 +280,7 @@ export function ListingsFilterPanel({
           </label>
           <label className="flex flex-col gap-1">
             <span className="flex items-center gap-1 text-[10px] font-medium tracking-wider text-muted uppercase">
-              <Bath className="h-3 w-3" /> Μπάνια
+              <Bath className="h-3 w-3" /> {tf("bathrooms")}
             </span>
             <select
               name="bathrooms"
@@ -278,7 +288,7 @@ export function ListingsFilterPanel({
               onChange={(e) => setField("bathrooms", e.target.value)}
               className="rounded-xl border border-border bg-white px-3 py-2 text-sm text-charcoal outline-none focus:border-gold/50"
             >
-              {BATHROOM_OPTIONS.map((o) => (
+              {bathroomOptions.map((o) => (
                 <option key={o.value || "all"} value={o.value}>
                   {o.label}
                 </option>
@@ -287,24 +297,24 @@ export function ListingsFilterPanel({
           </label>
           <label className="flex flex-col gap-1">
             <span className="flex items-center gap-1 text-[10px] font-medium tracking-wider text-muted uppercase">
-              <Users className="h-3 w-3" /> Άτομα
+              <Users className="h-3 w-3" /> {tSearch("guests")}
             </span>
             <input
               type="number"
               min={1}
               value={values.guests ?? ""}
               onChange={(e) => setField("guests", e.target.value)}
-              placeholder="π.χ. 2"
+              placeholder={tSearch("guestsPlaceholder")}
               className="rounded-xl border border-border bg-white px-3 py-2 text-sm text-charcoal outline-none focus:border-gold/50"
             />
           </label>
         </div>
       </Section>
 
-      <Section title="Παροχές">
+      <Section title={tListing("amenities")}>
         <div className="grid gap-0.5 sm:grid-cols-2">
           <CheckRow
-            label="Θέρμανση / κλιματισμός"
+            label={tf("heatingClimate")}
             name="heating"
             checked={values.heating === "true"}
             onChange={(n, c) => setBoolField(n, c)}
@@ -316,20 +326,20 @@ export function ListingsFilterPanel({
             onChange={(n, c) => setBoolField(n, c)}
           />
           <CheckRow
-            label="Επιπλωμένο"
+            label={tf("furnished")}
             name="furnished"
             checked={values.furnished === "true"}
             onChange={(n, c) => setBoolField(n, c)}
           />
           <CheckRow
-            label="Κατοικίδια επιτρέπονται"
+            label={tf("petsAllowed")}
             name="pets"
             checked={values.pets === "true"}
             onChange={(n, c) => setBoolField(n, c)}
           />
           {isMonthly && (
             <CheckRow
-              label="Λογαριασμοί περιλαμβάνονται"
+              label={tf("billsIncluded")}
               name="bills"
               checked={values.bills === "true"}
               onChange={(n, c) => setBoolField(n, c)}
@@ -339,17 +349,17 @@ export function ListingsFilterPanel({
       </Section>
 
       {isMonthly && (
-        <Section title="Ελάχιστη διάρκεια">
+        <Section title={tf("minStayMonths")}>
           <label className="flex flex-col gap-1">
             <span className="text-[10px] font-medium tracking-wider text-muted uppercase">
-              Μήνες
+              {tf("monthsLabel")}
             </span>
             <input
               type="number"
               min={1}
               value={values.minMonths ?? ""}
               onChange={(e) => setField("minMonths", e.target.value)}
-              placeholder="π.χ. 3"
+              placeholder={tf("placeholderMonths")}
               className="rounded-xl border border-border bg-white px-3 py-2 text-sm text-charcoal outline-none focus:border-gold/50"
             />
           </label>

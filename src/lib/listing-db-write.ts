@@ -29,6 +29,8 @@ const PORTAL_OPTIONAL_COLUMNS = [
   "midora_verification_code",
   "owner_responsibility_accepted",
   "platform_role_accepted",
+  "tax_obligation_accepted",
+  "authority_disclosure_accepted",
   "terms_privacy_accepted",
   "declarations_submitted_at",
   "city_display_name",
@@ -73,6 +75,13 @@ const PORTAL_OPTIONAL_COLUMNS = [
   "minimum_stay_months",
   "monthly_includes_bills",
   "monthly_terms",
+  "wizard_resume_step",
+  "monthly_pricing_mode",
+  "monthly_base_price",
+  "monthly_included_people",
+  "monthly_max_people",
+  "monthly_extra_person_price",
+  "monthly_max_price",
 ] as const;
 
 const MAX_SCHEMA_RETRIES = PORTAL_OPTIONAL_COLUMNS.length + 12;

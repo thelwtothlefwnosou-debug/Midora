@@ -10,6 +10,12 @@ import {
   resolveWizardArea,
   resolveWizardCity,
 } from "@/lib/listing-wizard-validation";
+import { parseWizardResumeStep } from "@/lib/listing-wizard-resume";
+import {
+  validateMonthlyOccupancyPricing,
+  type MonthlyPricingMode,
+} from "@/lib/listing-monthly-price";
+import { appendHouseRulesToDescription } from "@/lib/listing-description";
 
 export type PortalListingFields = ReturnType<typeof parsePortalListingFields>;
 
@@ -73,9 +79,7 @@ export function parsePortalListingFields(formData: FormData) {
 
   let description = (formData.get("description") as string) ?? "";
   const houseRules = (formData.get("house_rules") as string)?.trim();
-  if (houseRules) {
-    description = `${description}\n\nΚανόνες σπιτιού:\n${houseRules}`;
-  }
+  description = appendHouseRulesToDescription(description, houseRules);
 
   const legalRegistryType = ((formData.get("legal_registry_type") as string) ||
     "none") as LegalRegistryType;
@@ -99,6 +103,84 @@ export function parsePortalListingFields(formData: FormData) {
         : null;
 
   const monthly_terms = (formData.get("monthly_terms") as string)?.trim() || null;
+
+  const monthlyPricingModeRaw = (formData.get("monthly_pricing_mode") as string)?.trim();
+  const monthly_pricing_mode: MonthlyPricingMode | null =
+    monthlyPricingModeRaw === "fixed" ||
+    monthlyPricingModeRaw === "extra_person" ||
+    monthlyPricingModeRaw === "tiers"
+      ? monthlyPricingModeRaw
+      : supportsMonthly
+        ? "extra_person"
+        : null;
+
+  const monthlyBaseRaw = (formData.get("monthly_base_price") as string)?.trim();
+  const monthly_base_price = monthlyBaseRaw
+    ? parseInt(monthlyBaseRaw, 10)
+    : supportsMonthly
+      ? price_monthly
+      : null;
+
+  const monthlyIncludedRaw = (formData.get("monthly_included_people") as string)?.trim();
+  const monthly_included_people = monthlyIncludedRaw
+    ? parseInt(monthlyIncludedRaw, 10)
+    : null;
+
+  const monthlyMaxPeopleRaw = (formData.get("monthly_max_people") as string)?.trim();
+  const monthly_max_people = monthlyMaxPeopleRaw
+    ? parseInt(monthlyMaxPeopleRaw, 10)
+    : null;
+
+  const monthlyExtraRaw = (formData.get("monthly_extra_person_price") as string)?.trim();
+  const monthly_extra_person_price =
+    monthlyExtraRaw !== "" && monthlyExtraRaw != null
+      ? parseInt(monthlyExtraRaw, 10)
+      : null;
+
+  const monthlyMaxPriceRaw = (formData.get("monthly_max_price") as string)?.trim();
+  const monthly_max_price = monthlyMaxPriceRaw ? parseInt(monthlyMaxPriceRaw, 10) : null;
+
+  let monthly_price_tiers: {
+    people_from: number;
+    people_to: number;
+    monthly_price: number;
+  }[] = [];
+  const tiersJson = (formData.get("monthly_price_tiers_json") as string)?.trim();
+  if (tiersJson) {
+    try {
+      const parsed = JSON.parse(tiersJson) as unknown;
+      if (Array.isArray(parsed)) {
+        monthly_price_tiers = parsed
+          .map((row) => ({
+            people_from: Number((row as { people_from?: number }).people_from) || 0,
+            people_to: Number((row as { people_to?: number }).people_to) || 0,
+            monthly_price: Number((row as { monthly_price?: number }).monthly_price) || 0,
+          }))
+          .filter((t) => t.people_from >= 1 && t.people_to >= t.people_from && t.monthly_price > 0);
+      }
+    } catch {
+      monthly_price_tiers = [];
+    }
+  }
+
+  const resolvedMaxGuests = (() => {
+    const fromForm = maxGuestsRaw ? parseInt(maxGuestsRaw, 10) : null;
+    if (supportsMonthly && monthly_max_people && monthly_max_people > 0) {
+      return monthly_max_people;
+    }
+    return fromForm;
+  })();
+
+  const resolvedPriceMonthly = (() => {
+    if (supportsMonthly && monthly_pricing_mode === "tiers" && monthly_price_tiers.length > 0) {
+      const minTier = Math.min(...monthly_price_tiers.map((t) => t.monthly_price));
+      if (Number.isFinite(minTier) && minTier > 0) return minTier;
+    }
+    if (supportsMonthly && monthly_base_price && monthly_base_price > 0) {
+      return monthly_base_price;
+    }
+    return price_monthly;
+  })();
 
   const min_months = supportsMonthly
     ? (minimum_stay_months ?? MONTHLY_MIN_STAY_FLOOR)
@@ -127,8 +209,15 @@ export function parsePortalListingFields(formData: FormData) {
     address_unit: addressUnit || null,
     description,
     description_en: (formData.get("description_en") as string)?.trim() || null,
-    price_monthly,
+    price_monthly: resolvedPriceMonthly,
     price_per_night,
+    monthly_pricing_mode,
+    monthly_base_price,
+    monthly_included_people,
+    monthly_max_people,
+    monthly_extra_person_price,
+    monthly_max_price,
+    monthly_price_tiers,
     included_guests: includedGuestsRaw ? parseInt(includedGuestsRaw, 10) : null,
     extra_guest_fee_per_night: extraGuestFeeRaw
       ? parseInt(extraGuestFeeRaw, 10)
@@ -147,7 +236,12 @@ export function parsePortalListingFields(formData: FormData) {
       const n = parseInt(raw, 10);
       return Number.isFinite(n) ? n : null;
     })(),
-    total_floors: parseInt((formData.get("total_floors") as string) || "", 10) || null,
+    total_floors: (() => {
+      const raw = (formData.get("total_floors") as string)?.trim() ?? "";
+      if (raw === "") return null;
+      const n = parseInt(raw, 10);
+      return Number.isFinite(n) && n > 0 ? n : null;
+    })(),
     year_built: parseInt((formData.get("year_built") as string) || "", 10) || null,
     year_renovated: parseInt((formData.get("year_renovated") as string) || "", 10) || null,
     furnished: formData.get("furnished") === "on",
@@ -158,7 +252,10 @@ export function parsePortalListingFields(formData: FormData) {
     utilities_included: formData.get("utilities_included") === "on",
     has_parking: formData.get("has_parking") === "on",
     pets_allowed: formData.get("pets_allowed") === "on",
-    max_guests: maxGuestsRaw ? parseInt(maxGuestsRaw, 10) : null,
+    max_guests:
+      resolvedMaxGuests != null && Number.isFinite(resolvedMaxGuests)
+        ? resolvedMaxGuests
+        : null,
     cleaning_included: formData.get("cleaning_included") === "on",
     min_months,
     property_type: (formData.get("property_type") as string) || "apartment",
@@ -182,6 +279,9 @@ export function parsePortalListingFields(formData: FormData) {
     owner_responsibility_accepted:
       formData.get("owner_responsibility_accepted") === "on",
     platform_role_accepted: formData.get("platform_role_accepted") === "on",
+    tax_obligation_accepted: formData.get("tax_obligation_accepted") === "on",
+    authority_disclosure_accepted:
+      formData.get("authority_disclosure_accepted") === "on",
     ama_declaration_accepted: formData.get("ama_declaration_accepted") === "on",
     terms_privacy_accepted: formData.get("terms_privacy_accepted") === "on",
     contact_name: (formData.get("contact_name") as string)?.trim() || null,
@@ -209,6 +309,7 @@ export function parsePortalListingFields(formData: FormData) {
     contact_viber_phone: (formData.get("contact_viber_phone") as string)?.trim() || null,
     contact_whatsapp_use_primary: formData.get("contact_whatsapp_use_primary") !== "off",
     contact_viber_use_primary: formData.get("contact_viber_use_primary") !== "off",
+    wizard_resume_step: parseWizardResumeStep(formData.get("wizard_resume_step")),
   };
 }
 
@@ -234,79 +335,94 @@ export function validatePortalListingFields(
   }
 
   if (!fields.supports_short_term && !fields.supports_monthly) {
-    return "Επίλεξε τύπο μίσθωσης (βραχυχρόνια ή μηνιαία).";
+    return "selectRentalType";
   }
 
   if (fields.supports_short_term && fields.supports_monthly) {
-    return "Η αγγελία μπορεί να είναι είτε βραχυχρόνια είτε μηνιαία, όχι και τα δύο.";
+    return "rentalTypeExclusive";
   }
 
   if (fields.supports_short_term) {
     if (!fields.price_per_night || fields.price_per_night <= 0) {
-      return "Συμπλήρωσε τη βασική τιμή ανά βράδυ.";
+      return "pricePerNightRequired";
     }
     if (!fields.included_guests || fields.included_guests <= 0) {
-      return "Συμπλήρωσε πόσα άτομα περιλαμβάνει η τιμή.";
+      return "includedGuestsRequired";
     }
     if (fields.extra_guest_fee_per_night == null || fields.extra_guest_fee_per_night < 0) {
-      return "Συμπλήρωσε τη χρέωση ανά επιπλέον άτομο / βράδυ.";
+      return "extraGuestFeeRequired";
     }
     if (!fields.max_guests || fields.max_guests <= 0) {
-      return "Συμπλήρωσε τον μέγιστο αριθμό ατόμων.";
+      return "maxGuestsMin";
     }
     if (!fields.min_stay_label?.trim()) {
-      return "Επίλεξε την ελάχιστη διαμονή σε νύχτες.";
+      return "minStayNightsRequired";
     }
   }
 
   if (fields.supports_monthly) {
     if (!fields.price_monthly || fields.price_monthly <= 0) {
-      return "Συμπλήρωσε τιμή ανά μήνα.";
+      return "priceMonthlyRequired";
     }
     if (!fields.max_guests || fields.max_guests <= 0) {
-      return "Συμπλήρωσε τον μέγιστο αριθμό ατόμων.";
+      return "maxGuestsMin";
     }
     if (
       fields.minimum_stay_months != null &&
       fields.minimum_stay_months < MONTHLY_MIN_STAY_FLOOR
     ) {
-      return "Η ελάχιστη διάρκεια για μηνιαία διαμονή είναι 2 μήνες.";
+      return "monthlyMinStayFloor";
     }
+    const occupancyError = validateMonthlyOccupancyPricing({
+      pricingMode: fields.monthly_pricing_mode,
+      monthlyBasePrice: fields.monthly_base_price ?? fields.price_monthly,
+      priceMonthly: fields.price_monthly,
+      includedPeople: fields.monthly_included_people,
+      maxPeople: fields.monthly_max_people ?? fields.max_guests,
+      maxGuests: fields.max_guests,
+      extraPersonPrice: fields.monthly_extra_person_price,
+      maxPrice: fields.monthly_max_price,
+      tiers: fields.monthly_price_tiers,
+    });
+    if (occupancyError) return occupancyError;
   }
 
   const needsAma = needsAmaForFields(fields);
   if (needsAma) {
-    if (!fields.ama_number) return "Συμπλήρωσε τον αριθμό καταχώρισης.";
+    if (!fields.ama_number) return "registryNumberRequired";
     if (!fields.legal_registry_type || fields.legal_registry_type === "none") {
-      return "Επίλεξε τύπο αριθμού καταχώρισης (ΑΜΑ, ΕΣΛ ή ΜΑΓ).";
+      return "registryTypeRequired";
     }
     if (
       options.forSubmission &&
       !isValidRegistryNumber(fields.legal_registry_type, fields.ama_number)
     ) {
       if (fields.legal_registry_type === "ama") {
-        return "Ο ΑΜΑ πρέπει να είναι ακριβώς 11 ψηφία.";
+        return "amaInvalid";
       }
-      return "Ο αριθμός καταχώρισης δεν έχει έγκυρη μορφή.";
+      return "registryInvalid";
     }
   }
 
   if (options.forSubmission) {
-    if (!fields.contact_name) return "Συμπλήρωσε όνομα αγγελιοδότη.";
+    if (!fields.contact_name) return "contactNameRequired";
     if (!fields.contact_phone && !fields.contact_email) {
-      return "Συμπλήρωσε τηλέφωνο ή email επικοινωνίας.";
+      return "contactPhoneOrEmail";
     }
     if (fields.latitude == null || fields.longitude == null) {
-      return "Ορίσε την ακριβή θέση του ακινήτου στον χάρτη για να συνεχίσεις.";
+      return "mapPinRequired";
     }
     if (!fields.owner_responsibility_accepted || !fields.platform_role_accepted) {
-      return "Επίλεξε όλες τις απαιτούμενες δηλώσεις για να συνεχίσεις.";
+      return "declarationsRequired";
+    }
+    if (!fields.tax_obligation_accepted || !fields.authority_disclosure_accepted) {
+      return "declarationsRequired";
     }
     if (!fields.terms_privacy_accepted) {
-      return "Επίλεξε όλες τις απαιτούμενες δηλώσεις για να συνεχίσεις.";
+      return "declarationsRequired";
     }
     if (needsAma && !fields.ama_declaration_accepted) {
-      return "Επίλεξε όλες τις απαιτούμενες δηλώσεις για να συνεχίσεις.";
+      return "declarationsRequired";
     }
   }
 
@@ -377,6 +493,20 @@ export function buildPortalListingRow(
     description_en: fields.description_en,
     price_monthly: fields.price_monthly,
     price_per_night: fields.price_per_night,
+    monthly_pricing_mode: fields.supports_monthly ? fields.monthly_pricing_mode : null,
+    monthly_base_price: fields.supports_monthly
+      ? (fields.monthly_base_price ?? fields.price_monthly)
+      : null,
+    monthly_included_people: fields.supports_monthly
+      ? fields.monthly_included_people
+      : null,
+    monthly_max_people: fields.supports_monthly
+      ? (fields.monthly_max_people ?? fields.max_guests)
+      : null,
+    monthly_extra_person_price: fields.supports_monthly
+      ? fields.monthly_extra_person_price
+      : null,
+    monthly_max_price: fields.supports_monthly ? fields.monthly_max_price : null,
     included_guests: fields.included_guests,
     extra_guest_fee_per_night: fields.extra_guest_fee_per_night,
     rental_type: fields.rental_type,
@@ -398,6 +528,8 @@ export function buildPortalListingRow(
     midora_verification_code: verificationCode,
     owner_responsibility_accepted: fields.owner_responsibility_accepted,
     platform_role_accepted: fields.platform_role_accepted,
+    tax_obligation_accepted: fields.tax_obligation_accepted,
+    authority_disclosure_accepted: fields.authority_disclosure_accepted,
     ama_declaration_accepted: fields.ama_declaration_accepted,
     terms_privacy_accepted: fields.terms_privacy_accepted,
     contact_name: fields.contact_name,
@@ -434,6 +566,7 @@ export function buildPortalListingRow(
     property_type: fields.property_type,
     latitude: fields.latitude,
     longitude: fields.longitude,
+    wizard_resume_step: fields.wizard_resume_step,
     status: "pending" as const,
     approval_status: approvalStatus,
     property_verification_status: "pending" as const,

@@ -1,6 +1,8 @@
-import type { Metadata } from "next";
+﻿import type { Metadata } from "next";
 import { Suspense } from "react";
-import { Footer } from "@/components/layout/Footer";
+import { redirect } from "next/navigation";
+import { getTranslations } from "next-intl/server";
+import { SearchPageFooter } from "@/components/listings/SearchPageFooter";
 import {
   ListingsFilters,
   type ListingsFilterValues,
@@ -15,12 +17,15 @@ import { resolveLocation } from "@/lib/locations/search-server";
 import { resolveSearchMapViewport } from "@/lib/search-map-viewport";
 import { filterListingsByMapBounds } from "@/lib/listing-map-bounds";
 import { computePriceHistogram } from "@/lib/listing-price-histogram";
+import { parsePublicRentalType } from "@/lib/rental-types";
 
-export const metadata: Metadata = {
-  title: "Αναζήτηση ακινήτων",
-  description:
-    "Αναζήτηση αγγελιών για βραχυχρόνια και μηνιαία/μεσοπρόθεσμη μίσθωση στην Ελλάδα — φίλτρα, χάρτης και διαθεσιμότητα.",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("Meta");
+  return {
+    title: t("listingsTitle"),
+    description: t("listingsDescription"),
+  };
+}
 
 export const revalidate = 60;
 
@@ -60,7 +65,20 @@ export default async function ListingsPage({
   searchParams: Promise<Record<string, string | undefined>>;
 }) {
   const params = await searchParams;
+  const rentalType = parsePublicRentalType(params.rentalType);
+  if (!rentalType) {
+    const next = new URLSearchParams();
+    for (const [key, value] of Object.entries(params)) {
+      if (key === "rentalType") continue;
+      if (value == null || value === "") continue;
+      next.set(key, value);
+    }
+    next.set("rentalType", "short_term");
+    redirect(`/listings?${next.toString()}`);
+  }
+
   const { filters, dateMessages } = parseListingFiltersWithMessages(params);
+  const tListings = await getTranslations("Listings");
 
   const rawCity = params.city ? decodeURIComponent(params.city) : undefined;
   const resolved = rawCity ? resolveLocation(rawCity) : null;
@@ -210,7 +228,7 @@ export default async function ListingsPage({
 
   return (
     <>
-      <main className="listings-page bg-white lg:flex lg:h-[100dvh] lg:flex-col lg:overflow-hidden">
+      <main className="listings-page bg-white">
         <Suspense fallback={<FiltersSkeleton />}>
           <ListingsFilters
             defaults={filterDefaults}
@@ -221,9 +239,9 @@ export default async function ListingsPage({
 
         {loadFailed && (
           <div className="border-b border-amber-200/80 bg-amber-50 px-4 py-2.5 text-sm text-amber-900 sm:px-6">
-            Δεν ήταν δυνατή η φόρτωση των αγγελιών. Δοκίμασε ξανά σε λίγα δευτερόλεπτα ή{" "}
-            <a href="/listings" className="font-semibold underline">
-              ανανέωσε τη σελίδα
+            {tListings("loadFailedBanner")}{" "}
+            <a href="/listings?rentalType=short_term" className="font-semibold underline">
+              {tListings("refreshPage")}
             </a>
             .
           </div>
@@ -235,29 +253,25 @@ export default async function ListingsPage({
           </div>
         )}
 
-        <div className="lg:flex lg:min-h-0 lg:flex-1 lg:flex-col lg:overflow-hidden">
-          <ListingsSearchView
-            catalogListings={catalogListings}
-            emptyDueToMinStay={emptyDueToMinStay}
-            cityLabel={cityLabel}
-            districtLabel={districtLabel}
-            nearbySearch={nearbySearch}
-            mapAreaSearch={mapAreaSearch}
-            searchPolygon={filters.polygon}
-            mapCenter={mapViewport.center}
-            mapZoom={mapViewport.zoom}
-            mapInitialBounds={mapViewport.initialBounds}
-            fitMapToMarkers={mapViewport.fitToMarkers}
-            fitMapMaxZoom={mapViewport.fitMaxZoom}
-            fitMapMinZoom={mapViewport.fitMinZoom}
-            favoriteIds={favoriteIds}
-            unavailablePeriodsByListingId={unavailablePeriodsByListingId}
-          />
-        </div>
+        <ListingsSearchView
+          catalogListings={catalogListings}
+          emptyDueToMinStay={emptyDueToMinStay}
+          cityLabel={cityLabel}
+          districtLabel={districtLabel}
+          nearbySearch={nearbySearch}
+          mapAreaSearch={mapAreaSearch}
+          searchPolygon={filters.polygon}
+          mapCenter={mapViewport.center}
+          mapZoom={mapViewport.zoom}
+          mapInitialBounds={mapViewport.initialBounds}
+          fitMapToMarkers={mapViewport.fitToMarkers}
+          fitMapMaxZoom={mapViewport.fitMaxZoom}
+          fitMapMinZoom={mapViewport.fitMinZoom}
+          favoriteIds={favoriteIds}
+          unavailablePeriodsByListingId={unavailablePeriodsByListingId}
+        />
       </main>
-      <div className="lg:hidden">
-        <Footer />
-      </div>
+      <SearchPageFooter />
     </>
   );
 }

@@ -1,11 +1,13 @@
 import type { ListingWithImages } from "@/lib/types";
 import { getListingCoverImage } from "@/lib/listings";
 import { formatListingPrice, listingRentalType } from "@/lib/rental-types";
+import { pickLocale } from "@/lib/locale-fallbacks";
 import { getSiteUrl } from "@/lib/site-url";
 
 export function buildListingJsonLd(
   listing: ListingWithImages,
-  canonicalPath: string
+  canonicalPath: string,
+  locale?: string
 ): Record<string, unknown> {
   const siteUrl = getSiteUrl();
   const cover = getListingCoverImage(listing);
@@ -45,8 +47,8 @@ export function buildListingJsonLd(
       availability: "https://schema.org/InStock",
       description:
         rt === "short_term"
-          ? "Βραχυχρόνια μίσθωση"
-          : "Μηνιαία / μεσοπρόθεσμη μίσθωση",
+          ? pickLocale(locale, "Βραχυχρόνια μίσθωση", "Short-term rental")
+          : pickLocale(locale, "Μηνιαία / μεσοπρόθεσμη μίσθωση", "Monthly / mid-term rental"),
     },
     ...(addressParts.length
       ? { containedInPlace: { "@type": "Place", name: addressParts.join(", ") } }

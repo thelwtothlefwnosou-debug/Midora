@@ -2,9 +2,11 @@
 
 import { useState } from "react";
 import { Shield } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 
 export function IdentityVerificationModal() {
+  const t = useTranslations("Owner.identityModal");
   const [open, setOpen] = useState(false);
 
   return (
@@ -17,7 +19,7 @@ export function IdentityVerificationModal() {
         )}
       >
         <Shield className="h-4 w-4" />
-        Ξεκίνα επαλήθευση ταυτότητας
+        {t("startCta")}
       </button>
 
       {open && (
@@ -25,32 +27,26 @@ export function IdentityVerificationModal() {
           <button
             type="button"
             className="absolute inset-0 bg-charcoal/45"
-            aria-label="Κλείσιμο"
+            aria-label={t("close")}
             onClick={() => setOpen(false)}
           />
           <div className="relative max-w-md rounded-2xl bg-white p-6 shadow-2xl">
-            <h3 className="font-display text-lg font-semibold text-charcoal">
-              Επαλήθευση ταυτότητας
-            </h3>
-            <p className="mt-3 text-sm leading-relaxed text-muted">
-              Η επαλήθευση ταυτότητας θα γίνεται μέσω εξωτερικού παρόχου, όπως Stripe
-              Identity, Veriff ή Sumsub. Το Midora θα αποθηκεύει μόνο το αποτέλεσμα της
-              επαλήθευσης και όχι φωτογραφίες ταυτότητας ή selfie.
-            </p>
+            <h3 className="font-display text-lg font-semibold text-charcoal">{t("title")}</h3>
+            <p className="mt-3 text-sm leading-relaxed text-muted">{t("description")}</p>
             <div className="mt-5 flex flex-col gap-2 sm:flex-row">
               <button
                 type="button"
                 onClick={() => setOpen(false)}
                 className="flex-1 rounded-xl bg-charcoal py-3 text-sm font-semibold text-white"
               >
-                Κατάλαβα
+                {t("gotIt")}
               </button>
               <button
                 type="button"
                 disabled
                 className="flex-1 cursor-not-allowed rounded-xl border border-border py-3 text-sm font-medium text-muted opacity-60"
               >
-                Σύντομα διαθέσιμο
+                {t("comingSoon")}
               </button>
             </div>
           </div>

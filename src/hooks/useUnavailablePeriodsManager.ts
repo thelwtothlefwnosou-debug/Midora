@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { deleteUnavailablePeriod, saveUnavailablePeriod } from "@/lib/actions";
 import {
   addMonths,
@@ -22,6 +23,7 @@ type Options = {
 
 export function useUnavailablePeriodsManager({ listingId, initialPeriods }: Options) {
   const router = useRouter();
+  const t = useTranslations("Workspace.unavailablePeriods");
   const [items, setItems] = useState(initialPeriods);
   const [month, setMonth] = useState(() => new Date());
   const [selectionStart, setSelectionStart] = useState<string | null>(null);
@@ -56,11 +58,11 @@ export function useUnavailablePeriodsManager({ listingId, initialPeriods }: Opti
     setError(null);
 
     if (end < start) {
-      setError("Η ημερομηνία λήξης πρέπει να είναι ίδια ή μεταγενέστερη από την ημερομηνία έναρξης.");
+      setError(t("errorEndBeforeStart"));
       return;
     }
     if (end < today) {
-      setError("Δεν μπορείς να δηλώσεις μη διαθεσιμότητα στο παρελθόν.");
+      setError(t("errorPast"));
       return;
     }
 
@@ -75,18 +77,18 @@ export function useUnavailablePeriodsManager({ listingId, initialPeriods }: Opti
       const result = await saveUnavailablePeriod(fd);
       if (result?.error) {
         setError(result.error);
-        showToast("Δεν ήταν δυνατή η αποθήκευση. Δοκίμασε ξανά.");
+        showToast(t("toastSaveFailed"));
         return;
       }
       if (!result?.periods) {
-        setError("Η αποθήκευση δεν ολοκληρώθηκε. Δοκίμασε ξανά.");
-        showToast("Δεν ήταν δυνατή η αποθήκευση. Δοκίμασε ξανά.");
+        setError(t("errorSaveFailed"));
+        showToast(t("toastSaveFailed"));
         return;
       }
       applyPeriods(result.periods as ListingUnavailablePeriod[]);
       clearSelection();
       onSuccess?.();
-      showToast("Οι ημερομηνίες σημειώθηκαν ως μη διαθέσιμες.");
+      showToast(t("toastSaved"));
     });
   }
 
@@ -99,11 +101,7 @@ export function useUnavailablePeriodsManager({ listingId, initialPeriods }: Opti
         existingPeriod.start_date,
         existingPeriod.end_date
       );
-      if (
-        !confirm(
-          `Να γίνουν ξανά διαθέσιμες οι ημερομηνίες ${label};`
-        )
-      ) {
+      if (!confirm(t("confirmReopen", { label }))) {
         return;
       }
       handleDelete(existingPeriod.id, { skipConfirm: true });
@@ -140,10 +138,7 @@ export function useUnavailablePeriodsManager({ listingId, initialPeriods }: Opti
     periodId: string,
     options?: { skipConfirm?: boolean }
   ) {
-    if (
-      !options?.skipConfirm &&
-      !confirm("Θέλεις να διαγράψεις αυτή τη μη διαθέσιμη περίοδο;")
-    ) {
+    if (!options?.skipConfirm && !confirm(t("confirmDelete"))) {
       return;
     }
     setDeleteId(periodId);
@@ -152,13 +147,13 @@ export function useUnavailablePeriodsManager({ listingId, initialPeriods }: Opti
       setDeleteId(null);
       if (result?.error) {
         setError(result.error);
-        showToast("Δεν ήταν δυνατή η αλλαγή. Δοκίμασε ξανά.");
+        showToast(t("toastChangeFailed"));
         return;
       }
       setItems((prev) => prev.filter((p) => p.id !== periodId));
       clearSelection();
       router.refresh();
-      showToast("Οι ημερομηνίες είναι πάλι διαθέσιμες.");
+      showToast(t("toastReopened"));
     });
   }
 

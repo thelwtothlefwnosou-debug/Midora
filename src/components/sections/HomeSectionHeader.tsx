@@ -24,7 +24,7 @@ export function HomeSectionHeader({
       )}
     >
       <div className={cn("max-w-2xl", centered && "mx-auto")}>
-        <h2 className="font-display text-[1.625rem] font-semibold leading-[1.15] tracking-tight text-charcoal sm:text-[2rem]">
+        <h2 className="font-display text-[1.75rem] font-semibold leading-[1.12] tracking-tight text-charcoal sm:text-[2.15rem] lg:text-[2.35rem]">
           {title}
         </h2>
         {subtitle ? (

@@ -2,6 +2,7 @@
 
 import { useCallback, useMemo, useState } from "react";
 import { ChevronDown } from "lucide-react";
+import { useLocale, useTranslations } from "next-intl";
 import type { PriceHistogramBucket } from "@/lib/listing-price-histogram";
 import { cn } from "@/lib/utils";
 
@@ -16,31 +17,39 @@ type Props = {
 
 type PricePreset = {
   id: string;
-  label: string;
+  labelKey:
+    | "presetTo50"
+    | "preset50_100"
+    | "preset100_150"
+    | "preset150Plus"
+    | "presetTo800"
+    | "preset800_1200"
+    | "preset1200_1600"
+    | "preset1600Plus";
   min?: number;
   max?: number;
 };
 
 const SHORT_PRESETS: PricePreset[] = [
-  { id: "to-50", label: "Έως €50", max: 50 },
-  { id: "50-100", label: "€50–€100", min: 50, max: 100 },
-  { id: "100-150", label: "€100–€150", min: 100, max: 150 },
-  { id: "150-plus", label: "€150+", min: 150 },
+  { id: "to-50", labelKey: "presetTo50", max: 50 },
+  { id: "50-100", labelKey: "preset50_100", min: 50, max: 100 },
+  { id: "100-150", labelKey: "preset100_150", min: 100, max: 150 },
+  { id: "150-plus", labelKey: "preset150Plus", min: 150 },
 ];
 
 const MONTHLY_PRESETS: PricePreset[] = [
-  { id: "to-800", label: "Έως €800", max: 800 },
-  { id: "800-1200", label: "€800–€1.200", min: 800, max: 1200 },
-  { id: "1200-1600", label: "€1.200–€1.600", min: 1200, max: 1600 },
-  { id: "1600-plus", label: "€1.600+", min: 1600 },
+  { id: "to-800", labelKey: "presetTo800", max: 800 },
+  { id: "800-1200", labelKey: "preset800_1200", min: 800, max: 1200 },
+  { id: "1200-1600", labelKey: "preset1200_1600", min: 1200, max: 1600 },
+  { id: "1600-plus", labelKey: "preset1600Plus", min: 1600 },
 ];
 
 function clamp(n: number, lo: number, hi: number) {
   return Math.min(hi, Math.max(lo, n));
 }
 
-function formatEuro(n: number): string {
-  return n.toLocaleString("el-GR");
+function formatEuro(n: number, locale: string): string {
+  return n.toLocaleString(locale === "en" ? "en-GB" : "el-GR");
 }
 
 function parsePriceInput(raw: string): number | null {
@@ -78,6 +87,8 @@ export function FilterPriceSection({
   onMinChange,
   onMaxChange,
 }: Props) {
+  const t = useTranslations("Listings.filter");
+  const locale = useLocale();
   const { min: boundMin, max: boundMax, buckets } = histogram;
   const presets = isShort ? SHORT_PRESETS : MONTHLY_PRESETS;
 
@@ -98,9 +109,9 @@ export function FilterPriceSection({
   const rangeSummary = useMemo(() => {
     const lo = minValue ? parseInt(minValue, 10) : boundMin;
     const hi = maxValue ? parseInt(maxValue, 10) : boundMax;
-    const base = `€${formatEuro(lo)} – €${formatEuro(hi)}`;
-    return isShort ? base : `${base} / μήνα`;
-  }, [minValue, maxValue, boundMin, boundMax, isShort]);
+    const base = `€${formatEuro(lo, locale)} – €${formatEuro(hi, locale)}`;
+    return isShort ? base : `${base} ${t("perMonthSuffix")}`;
+  }, [minValue, maxValue, boundMin, boundMax, isShort, locale, t]);
 
   const setRange = useCallback(
     (nextMin: number, nextMax: number) => {
@@ -147,7 +158,7 @@ export function FilterPriceSection({
     <details className="group border-b border-charcoal/8 last:border-b-0" open>
       <summary className="flex cursor-pointer list-none items-center gap-3 py-3.5 [&::-webkit-details-marker]:hidden">
         <span className="min-w-0 flex-1 font-display text-base font-semibold text-charcoal">
-          {isShort ? "Τιμή ανά βράδυ" : "Τιμή ανά μήνα"}
+          {isShort ? t("pricePerNight") : t("pricePerMonth")}
         </span>
         <span
           className={cn(
@@ -201,7 +212,7 @@ export function FilterPriceSection({
               setRange(n, sliderMax);
             }}
             className="filter-price-range filter-price-range--min"
-            aria-label="Ελάχιστη τιμή"
+            aria-label={t("minPrice")}
             aria-valuemin={boundMin}
             aria-valuemax={boundMax}
             aria-valuenow={sliderMin}
@@ -216,7 +227,7 @@ export function FilterPriceSection({
               setRange(sliderMin, n);
             }}
             className="filter-price-range filter-price-range--max"
-            aria-label="Μέγιστη τιμή"
+            aria-label={t("maxPrice")}
             aria-valuemin={boundMin}
             aria-valuemax={boundMax}
             aria-valuenow={sliderMax}
@@ -226,19 +237,21 @@ export function FilterPriceSection({
         {/* Min / max inputs */}
         <div className="filter-price-inputs">
           <PriceInput
-            label="Ελάχιστη τιμή"
+            label={t("minPrice")}
             value={minValue}
-            placeholder={formatEuro(boundMin)}
+            placeholder={formatEuro(boundMin, locale)}
             boundMin={boundMin}
             boundMax={boundMax}
+            locale={locale}
             onChange={handleMinInput}
           />
           <PriceInput
-            label="Μέγιστη τιμή"
+            label={t("maxPrice")}
             value={maxValue}
-            placeholder={formatEuro(boundMax)}
+            placeholder={formatEuro(boundMax, locale)}
             boundMin={boundMin}
             boundMax={boundMax}
+            locale={locale}
             onChange={handleMaxInput}
           />
         </div>
@@ -257,7 +270,7 @@ export function FilterPriceSection({
                   active && "filter-price-preset--active"
                 )}
               >
-                {preset.label}
+                {t(preset.labelKey)}
               </button>
             );
           })}
@@ -273,6 +286,7 @@ function PriceInput({
   placeholder,
   boundMin,
   boundMax,
+  locale,
   onChange,
 }: {
   label: string;
@@ -280,6 +294,7 @@ function PriceInput({
   placeholder: string;
   boundMin: number;
   boundMax: number;
+  locale: string;
   onChange: (raw: string) => void;
 }) {
   const [focused, setFocused] = useState(false);
@@ -288,7 +303,7 @@ function PriceInput({
   const displayValue = focused
     ? draft
     : value
-      ? formatEuro(parseInt(value, 10))
+      ? formatEuro(parseInt(value, 10), locale)
       : "";
 
   return (

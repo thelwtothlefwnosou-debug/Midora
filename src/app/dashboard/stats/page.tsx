@@ -1,3 +1,4 @@
+import { getTranslations } from "next-intl/server";
 import { AccountShell } from "@/components/account/AccountShell";
 import { DashboardListingsOverviewMetrics } from "@/components/dashboard/DashboardListingsOverviewMetrics";
 import { GlassCard } from "@/components/ui/GlassCard";
@@ -13,6 +14,7 @@ import {
 
 export default async function DashboardStatsPage() {
   const { profile, email } = await requireDashboardContext("/dashboard/stats");
+  const t = await getTranslations("Owner.statsPage");
 
   const listings = await attachStoredViewCounts(await getUserListings(profile.id));
   const listingIds = listings.map((l) => l.id);
@@ -35,19 +37,17 @@ export default async function DashboardStatsPage() {
       profile={profile}
       email={email}
       active="listings"
-      title="Στατιστικά"
-      subtitle="Συνολική εικόνα από όλα τα ακίνητά σου."
+      title={t("title")}
+      subtitle={t("subtitle")}
     >
       {hasPublished ? (
         <DashboardListingsOverviewMetrics overview={overview} />
       ) : (
         <GlassCard className="px-6 py-10 text-center">
           <p className="font-display text-lg font-semibold text-charcoal">
-            Δεν υπάρχουν ακόμη στατιστικά
+            {t("emptyTitle")}
           </p>
-          <p className="mx-auto mt-2 max-w-md text-sm text-muted">
-            Μόλις δημοσιευτεί τουλάχιστον μία αγγελία, θα εμφανίζονται εδώ προβολές και αιτήματα.
-          </p>
+          <p className="mx-auto mt-2 max-w-md text-sm text-muted">{t("emptyDesc")}</p>
         </GlassCard>
       )}
     </AccountShell>

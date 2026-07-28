@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { ChevronDown } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { ListingContactCard } from "@/components/listings/ListingContactCard";
 import { ListingPortalDisclaimer } from "@/components/listings/detail/ListingPortalDisclaimer";
 import { useListingInterest } from "@/components/listings/ListingInterestContext";
@@ -15,6 +16,7 @@ import {
 } from "@/lib/listing-rental-modes";
 import { formatMonthLabel } from "@/lib/search-interest-dates";
 import { minSearchMonthValue } from "@/lib/search-date-validation";
+import { MonthInput } from "@/components/ui/MonthInput";
 import { cn } from "@/lib/utils";
 
 type Props = {
@@ -30,10 +32,14 @@ export function MonthlyInquiryCard({
   hostName,
   className,
 }: Props) {
+  const t = useTranslations("Listing");
+  const tCommon = useTranslations("Common");
+  const tLegal = useTranslations("Legal.shared");
   const { openInterest } = useListingInterest();
   const minStayMonths = resolveMinimumStayMonths(listing);
-  const durationOptions = monthlyDurationOptions(minStayMonths);
-  const price = publicPricePrimary(listing, "monthly");
+  const durationOptions = monthlyDurationOptions(minStayMonths, (key, values) =>
+    t(key, values)
+  );
   const minMonth = minSearchMonthValue();
 
   const [startMonth, setStartMonth] = useState(() => {
@@ -41,7 +47,11 @@ export function MonthlyInquiryCard({
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
   });
   const [durationMonths, setDurationMonths] = useState(minStayMonths);
-  const [guests, setGuests] = useState(listing.max_guests ?? 2);
+  const includedDefault =
+    listing.monthly_included_people && listing.monthly_included_people > 0
+      ? listing.monthly_included_people
+      : Math.min(2, listing.max_guests ?? 2);
+  const [guests, setGuests] = useState(includedDefault);
   const [contactOpen, setContactOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
 
@@ -49,7 +59,12 @@ export function MonthlyInquiryCard({
     setMounted(true);
   }, []);
   const activeDuration = Math.max(minStayMonths, durationMonths);
-  const maxGuests = listing.max_guests ?? 16;
+  const maxGuests = listing.monthly_max_people ?? listing.max_guests ?? 16;
+
+  const price = useMemo(
+    () => publicPricePrimary(listing, "monthly", guests),
+    [listing, guests]
+  );
 
   const hasDirectContact =
     (contact.allowPhone && contact.phone) ||
@@ -70,29 +85,39 @@ export function MonthlyInquiryCard({
     }
     openInterest({
       guests,
-      message:
-        "Καλησπέρα, ενδιαφέρομαι για το ακίνητο. Θα ήθελα περισσότερες πληροφορίες για διαθεσιμότητα και όρους μίσθωσης.",
+      message: t("inquiry.prefillMonthlySimple"),
     });
   }
 
   const tags = [
-    listing.furnished && "Επιπλωμένο",
-    listing.utilities_included && "Λογαριασμοί περιλαμβάνονται",
-    listing.pets_allowed && "Επιτρέπονται κατοικίδια",
-    minStayMonths > 0 && `Ελάχ. ${minStayMonths} μήνες`,
+    listing.furnished && t("furnished"),
+    listing.utilities_included && tCommon("utilitiesIncluded"),
+    listing.pets_allowed && t("petsAllowed"),
+    minStayMonths > 0 && t("minStayMonthsShort", { count: minStayMonths }),
   ].filter(Boolean) as string[];
 
   function openRentalRequest() {
     const durationLabel =
       durationOptions.find((o) => o.value === activeDuration)?.label ??
-      `${activeDuration} μήνες`;
+      t("monthsCount", { count: activeDuration });
+    // Prefer translated duration for known option values
+    const translatedDuration =
+      activeDuration === 12
+        ? t("monthsPlus", { count: 12 })
+        : t("monthsCount", { count: activeDuration });
+    const durationText = durationOptions.some((o) => o.value === activeDuration)
+      ? translatedDuration
+      : durationLabel;
     openInterest({
       guests,
       interestStartMonth: startMonth,
       interestDurationMonths: activeDuration,
       timingNote: formatMonthLabel(startMonth),
-      duration: durationLabel,
-      message: `Καλησπέρα, ενδιαφέρομαι για το ακίνητο από ${formatMonthLabel(startMonth)} για διάρκεια ${durationLabel}. Θα ήθελα περισσότερες πληροφορίες για διαθεσιμότητα και όρους μίσθωσης.`,
+      duration: durationText,
+      message: t("inquiry.prefillMonthlyWithDates", {
+        month: formatMonthLabel(startMonth),
+        duration: durationText,
+      }),
     });
   }
 
@@ -101,18 +126,18 @@ export function MonthlyInquiryCard({
       <p className="listing-price-display text-2xl text-charcoal">
         {price.display}
       </p>
-      <p className="mt-2 text-sm text-charcoal/65">
-        Η τελική διαθεσιμότητα και τιμή επιβεβαιώνονται από τον ιδιοκτήτη.
-      </p>
+      {price.subtext ? (
+        <p className="mt-1 text-sm text-charcoal/65">{price.subtext}</p>
+      ) : null}
+      <p className="mt-2 text-sm text-charcoal/65">{t("finalPriceOwner")}</p>
 
       {hostName && (
         <p className="mt-3 text-sm text-charcoal/70">{hostName}</p>
       )}
 
       <label className="mt-5 block">
-        <span className="text-[11px] font-medium text-muted">Μήνας έναρξης</span>
-        <input
-          type="month"
+        <span className="text-[11px] font-medium text-muted">{t("startMonth")}</span>
+        <MonthInput
           min={minMonth}
           value={startMonth}
           onChange={(e) => setStartMonth(e.target.value)}
@@ -121,7 +146,7 @@ export function MonthlyInquiryCard({
       </label>
 
       <label className="mt-3 block">
-        <span className="text-[11px] font-medium text-muted">Διάρκεια</span>
+        <span className="text-[11px] font-medium text-muted">{t("duration")}</span>
         <div className="relative mt-1">
           <select
             value={activeDuration}
@@ -130,7 +155,9 @@ export function MonthlyInquiryCard({
           >
             {durationOptions.map((o) => (
               <option key={o.value} value={o.value}>
-                {o.label}
+                {o.value === 12
+                  ? t("monthsPlus", { count: 12 })
+                  : t("monthsCount", { count: o.value })}
               </option>
             ))}
           </select>
@@ -139,16 +166,16 @@ export function MonthlyInquiryCard({
       </label>
 
       <label className="mt-3 block">
-        <span className="text-[11px] font-medium text-muted">Άτομα</span>
+        <span className="text-[11px] font-medium text-muted">{t("peopleStaying")}</span>
         <div className="relative mt-1">
           <select
-            value={guests}
+            value={Math.min(guests, maxGuests)}
             onChange={(e) => setGuests(parseInt(e.target.value, 10))}
             className="min-h-12 w-full appearance-none rounded-xl border border-charcoal/12 bg-white px-3.5 py-2.5 text-sm font-medium outline-none focus:border-gold/40"
           >
             {Array.from({ length: maxGuests }, (_, i) => i + 1).map((n) => (
               <option key={n} value={n}>
-                {n} {n === 1 ? "άτομο" : "άτομα"}
+                {n} {n === 1 ? tCommon("person") : tCommon("peoplePlural")}
               </option>
             ))}
           </select>
@@ -174,16 +201,33 @@ export function MonthlyInquiryCard({
         onClick={openRentalRequest}
         className="mt-5 flex min-h-12 w-full items-center justify-center rounded-xl bg-gold text-sm font-semibold text-white transition-colors hover:bg-gold-dark active:scale-[0.99]"
       >
-        Στείλε αίτημα μίσθωσης
+        {t("sendRentalRequest")}
+      </button>
+
+      <button
+        type="button"
+        onClick={() =>
+          openInterest({
+            intent: "message",
+            rentalMode: "monthly",
+            guests,
+            interestStartMonth: startMonth,
+            interestDurationMonths: activeDuration,
+            message: "",
+          })
+        }
+        className="mt-3 w-full text-center text-sm font-medium text-charcoal/80 underline-offset-2 hover:text-charcoal hover:underline"
+      >
+        {tLegal("stickyMessageLinkMonthly")}
       </button>
 
       {hasDirectContact && (
         <button
           type="button"
           onClick={handleContactOwner}
-          className="mt-3 flex min-h-12 w-full items-center justify-center rounded-xl border border-charcoal/12 bg-white text-sm font-medium text-charcoal transition-colors hover:border-gold/35"
+          className="mt-2 flex min-h-10 w-full items-center justify-center rounded-xl border border-charcoal/10 bg-white text-sm font-medium text-charcoal/70 transition-colors hover:border-gold/35"
         >
-          Επικοινώνησε με τον ιδιοκτήτη
+          {t("otherContactMethods")}
         </button>
       )}
 
@@ -198,14 +242,16 @@ export function MonthlyInquiryCard({
       <div className="mx-auto flex max-w-6xl items-center gap-3 pb-[env(safe-area-inset-bottom)]">
         <div className="min-w-0 flex-1">
           <p className="listing-price-display text-lg">{price.display}</p>
-          <p className="text-[11px] text-muted">Μηνιαία / μεσοπρόθεσμη</p>
+          <p className="text-[11px] text-muted">
+            {price.subtext ?? t("monthlyMidterm")}
+          </p>
         </div>
         <button
           type="button"
           onClick={openRentalRequest}
           className="min-h-11 shrink-0 rounded-xl bg-gold px-4 text-sm font-semibold text-white"
         >
-          Αίτημα
+          {t("request")}
         </button>
       </div>
     </div>

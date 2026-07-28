@@ -1,3 +1,4 @@
+import { actionError, authActionError, mustSignInError } from "@/lib/action-error-i18n";
 import "server-only";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -77,8 +78,7 @@ export async function sendPhoneVerificationOtp(
   const twilio = await getTwilio();
   if (!twilio) {
     return {
-      error:
-        "Η αποστολή SMS δεν είναι διαθέσιμη αυτή τη στιγμή. Δοκίμασε ξανά αργότερα ή επικοινώνησε με την υποστήριξη.",
+      error: await actionError("smsUnavailable"),
     };
   }
 
@@ -89,7 +89,7 @@ export async function sendPhoneVerificationOtp(
     const elapsed = now.getTime() - new Date(session.last_sent_at).getTime();
     if (elapsed < RESEND_COOLDOWN_MS) {
       const waitSec = Math.ceil((RESEND_COOLDOWN_MS - elapsed) / 1000);
-      return { error: `Μπορείς να ζητήσεις νέο κωδικό σε ${waitSec} δευτερόλεπτα.` };
+      return { error: await actionError("smsResendWait", { seconds: waitSec }) };
     }
   }
 
@@ -100,11 +100,11 @@ export async function sendPhoneVerificationOtp(
     hourStart = now.toISOString();
   }
   if (sendsThisHour >= MAX_SENDS_PER_HOUR) {
-    return { error: "Έφτασες το όριο αποστολών κωδικού για αυτή την ώρα. Δοκίμασε αργότερα." };
+    return { error: await actionError("smsRateLimit") };
   }
 
   if ((session?.failed_attempts ?? 0) >= MAX_FAILED_ATTEMPTS) {
-    return { error: "Πολλές αποτυχημένες προσπάθειες. Δοκίμασε ξανά αργότερα." };
+    return { error: await actionError("tooManyAttempts") };
   }
 
   try {
@@ -113,7 +113,7 @@ export async function sendPhoneVerificationOtp(
       channel: "sms",
     });
   } catch {
-    return { error: "Δεν ήταν δυνατή η αποστολή του κωδικού. Έλεγξε τον αριθμό και δοκίμασε ξανά." };
+    return { error: await actionError("smsSendFailed") };
   }
 
   await supabase.from("phone_verification_sessions").upsert(
@@ -146,16 +146,16 @@ export async function verifyPhoneVerificationOtp(
 ): Promise<{ ok: true } | { error: string }> {
   const twilio = await getTwilio();
   if (!twilio) {
-    return { error: "Η επιβεβαίωση τηλεφώνου δεν είναι διαθέσιμη αυτή τη στιγμή." };
+    return { error: await actionError("phoneVerifyUnavailable") };
   }
 
   const session = await getSession(supabase, userId, purpose);
   if (!session || session.phone_e164 !== phoneE164) {
-    return { error: "Στείλε πρώτα κωδικό στον αριθμό που θέλεις να επιβεβαιώσεις." };
+    return { error: await actionError("sendCodeFirst") };
   }
 
   if ((session.failed_attempts ?? 0) >= MAX_FAILED_ATTEMPTS) {
-    return { error: "Πολλές αποτυχημένες προσπάθειες. Ζήτησε νέο κωδικό." };
+    return { error: await actionError("tooManyAttempts") };
   }
 
   let status: string;
@@ -181,7 +181,7 @@ export async function verifyPhoneVerificationOtp(
       .update({ verification_attempt_count: failed })
       .eq("id", userId);
 
-    return { error: "Ο κωδικός δεν είναι σωστός ή έληξε. Δοκίμασε ξανά." };
+    return { error: await actionError("wrongOrExpiredCode") };
   }
 
   const now = new Date().toISOString();

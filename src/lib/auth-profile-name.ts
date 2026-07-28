@@ -1,3 +1,5 @@
+import { pickLocale } from "@/lib/locale-fallbacks";
+
 type IdentityLike = {
   provider?: string;
   identity_data?: Record<string, unknown>;
@@ -56,7 +58,10 @@ function emailLocalPart(email: string | null | undefined): string | null {
 }
 
 /** Best display/full name from OAuth metadata, identities, or email. */
-export function resolveAuthProfileName(input: AuthProfileNameInput): string {
+export function resolveAuthProfileName(
+  input: AuthProfileNameInput,
+  locale?: string
+): string {
   const meta = input.userMetadata ?? {};
 
   const metaCandidates = [
@@ -87,13 +92,14 @@ export function resolveAuthProfileName(input: AuthProfileNameInput): string {
   const fromEmail = emailLocalPart(input.email);
   if (fromEmail && !isGenericProfileName(fromEmail)) return fromEmail;
 
-  return "Χρήστης";
+  return pickLocale(locale, "Χρήστης", "User");
 }
 
 export function pickProfileFullName(params: {
   incoming: string | null | undefined;
   existing?: string | null;
   email?: string | null;
+  locale?: string;
 }): string {
   const incoming = params.incoming?.trim() ?? "";
   const existing = params.existing?.trim() ?? "";
@@ -103,16 +109,17 @@ export function pickProfileFullName(params: {
   if (incoming) return incoming;
   if (existing) return existing;
 
-  return emailLocalPart(params.email) ?? "Χρήστης";
+  return emailLocalPart(params.email) ?? pickLocale(params.locale, "Χρήστης", "User");
 }
 
 export function resolveMenuDisplayName(params: {
   profileFullName?: string | null;
   profileDisplayName?: string | null;
   auth: AuthProfileNameInput;
+  locale?: string;
 }): string {
   const fromProfile =
     asTrimmedString(params.profileDisplayName) ?? asTrimmedString(params.profileFullName);
   if (fromProfile && !isGenericProfileName(fromProfile)) return fromProfile;
-  return resolveAuthProfileName(params.auth);
+  return resolveAuthProfileName(params.auth, params.locale);
 }

@@ -1,22 +1,26 @@
+import { intlLocale } from "@/lib/locale-fallbacks";
 import type { ListingUnavailablePeriod } from "@/lib/unavailable-periods";
 import { getTodayInAthens } from "@/lib/dates-athens";
 
-export const WEEKDAY_LABELS = ["Δε", "Τρ", "Τε", "Πε", "Πα", "Σα", "Κυ"] as const;
+/** Monday-first short weekday labels, matching `getCalendarDays` layout. */
+export function getWeekdayLabels(locale?: string): string[] {
+  const tag = intlLocale(locale);
+  // 2024-01-01 was a Monday
+  return Array.from({ length: 7 }, (_, i) =>
+    new Intl.DateTimeFormat(tag, { weekday: "short" }).format(
+      new Date(2024, 0, 1 + i)
+    )
+  );
+}
 
-const MONTH_NAMES = [
-  "Ιανουάριος",
-  "Φεβρουάριος",
-  "Μάρτιος",
-  "Απρίλιος",
-  "Μάιος",
-  "Ιούνιος",
-  "Ιούλιος",
-  "Αύγουστος",
-  "Σεπτέμβριος",
-  "Οκτώβριος",
-  "Νοέμβριος",
-  "Δεκέμβριος",
-] as const;
+/** @deprecated Use `getWeekdayLabels(locale)` */
+export const WEEKDAY_LABELS_LEGACY = getWeekdayLabels("el");
+
+/** Long month name for 0-based month index. */
+export function getMonthName(monthIndex: number, locale?: string): string {
+  const d = new Date(2024, monthIndex, 1);
+  return new Intl.DateTimeFormat(intlLocale(locale), { month: "long" }).format(d);
+}
 
 export type CalendarDay = {
   date: Date;
@@ -31,8 +35,11 @@ export function toDateKey(date: Date): string {
   return `${y}-${m}-${d}`;
 }
 
-export function formatMonthYear(date: Date): string {
-  return `${MONTH_NAMES[date.getMonth()]} ${date.getFullYear()}`;
+export function formatMonthYear(date: Date, locale?: string): string {
+  return new Intl.DateTimeFormat(intlLocale(locale), {
+    month: "long",
+    year: "numeric",
+  }).format(date);
 }
 
 export function addMonths(date: Date, delta: number): Date {
@@ -172,9 +179,9 @@ export function getRangeFromToday(days: number): { start: string; end: string } 
   return { start, end: addDays(start, days - 1) };
 }
 
-export function formatDateKeyDisplay(dateKey: string): string {
+export function formatDateKeyDisplay(dateKey: string, locale?: string): string {
   const [y, m, d] = dateKey.split("-").map(Number);
-  return new Intl.DateTimeFormat("el-GR", {
+  return new Intl.DateTimeFormat(intlLocale(locale), {
     day: "numeric",
     month: "short",
     year: "numeric",

@@ -1,7 +1,7 @@
 import { MIN_LISTING_PHOTOS_FOR_REVIEW } from "@/lib/constants";
 import { getAdminRegistryDisplay } from "@/lib/admin/registry-display";
 import { listingRentalType, requiresAmaRegistry } from "@/lib/rental-types";
-import { MIN_LISTING_DESCRIPTION_LENGTH } from "@/lib/listing-wizard-validation";
+import { MIN_LISTING_DESCRIPTION_LENGTH, isListingDescriptionWithinMax } from "@/lib/listing-wizard-validation";
 import type { ListingWithImages } from "@/lib/types";
 
 export type CompletenessItem = {
@@ -58,7 +58,8 @@ export function getListingCompleteness(listing: ListingWithImages): ListingCompl
       label: "Τίτλος και περιγραφή",
       ok: Boolean(
         listing.title?.trim().length >= 10 &&
-          listing.description?.trim().length >= MIN_LISTING_DESCRIPTION_LENGTH
+          listing.description?.trim().length >= MIN_LISTING_DESCRIPTION_LENGTH &&
+          isListingDescriptionWithinMax(listing.description ?? "")
       ),
     },
     {
@@ -81,6 +82,10 @@ export function getListingCompleteness(listing: ListingWithImages): ListingCompl
         listing.owner_responsibility_accepted &&
           listing.platform_role_accepted &&
           listing.terms_privacy_accepted &&
+          (listing.tax_obligation_accepted === true ||
+            Boolean(listing.declarations_submitted_at)) &&
+          (listing.authority_disclosure_accepted === true ||
+            Boolean(listing.declarations_submitted_at)) &&
           (!needsRegistry || listing.ama_declaration_accepted)
       ),
     },

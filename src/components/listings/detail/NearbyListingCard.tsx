@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { useLocale } from "next-intl";
 import type { ListingWithImages } from "@/lib/types";
 import { pickListingCoverPhotoUrl } from "@/lib/listing-media";
 import {
@@ -29,6 +30,7 @@ export function NearbyListingCard({
   searchParams,
   className,
 }: Props) {
+  const locale = useLocale();
   const cover = pickListingCoverPhotoUrl(listing);
   if (!cover) return null;
 
@@ -37,7 +39,7 @@ export function NearbyListingCard({
     interestTo,
     durationMonths,
     rentalTypeFilter: rentalMode,
-  });
+  }, locale);
 
   if (resolved.isUnavailable || !resolved.display || resolved.sortAmount <= 0) {
     return null;

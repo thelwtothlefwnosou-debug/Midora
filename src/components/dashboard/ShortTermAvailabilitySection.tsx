@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { AvailabilityCalendarPanel } from "@/components/availability/AvailabilityCalendarGrid";
 import { useUnavailablePeriodsManager } from "@/hooks/useUnavailablePeriodsManager";
 import {
@@ -11,10 +12,10 @@ import {
 import type { ListingUnavailablePeriod } from "@/lib/unavailable-periods";
 import { cn } from "@/lib/utils";
 
-const QUICK_ACTIONS = [
-  { label: "Μη διαθέσιμο αυτό το Σαββατοκύριακο", getRange: () => getUpcomingWeekendRange() },
-  { label: "Μη διαθέσιμο για 7 ημέρες", getRange: () => getRangeFromToday(7) },
-  { label: "Μη διαθέσιμο για 14 ημέρες", getRange: () => getRangeFromToday(14) },
+const QUICK_ACTION_KEYS = [
+  { id: "quickWeekend", getRange: () => getUpcomingWeekendRange() },
+  { id: "quick7", getRange: () => getRangeFromToday(7) },
+  { id: "quick14", getRange: () => getRangeFromToday(14) },
 ] as const;
 
 type Manager = ReturnType<typeof useUnavailablePeriodsManager>;
@@ -25,6 +26,8 @@ type ModalProps = {
 };
 
 export function ShortTermCalendarModal({ manager, onClose }: ModalProps) {
+  const t = useTranslations("Workspace.unavailablePeriods");
+
   return (
     <div
       className="fixed inset-0 z-[110] flex flex-col bg-white sm:bg-charcoal/45"
@@ -34,7 +37,7 @@ export function ShortTermCalendarModal({ manager, onClose }: ModalProps) {
       <button
         type="button"
         className="absolute inset-0 hidden sm:block"
-        aria-label="Κλείσιμο"
+        aria-label={t("close")}
         onClick={onClose}
       />
       <div className="relative flex min-h-0 flex-1 flex-col sm:mx-auto sm:my-auto sm:max-h-[92dvh] sm:w-full sm:max-w-3xl sm:rounded-2xl sm:bg-white sm:shadow-2xl">
@@ -42,19 +45,16 @@ export function ShortTermCalendarModal({ manager, onClose }: ModalProps) {
           <div className="flex items-start justify-between gap-3">
             <div>
               <h2 className="font-display text-lg font-semibold text-charcoal">
-                Ημερολόγιο διαθεσιμότητας
+                {t("calendarTitle")}
               </h2>
-              <p className="mt-1 text-sm text-muted">
-                Επίλεξε ημερομηνίες και κλείσε τις. Πάτησε χρυσή ημερομηνία για να την
-                ανοίξεις ξανά.
-              </p>
+              <p className="mt-1 text-sm text-muted">{t("calendarHintModal")}</p>
             </div>
             <button
               type="button"
               onClick={onClose}
               className="rounded-lg border border-border px-3 py-1.5 text-sm text-muted hover:text-charcoal"
             >
-              Κλείσιμο
+              {t("close")}
             </button>
           </div>
         </div>
@@ -75,15 +75,15 @@ export function ShortTermCalendarModal({ manager, onClose }: ModalProps) {
           </div>
 
           <aside className="mt-4 space-y-2 sm:hidden">
-            {QUICK_ACTIONS.map((action) => (
+            {QUICK_ACTION_KEYS.map((action) => (
               <button
-                key={action.label}
+                key={action.id}
                 type="button"
                 disabled={manager.pending}
                 onClick={() => manager.applyQuickRange(action.getRange)}
                 className="w-full rounded-xl border border-border bg-sand/30 px-3 py-2.5 text-left text-xs font-medium text-charcoal disabled:opacity-50"
               >
-                {action.label}
+                {t(action.id)}
               </button>
             ))}
           </aside>
@@ -97,7 +97,7 @@ export function ShortTermCalendarModal({ manager, onClose }: ModalProps) {
               disabled={!manager.selectionStart || manager.pending}
               className="min-h-11 flex-1 rounded-xl bg-charcoal px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-40 sm:flex-none"
             >
-              {manager.pending ? "Αποθήκευση…" : "Κλείσιμο ημερομηνιών"}
+              {manager.pending ? t("saving") : t("closeDates")}
             </button>
             <button
               type="button"
@@ -105,11 +105,13 @@ export function ShortTermCalendarModal({ manager, onClose }: ModalProps) {
               disabled={!manager.selectionStart}
               className="min-h-11 rounded-xl border border-border px-4 py-2.5 text-sm"
             >
-              Καθαρισμός επιλογής
+              {t("clearSelection")}
             </button>
           </div>
           {manager.selectionLabel && (
-            <p className="mt-2 text-xs text-muted">Επιλογή: {manager.selectionLabel}</p>
+            <p className="mt-2 text-xs text-muted">
+              {t("selectionLabel", { label: manager.selectionLabel })}
+            </p>
           )}
         </div>
       </div>
@@ -118,19 +120,21 @@ export function ShortTermCalendarModal({ manager, onClose }: ModalProps) {
 }
 
 function MiniCalendarLegend() {
+  const t = useTranslations("Workspace.unavailablePeriods");
+
   return (
     <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-[10px] text-muted">
       <span className="flex items-center gap-1">
         <span className="h-2 w-2 rounded-sm bg-gold/35" />
-        Μη διαθέσιμες ημερομηνίες
+        {t("legendUnavailable")}
       </span>
       <span className="flex items-center gap-1">
         <span className="h-2 w-2 rounded-full bg-gold" />
-        Επιλεγμένη περίοδος
+        {t("legendSelected")}
       </span>
       <span className="flex items-center gap-1">
         <span className="h-2 w-2 rounded-full opacity-35 ring-1 ring-border" />
-        Περασμένες ημερομηνίες
+        {t("legendPast")}
       </span>
     </div>
   );
@@ -151,15 +155,16 @@ export function ShortTermAvailabilitySection({
   embedded = false,
   className,
 }: SectionProps) {
+  const t = useTranslations("Workspace.unavailablePeriods");
   const manager = useUnavailablePeriodsManager({ listingId, initialPeriods: periods });
   const [calendarOpen, setCalendarOpen] = useState(false);
 
   const summary =
     manager.items.length === 0
-      ? "Δεν έχουν δηλωθεί μη διαθέσιμες ημερομηνίες"
-      : `${manager.items.length} ${
-          manager.items.length === 1 ? "μη διαθέσιμη περίοδος" : "μη διαθέσιμες περίοδοι"
-        }`;
+      ? t("summaryNone")
+      : manager.items.length === 1
+        ? t("summaryOne")
+        : t("summaryMany", { count: manager.items.length });
 
   return (
     <>
@@ -172,7 +177,7 @@ export function ShortTermAvailabilitySection({
       >
         {!embedded && (
           <>
-            <p className="text-xs font-medium text-charcoal">Διαθεσιμότητα βραχυχρόνιας</p>
+            <p className="text-xs font-medium text-charcoal">{t("sectionTitleShortTerm")}</p>
             <p className="mt-1 text-[11px] text-muted">{summary}</p>
           </>
         )}
@@ -202,7 +207,7 @@ export function ShortTermAvailabilitySection({
             onClick={() => setCalendarOpen(true)}
             className="rounded-lg border border-border bg-white px-3 py-1.5 text-xs font-medium text-charcoal hover:border-gold/30"
           >
-            Διαχείριση ημερολογίου
+            {t("manageCalendar")}
           </button>
           <button
             type="button"
@@ -210,7 +215,7 @@ export function ShortTermAvailabilitySection({
             disabled={!manager.selectionStart || manager.pending}
             className="rounded-lg bg-gold px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-40"
           >
-            {manager.pending ? "Αποθήκευση…" : "Κλείσιμο ημερομηνιών"}
+            {manager.pending ? t("saving") : t("closeDates")}
           </button>
         </div>
       </div>
@@ -219,9 +224,7 @@ export function ShortTermAvailabilitySection({
         <ShortTermCalendarModal manager={manager} onClose={() => setCalendarOpen(false)} />
       )}
 
-      {manager.error && (
-        <p className="mt-3 text-sm text-red-500">{manager.error}</p>
-      )}
+      {manager.error && <p className="mt-3 text-sm text-red-500">{manager.error}</p>}
 
       {manager.toast && (
         <div className="fixed bottom-6 left-1/2 z-[130] -translate-x-1/2 rounded-xl bg-charcoal px-4 py-2.5 text-sm text-white shadow-lg">

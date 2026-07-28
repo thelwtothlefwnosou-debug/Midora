@@ -1,0 +1,678 @@
+{
+  "cohosts-what-is": {
+    "q": "What is a co-host?",
+    "a": "A co-host (co-host) is a person who helps the owner manage a listing — eg. responds to requests or updates availability — with rights defined by the owner."
+  },
+  "cohosts-add": {
+    "q": "How do I add a co-host?",
+    "a": "1. Open the listing from /dashboard/listings.n2. Co-hosts tab.n3. Invite co-host → email + permission level.n4. The invitee accepts the invitation."
+  },
+  "cohosts-permissions": {
+    "q": "What rights does the co-host have?",
+    "a": "Owner chooses level: full management, messaging+availability, or messaging only. The co-host sees only what they're allowed to see — they don't replace the owner."
+  },
+  "cohosts-reply-messages": {
+    "q": "Can the co-host reply to messages?",
+    "a": "Yes, if the owner has given them the right to manage messages. Responses appear in the request thread."
+  },
+  "cohosts-change-availability": {
+    "q": "Can the co-host change availability?",
+    "a": "Yes, if they have an availability right (eg \"Messages + availability\" level or full management). Otherwise it only sees messages."
+  },
+  "cohosts-change-prices": {
+    "q": "Can the co-host change prices?",
+    "a": "Only if fully managed or expressly entitled to pricing/availability. In the other levels it cannot change values."
+  },
+  "cohosts-add-phone": {
+    "q": "Can the co-host add a phone?",
+    "a": "If they have the right to edit the listing/communication, they can help with the contact information of the listing — according to the rights set by the owner."
+  },
+  "cohosts-remove": {
+    "q": "How do I remove a co-host?",
+    "a": "1. Open the listing → Co-hosts.n2. Find the co-host.n3. Remove/Revoke Access.nnOnly the owner can remove a co-host."
+  },
+  "cohosts-delete-listing": {
+    "q": "Can the co-host delete the listing?",
+    "a": "No. The co-host cannot delete the listing, remove the owner, or manage billing/posting, unless the owner has explicitly given them such rights (usually not)."
+  },
+  "cohosts-public-display": {
+    "q": "Where does the co-host appear in the listing?",
+    "a": "If the owner allows it, the co-host may appear in the owner/host section. The primary owner remains responsible for the listing."
+  },
+  "cohosts-public-profile": {
+    "q": "Can the guest see the co-host's profile?",
+    "a": "Only if it appears publicly in the listing and has a public profile. Usually the main communication is with the owner or whoever responds to the request."
+  },
+  "external-links-what": {
+    "q": "What are trust links?",
+    "a": "They are optional HTTPS links that the owner adds from other platforms (eg Airbnb, Booking, Vrbo) so that visitors can cross-check that the listing exists elsewhere. It is not a verification by Midora nor a booking through Midora."
+  },
+  "external-links-add-airbnb-booking": {
+    "q": "Where do I link from Airbnb or Booking?",
+    "a": "1. Open the listing → Reliability tab.n2. \"Reliability links\" section.n3. Add link → paste HTTPS URL → select platform.n4. Save."
+  },
+  "external-links-other-platform": {
+    "q": "Can I link from another platform?",
+    "a": "Yes. Select \"Other\" platform, paste HTTPS URL and tag if necessary. Midora does not import data — it only stores the link you paste."
+  },
+  "external-links-where-shown": {
+    "q": "Where does the external link appear?",
+    "a": "Only if you've enabled him for public display — down in the public listing, after the owner. The visitor can open the link in a new tab."
+  },
+  "external-links-required": {
+    "q": "Is it mandatory to put an external link?",
+    "a": "No. External links are optional. Posting a listing does not require an external link — they help with credibility, not as a required field."
+  },
+  "external-links-no-scraping": {
+    "q": "Does Midora take data from Airbnb or Booking?",
+    "a": "No. Midora does not scrape, import photos, reviews or descriptions from other platforms. The owner only pastes URL — nothing else is automatically copied."
+  },
+  "external-links-no-photo-copy": {
+    "q": "If I put a link, are the photos copied?",
+    "a": "No. Photos, descriptions and reviews are NOT copied from an external link. Upload photos and description manually to Midora."
+  },
+  "external-links-visitor-open": {
+    "q": "Can the visitor open the external link?",
+    "a": "Yes, if the link is public and active. Opens on external platform — not payment or booking through Midora."
+  },
+  "external-links-why-optional": {
+    "q": "Why is the link optional?",
+    "a": "Because many owners only manage through Midora. The external link is an additional sign of trust, not a requirement."
+  },
+  "external-links-tips": {
+    "q": "What should I pay attention to when I put an external link?",
+    "a": "1. Use correct HTTPS URL.n2. Make sure the link points to the same listing.n3. Turn on public display only if you want.n4. Don't wait for auto-import — you fill in all the information in Midora."
+  },
+  "inquiries-send-generic": {
+    "q": "How do I send a request?",
+    "a": "Short-term: select dates, write a message and press \"Send availability request\".nMonthly: select month/duration, write a message and press \"Send rental request\".nnMidora does not complete bookings or payments — the final agreement is confirmed by the owner."
+  },
+  "inquiries-send-availability": {
+    "q": "How do I send an availability request?",
+    "a": "1. Open a short-term listing.n2. Select dates and guests (optional).n3. Write a message to the owner.n4. Click \"Send availability request\".nnMidora does not finalize bookings — final agreement is confirmed by the owner."
+  },
+  "inquiries-send-rental": {
+    "q": "How do I send a rental request?",
+    "a": "1. Open monthly listing.n2. Choose start month and duration.n3. Write a message to the owner.n4. Press \"Send rental request\".nnThe final agreement is made directly with the owner."
+  },
+  "inquiries-message-tips": {
+    "q": "What should I write in the message to the owner?",
+    "a": "Write briefly: who you are, how many people, dates, special needs (eg pets, check-in). The more specific, the faster the response."
+  },
+  "inquiries-without-dates": {
+    "q": "Can I send a message without dates?",
+    "a": "Yes. You can send a request without having selected dates — write in the message which dates you are interested in. With dates, the owner immediately sees your interest."
+  },
+  "inquiries-owner-response-time": {
+    "q": "When does the owner respond?",
+    "a": "Response time depends on the owner. You will receive a notification when he replies through Midora. If they do not respond in a few days, try again or send a request to another listing."
+  },
+  "inquiries-where-messages": {
+    "q": "Where do I see my messages?",
+    "a": "If you are logged in, view requests and responses from Dashboard → Requests/Messages. Each discussion is linked to the listing that interested you."
+  },
+  "inquiries-contact-cohost": {
+    "q": "Can I contact a co-host?",
+    "a": "Yes, if the owner has designated a co-host with messaging rights, they can respond to your request. Communication is through Midora — not off-platform."
+  },
+  "inquiries-no-phone": {
+    "q": "Why is the owner's phone not showing up?",
+    "a": "For security, the phone is not always displayed in public. The owner can share this upon request, depending on their settings (e.g. upon request or public)."
+  },
+  "inquiries-contact-when": {
+    "q": "When are contact details displayed?",
+    "a": "It depends on the owner's settings: private, on request or public. Usually contact details are shared after you send a request and there is a response."
+  },
+  "inquiries-cancel-change": {
+    "q": "Can I cancel or change a request?",
+    "a": "You can send a new message in the same conversation with updated dates or explain that you are no longer interested. There is no automatic \"cancel reservation\" — Midora does not manage reservations."
+  },
+  "inquiries-no-response": {
+    "q": "What do I do if the owner does not respond?",
+    "a": "1. Wait 1–2 days.n2. Send a kind follow-up to the same request.n3. Try a similar listing.n4. If there is an external link, you can see the listing elsewhere."
+  },
+  "inquiries-multiple-listings": {
+    "q": "Can I send the same request to multiple properties?",
+    "a": "Yes. Each listing has a separate request — open each listing and submit a separate request. So each owner sees only their own request."
+  },
+  "inquiries-owner-reply": {
+    "q": "How do I respond to a request?",
+    "a": "1. Open the listing → Requests tab.n2. Select guest request.n3. Write your answer in the message field.n4. Send.nnCommunication stays within Midora until you agree."
+  },
+  "inquiries-message-templates": {
+    "q": "How do I use message templates?",
+    "a": "In the request thread, write your response in the message field. If you need repetitive phrases, keep your own notes — ready-made message templates are not yet available in Midora."
+  },
+  "inquiries-cohost-can-reply": {
+    "q": "Can a co-host answer?",
+    "a": "Yes, if the owner has given it permission to message. The co-host replies from the same Requests tab, without changing ownership of the listing."
+  },
+  "legal-midora-role": {
+    "q": "What role does Midora play in leases?",
+    "a": "Midora acts as a listing display and initial communication platform. It is not part of any lease, payment or agreement between owner and interested party. Final availability, agreement, payment and related tax or legal obligations are made directly between the parties, outside Midora."
+  },
+  "legal-aade-owner-guide": {
+    "q": "AADE guide for owners",
+    "a": "General guidance by type of lease. Midora does not submit statements on your behalf.\n\n## Short stay\nIf the property is available for short-term accommodation, the owner or manager may need to register the property with AADE and use a number such as AMA, ESL or MAG where required.\n\n### Before posting the listing\n1. Log in to myAADE.\n2. Open the Short-Term Property Rental application.\n3. Register the property in the Short-Term Property Registry, as requested by the application.\n4. Keep the registration number corresponding to the property, such as AMA, ESL or MAG, where required.\n5. Fill in this number in your listing on Midora.\n\n### After actual stay\n1. Log in to myAADE.\n2. Open the Short-Term Property Rental application.\n3. Select the property / AMA corresponding to the accommodation.\n4. Fill in the information requested by the application, such as dates, tenant information and agreed amount.\n5. If an online platform is requested and the agreement came from Midora, there may be an option like \"Other digital platforms\", where you can mention Midora, as the application allows.\n6. Submit the statement and keep the proof of submission.\n\nPayment directly between the parties, even in cash, does not mean that the lease is not declared.\n\n## Monthly / long term lease\nIf the agreement concerns a monthly or long-term lease, it is usually not a Short-Term Residence Declaration. The owner follows the procedure of electronic submission of lease to AADE, where required.\n\n1. Log in to myAADE.\n2. Open the Property Lease Statements / Property Lease Details application.\n3. Fill in details of lessor and lessee.\n4. Fill in property information, lease term and agreed rent, as requested by the application.\n5. Submit the statement and keep the proof of submission.\n\nFor monthly or long-term leases, do not fill in AMA in Midora unless the specific case requires it.\n\n## What do I put as platform if the deal came from Midora?\nIf the AADE application requests an online platform and the agreement came from a listing on Midora, there may be an option available such as \"Other digital platforms\", where you can mention Midora, as permitted by the application. Do not select Airbnb, Booking.com, Vrbo or any other platform if the specific agreement did not come from there.\n\n## Important note\nThe information is provided as general information for the use of the platform and does not constitute tax, accounting or legal advice. Midora does not submit declarations to the AADE and does not undertake tax or legal obligations on behalf of owners or visitors. For the correct completion and for your case, consult an accountant, lawyer or the AADE."
+  },
+  "legal-aade-platform-field": {
+    "q": "What do I choose in AADE if the agreement came from Midora?",
+    "a": "If the deal came from a listing on Midora and the AADE application requests an online platform, there may be an option available such as \"Other digital platforms\", where the owner can mention Midora, as permitted by the application.\n\nDo not select Airbnb, Booking.com, Vrbo or any other platform if the specific agreement did not come from there.\n\nMidora does not file the return on your behalf and does not provide tax, accounting or legal advice. For correct completion, consult an accountant or the AADE.\n\nThe information is provided as general information for the use of the platform and does not constitute tax, accounting or legal advice. Midora does not submit declarations to the AADE and does not undertake tax or legal obligations on behalf of owners or visitors. For the correct completion and for your case, consult an accountant, lawyer or the AADE."
+  },
+  "legal-aade-short-term-phone": {
+    "q": "If the interested party found me through Midora but we agreed by phone, how do I report this to AADE?",
+    "a": "If it is a short-term stay, the owner or manager of the property submits a Short-Term Stay Declaration in the AADE application for Short-Term Property Rentals.\n\nGeneral steps:\n1. Log in to myAADE.\n2. You open the Short-Term Property Rental application.\n3. You select the property / AMA that corresponds to the listing.\n4. You fill in the accommodation details, such as arrival and departure dates, tenant details and agreed amount, according to what the application asks for.\n5. If the application requests an online platform and the agreement came from Midora, there may be an option like \"Other digital platforms\", where you can mention Midora, according to what the application allows.\n6. You submit the declaration and keep the proof of submission.\n\nThe fact that the payment was made directly between the parties, even in cash, does not mean that the lease is not declared. Midora does not submit the declaration on your behalf.\n\nThe information is for general information and does not constitute tax or legal advice. For correct completion, consult an accountant or the AADE."
+  },
+  "legal-aade-monthly": {
+    "q": "What do I do if the agreement is monthly or long term?",
+    "a": "If the agreement concerns a monthly or long-term lease, it is not a Short-Term Residence Declaration. The owner follows the procedure of electronic submission of lease to AADE, where required.\n\nGeneral steps:\n1. Log in to myAADE.\n2. You open the Real Estate Lease Statements / Real Estate Lease Details application.\n3. You fill in details of lessor and lessee.\n4. You fill in property information, lease term and agreed rent, according to what the application asks for.\n5. You submit the declaration and keep the proof of submission.\n\nMidora does not file leases or tax returns on behalf of landlords.\n\nThe information is for general information and does not constitute tax or legal advice. For correct completion, consult an accountant or the AADE."
+  },
+  "legal-damage-responsibility": {
+    "q": "Who is liable if the property is damaged?",
+    "a": "Midora acts as a listing display and initial communication platform. It is not part of the lease or agreement between the owner and the guest/tenant. Damage, wear and tear, losses or financial differences arising from the use of the property are a matter between the parties, in accordance with the agreement between them and the applicable law.\n\nMidora does not provide insurance, warranty, claims management or compensation for damage to the property."
+  },
+  "legal-aade-assistant-pattern": {
+    "q": "Does Midora submit declarations to AADE?",
+    "a": "Midora does not submit declarations to AADE on behalf of owners. If the agreement came from an advertisement on Midora and is for a short stay, the owner/operator is responsible for the Short Stay Declaration. If the app asks for a platform, there might be an option like \"Other digital platforms\", where the owner can mention Midora as per what the app allows. For correct completion, consult an accountant or the AADE."
+  },
+  "owner-dashboard-all-listings": {
+    "q": "Where do I see all my listings?",
+    "a": "Go to Dashboard → My Properties (/dashboard/listings). There you see all your listings in cards or a list, with status and quick actions."
+  },
+  "owner-dashboard-back-to-listings": {
+    "q": "How do I get back to my listings?",
+    "a": "Click \"My Properties\" in the top menu or go to /dashboard/listings. From listing workspace, use breadcrumb or logo."
+  },
+  "owner-dashboard-open-listing": {
+    "q": "How do I open a specific listing?",
+    "a": "From /dashboard/listings, press the listing card. Opens the workspace with tabs: Overview, Listing, Photos, Availability, Requests, Publish, etc."
+  },
+  "owner-dashboard-inquiries-where": {
+    "q": "Where do I see requests?",
+    "a": "Open the listing → Requests tab. There you see availability/rental requests from guests and can respond."
+  },
+  "owner-dashboard-messages-where": {
+    "q": "Where do I see the messages?",
+    "a": "Messages are associated with requests. Open the listing → Requests or the general Dashboard → Messages (if available). Each thread corresponds to a guest request."
+  },
+  "owner-dashboard-analytics": {
+    "q": "Where do I see the stats?",
+    "a": "Open the listing → Analytics tab. There you see views and performance indicators, depending on the available data."
+  },
+  "owner-dashboard-completion-score": {
+    "q": "What does listing completion rate mean?",
+    "a": "It shows how complete the listing is (photos, description, prices, amenities, etc.). A higher completion score helps visitors trust the listing."
+  },
+  "owner-dashboard-improve-listing": {
+    "q": "How do I improve my listing?",
+    "a": "1. Add quality photos and cover photo.n2. Fill in amenities and description.n3. Set correct prices and availability.n4. Respond quickly to requests.n5. Publish when conditions are met."
+  },
+  "owner-dashboard-published-status": {
+    "q": "Where do I see if the listing is published?",
+    "a": "In the list of listings (/dashboard/listings) you see status (e.g. active, draft, under review). Details and Publish button on the Publish tab."
+  },
+  "owner-dashboard-preview-public": {
+    "q": "How do I see the listing as the visitor sees it?",
+    "a": "From the workspace, click \"View public listing\" or open the public link (/listings/{id}). So you see exactly what is displayed to visitors."
+  },
+  "owner-dashboard-mobile-preview": {
+    "q": "How do I switch from desktop to mobile view?",
+    "a": "In the workspace or preview, use the Desktop/Mobile toggle (if available) or minimize the browser window. For a full check, open the listing from mobile."
+  },
+  "owner-dashboard-update-listing": {
+    "q": "How do I update my listing?",
+    "a": "Open the listing from /dashboard/listings and edit the appropriate tab (Listing, Photos, Availability). Click Save in each section. Changes appear publicly after saving."
+  },
+  "owner-listing-create": {
+    "q": "How do I post a listing?",
+    "a": "1. Go to Dashboard → My Properties (/dashboard/listings).n2. Press New listing.n3. Choose short term or monthly.n4. Fill in details, photos, prices and availability.n5. Publish from the Publish tab."
+  },
+  "owner-listing-required-fields": {
+    "q": "What information is needed for a listing?",
+    "a": "Basics: title, description, location, rental type, capacity, photos, price and availability. To publish, check the Publish tab for eligibility requirements."
+  },
+  "owner-listing-short-term": {
+    "q": "Can I upload a short-term listing?",
+    "a": "Yes. When creating or editing, select short-term rental. You will set prices per night, calendar of availability and minimum stay."
+  },
+  "owner-listing-monthly": {
+    "q": "Can I post a monthly listing?",
+    "a": "Yes. Choose a monthly/medium term lease and set a price per month, duration and basic details. Guests send a rental request."
+  },
+  "owner-listing-good-description": {
+    "q": "How do I write a good description?",
+    "a": "Write clearly: what the property is, where it is (no exact address), what it includes, rules, check-in/out. Use honest information — it helps with requests."
+  },
+  "owner-listing-how-many-photos": {
+    "q": "How many photos should I upload?",
+    "a": "Add enough photos for each main area — usually 5–15+ for a good look. The Post tab shows if you meet the minimum photo requirement."
+  },
+  "owner-listing-upload-photos": {
+    "q": "How do I upload photos?",
+    "a": "1. Open the listing → Photos tab.n2. Click \"Add photos\" or drag files.n3. Wait for the upload to complete.n4. Set cover and order as you want."
+  },
+  "owner-listing-cover-photo": {
+    "q": "How do I set a main photo?",
+    "a": "1. Open the listing → Photos tab.n2. Tap the three dots on the photo.n3. Select \"Set as cover\".nnThe cover appears first in the public listing and in search."
+  },
+  "owner-listing-reorder-photos": {
+    "q": "How do I change the order of the photos?",
+    "a": "In the Photos tab, drag & drop the photos for a new row. The series also appears in the public gallery."
+  },
+  "owner-listing-rooms": {
+    "q": "How do I add rooms and spaces?",
+    "a": "On the Photos or Listing tab, organize photos and descriptions by space/room. So visitors see a structured gallery by area of ​​the property."
+  },
+  "owner-listing-amenities": {
+    "q": "How do I add amenities?",
+    "a": "1. Open the listing → tab Registration (edit).n2. Scroll to the \"Features\" section.n3. Select the amenities that apply.n4. Click \"Save amenities\"."
+  },
+  "owner-listing-set-price": {
+    "q": "How do I set a price?",
+    "a": "Short-term: Availability tab — base price per night, weekend, discounts.nMonthly: Listing tab — price per month.nSave changes."
+  },
+  "owner-listing-set-availability": {
+    "q": "How do I set availability?",
+    "a": "1. Open the listing → Availability tab.n2. Click on a date to block/unblock.n3. For short term, set price per day.n4. Save."
+  },
+  "owner-listing-publish": {
+    "q": "How do I post the listing?",
+    "a": "1. Fill in details, photos, prices.n2. Go to the Publish tab.n3. Check the conditions.n4. Click Publish.nnThe listing appears publicly only when it is active."
+  },
+  "owner-listing-not-public": {
+    "q": "Why is my listing not appearing publicly?",
+    "a": "Check: (1) Publish tab — is it active/published? (2) completeness — missing photos/prices? (3) \"under review\" status or pause. Corrected and reposted."
+  },
+  "owner-listing-under-review": {
+    "q": "What does it mean that the listing is under review?",
+    "a": "The listing may be temporarily non-public while it is being reviewed or until you complete required information. See the Publishing tab for what's missing."
+  },
+  "owner-listing-pause": {
+    "q": "Can I pause a listing?",
+    "a": "Yes. From the Publish tab or the status settings, you can disable/pause the listing. It won't show up in search until you turn it back on."
+  },
+  "photos-amenities-view-all-photos": {
+    "q": "How do I see all the photos?",
+    "a": "In the listing, click on a photo at the top to open the gallery. You can see all the photos, often grouped by space."
+  },
+  "photos-amenities-room-sections": {
+    "q": "Why are photos separated by space?",
+    "a": "The owner organizes the photos by room or space (eg kitchen, bedroom) so you can better understand the property before submitting a request."
+  },
+  "photos-amenities-room-photos": {
+    "q": "What are the photos per room?",
+    "a": "They are photos uploaded by the owner and placed in a room/space category. They help to see each part of the property separately."
+  },
+  "photos-amenities-where": {
+    "q": "Where do I see the amenities?",
+    "a": "In the listing, section \"Amenities\" or \"What the place offers\" — all the amenities chosen by the owner are displayed there."
+  },
+  "photos-amenities-what-offers": {
+    "q": "What does \"What the space offers\" mean?",
+    "a": "It's the property's amenities list — Wi-Fi, air conditioning, kitchen, parking, etc. — as stated by the owner. Midora does not guarantee that all are valid — confirm in the request if necessary."
+  },
+  "photos-amenities-wifi": {
+    "q": "How do I see if it has Wi-Fi?",
+    "a": "See the \"amenities\" section. If the owner has selected Wi-Fi, it appears there. You can also ask it in the request."
+  },
+  "photos-amenities-kitchen": {
+    "q": "How do I see if it has a kitchen?",
+    "a": "Under \"Amenities\" look for \"Kitchen\" or related options (full/small kitchen). Kitchen photos also help in the gallery section."
+  },
+  "photos-amenities-washer": {
+    "q": "How do I see if it has a washing machine?",
+    "a": "See \"Amenities\" for washing machine or washer/dryer. If not listed, ask the owner on the request."
+  },
+  "photos-amenities-ac": {
+    "q": "How do I see if it has air conditioning?",
+    "a": "\"Amenities\" shows \"Air conditioning\" if the owner has selected it. In summer, also ask for rooms with A/C in the request."
+  },
+  "photos-amenities-workspace": {
+    "q": "How do I see if it has a workspace?",
+    "a": "See the facilities and photos of the office/living room. If workspace is not explicitly mentioned, ask in the request."
+  },
+  "photos-amenities-parking": {
+    "q": "How do I see if it has parking?",
+    "a": "In \"Amenities\" search for parking/parking space. You can also filter listings with parking in the search (/listings)."
+  },
+  "photos-amenities-pets": {
+    "q": "How do I see if pets are allowed?",
+    "a": "See \"amenities\" and \"Rules\" in the listing. If pets are allowed, it is usually stated explicitly. Otherwise ask in the request before you travel."
+  },
+  "pricing-how-calculated": {
+    "q": "How is the price calculated?",
+    "a": "The owner sets prices (per night or per month). In short term, Midora calculates indicative total based on price calendar — weekend, special periods, 7+/28+ night discounts. The final price is confirmed by the owner."
+  },
+  "pricing-changes-with-dates": {
+    "q": "Why does the price change when I put dates?",
+    "a": "Each day may have a different price (eg weekend, special period). When you select dates, the total is calculated for those nights — not the indicative 5-night preview."
+  },
+  "pricing-5-nights-display": {
+    "q": "Why is a price for 5 nights displayed?",
+    "a": "With no dates selected, Midora shows an indicative price for 5 nights so you can compare listings. With dates, the price changes for your time period."
+  },
+  "pricing-final-price": {
+    "q": "Is the price I see final?",
+    "a": "No — it's indicative. The final price and terms are confirmed by the owner upon request. Midora does not complete payments or reservations."
+  },
+  "pricing-midora-commission": {
+    "q": "Does Midora charge commission?",
+    "a": "Midora is a listing and request platform — it does not process payments and does not charge a booking fee. Any price agreement is made directly with the owner."
+  },
+  "pricing-pay-through-midora": {
+    "q": "Can I pay through Midora?",
+    "a": "No. Midora does not process payments. You send a request, contact the owner and directly agree on a payment method and time."
+  },
+  "pricing-owner-confirms": {
+    "q": "What does \"final agreement confirmed by owner\" mean?",
+    "a": "Midora shows indicative values ​​and allows you to send a request. The owner checks availability, price, rules and replies. The definitive agreement is made outside Midora, directly with him."
+  },
+  "availability-see-dates": {
+    "q": "How do I see available dates?",
+    "a": "In the listing, in the \"Availability\" or \"Indicative availability\" section, see the calendar. Available days are selected — closed ones are grayed out."
+  },
+  "availability-grey-dates": {
+    "q": "What do the gray dates in the calendar mean?",
+    "a": "Gray dates are unavailable — closed by the owner or in the past. You cannot select them for a request."
+  },
+  "availability-dash-meaning": {
+    "q": "What does a dash on a date mean?",
+    "a": "A dash (–) indicates that the day is blocked/unavailable. Try other dates or send a request with an alternative range."
+  },
+  "availability-select-blocked": {
+    "q": "Can I select dates that are closed?",
+    "a": "No — closed dates are not selected. If you need those days, send a request with alternative dates or ask the owner."
+  },
+  "availability-range-not-selectable": {
+    "q": "Why can't I select a date range?",
+    "a": "There may be a closed day within the range, a minimum stay that is not met, or a conflict with the owner's arrangements. Try a shorter or different interval."
+  },
+  "availability-change-dates-in-listing": {
+    "q": "What if I change dates within the listing?",
+    "a": "The indicative price and calendar are updated for the new range. The request you send will include the dates you have selected at that time."
+  },
+  "owner-availability-block-dates": {
+    "q": "How do I book dates?",
+    "a": "1. Open the listing → Availability tab.n2. Click on a date or range to block (close).n3. Save. Closed dates do not accept requests."
+  },
+  "owner-availability-daily-price": {
+    "q": "How do I change the price of the day?",
+    "a": "On the Availability tab, select a date and set a price per night. You can set a different price per day in the calendar."
+  },
+  "owner-availability-weekend-price": {
+    "q": "How do I set a weekend price?",
+    "a": "On the Availability tab, set a weekend value (or per day for Sat/Sun) in the corresponding field. Save to apply on relevant dates."
+  },
+  "profile-change-photo": {
+    "q": "How do I change my profile picture?",
+    "a": "1. Go to Dashboard → Profile (/dashboard/profile).n2. Tap on the current photo or edit button.n3. Upload new image.n4. Save."
+  },
+  "profile-change-name": {
+    "q": "How do I change my name?",
+    "a": "In /dashboard/profile, edit the name field and save. If you signed in with Google, the name can be synced — you can customize it in the profile."
+  },
+  "profile-add-bio": {
+    "q": "How do I add a profile description?",
+    "a": "In Dashboard → Profile, fill in the bio/description field. This is displayed on your public profile as an owner, if active."
+  },
+  "profile-add-languages": {
+    "q": "How do I add languages?",
+    "a": "In the profile (/dashboard/profile), select the languages ​​you speak. They appear on the public profile so visitors know how to get in touch."
+  },
+  "profile-change-email": {
+    "q": "How do I change email?",
+    "a": "The email is linked to your account (e.g. Google or email login). To change, see account settings in profile or contact support if you can't."
+  },
+  "profile-change-phone": {
+    "q": "How do I change phone?",
+    "a": "In /dashboard/profile, update the phone and complete verification if requested. The phone can be displayed publicly or only by request, depending on the settings."
+  },
+  "profile-public-fields": {
+    "q": "What information is publicly visible?",
+    "a": "Usually: name, photo, biography, languages, active listings. Private information of other users (eg email) is not displayed without explicit notification."
+  },
+  "profile-private-fields": {
+    "q": "What information is private?",
+    "a": "Account email, internal settings and information that you have not selected for public display remain private. Phone may be private or upon request."
+  },
+  "profile-view-public": {
+    "q": "How do I view my public profile?",
+    "a": "From your profile or a listing, open \"View Public Profile\" or the link /profile/{username} (if available). This is how you see what visitors see."
+  },
+  "profile-as-owner": {
+    "q": "How do I appear as an owner?",
+    "a": "Complete profile (name, photo, bio, languages) and post listings. In your listings you appear as the owner/host with a link to your public profile."
+  },
+  "profile-as-cohost": {
+    "q": "How do I appear as a co-host?",
+    "a": "You are accepting a co-host invitation from an owner. If the owner lists you publicly, you may appear in the listing. Your profile uses the same data from /dashboard/profile."
+  },
+  "public-listing-photos-all": {
+    "q": "How do I see all photos of a property?",
+    "a": "At the top of the listing you can see a photo gallery. Click on a photo to enlarge or open a full gallery. You can scroll/arrow to see them all."
+  },
+  "public-listing-amenities-where": {
+    "q": "Where do I see the property's amenities?",
+    "a": "Scroll through the listing to the \"Features\" or \"What the space offers\" section. Wi-Fi, air conditioning, kitchen, parking, etc. appear there. stated by the owner."
+  },
+  "public-listing-pets-where": {
+    "q": "Where can I see if pets are allowed?",
+    "a": "See the \"Rules\" or \"Features\" section of the listing — that's where it says if pets are allowed. You can also ask it in the request to the owner."
+  },
+  "public-listing-location-where": {
+    "q": "Where do I see the area of ​​the property?",
+    "a": "In the \"Location\" section you see a map with an approximate point and region/city. The exact address is not shown publicly for security."
+  },
+  "public-listing-no-exact-address": {
+    "q": "Why is the exact address not displayed?",
+    "a": "For owner and guest safety, Midora shows approximate location on map. The exact address is shared directly after communication and agreement."
+  },
+  "public-listing-owner-profile": {
+    "q": "How do I see the owner's profile?",
+    "a": "In the listing, under the \"Owner\" or \"About the host\" section, click on the host's name or profile picture to open their public profile."
+  },
+  "public-listing-cohost-what": {
+    "q": "What is a co-host?",
+    "a": "A co-host is a person who helps the owner manage the listing (eg messages, availability), with rights set by the owner. It does not replace the owner."
+  },
+  "public-listing-approximate-location": {
+    "q": "What does approximate location mean?",
+    "a": "The map shows the general area, not the exact entrance. This is how personal information is protected until you contact the owner."
+  },
+  "public-listing-parking-where": {
+    "q": "Where can I see if there is parking?",
+    "a": "See the \"Amenities\" section — if parking is available, it will appear there. You can also use a parking filter in the search (/listings)."
+  },
+  "public-listing-checkin-out": {
+    "q": "Where do I see check-in and check-out?",
+    "a": "In the listing, in the \"Rules\" or \"Accommodation details\" section, check-in/check-out times are shown if they have been set by the owner. For special needs, ask in the request."
+  },
+  "public-listing-kids-friendly": {
+    "q": "Where do I see if the property is suitable for children?",
+    "a": "See the amenities and rules in the listing — beds, security, quiet rules, etc. If not explicitly stated, ask the owner in the request."
+  },
+  "public-listing-external-platform": {
+    "q": "Where can I see if the listing is also available on another platform?",
+    "a": "If the owner has activated a public external link, it appears at the bottom of the listing (eg Airbnb, Booking). It's not a reservation through Midora — just a link to another platform."
+  },
+  "safety-communicate-in-midora": {
+    "q": "Is it safe to communicate through Midora?",
+    "a": "For your safety, contact through Midora and confirm the details of the property before proceeding with any payment or agreement. Midora does not manage payments, reservations or advances. The final agreement is made directly with the owner."
+  },
+  "safety-send-deposit": {
+    "q": "Do I have to send a deposit to the landlord?",
+    "a": "Midora does not manage payments, reservations or advances. Before sending any amount directly to an owner, confirm their identity, availability, property details and terms of the deal. For a monthly or long-term lease, it is safer to view the property first or confirm the details of the agreement with confidence."
+  },
+  "safety-midora-protect-payment": {
+    "q": "Does Midora hold or protect my payment?",
+    "a": "No. Midora acts as a listing display and initial communication platform. It does not hold funds, process payments, or provide payment or advance protection."
+  },
+  "safety-message-owner": {
+    "q": "Can I message the owner through Midora?",
+    "a": "Yes. From the public listing you can send a message to the owner or host for availability, terms and details of the property. Communication through Midora helps keep an organized history, but the final agreement is made directly between the parties."
+  },
+  "safety-midora-payments": {
+    "q": "Does Midora handle payments?",
+    "a": "No. Midora does not process payments, reservations or refunds. You send a request or message, contact the owner and agree directly — off-platform for payment."
+  },
+  "safety-pay-before-talk": {
+    "q": "Do I need to send money before talking to the owner?",
+    "a": "No. Do not send money or advance payment before confirming availability, owner identity and terms. Midora does not guarantee payments. For your safety, contact through Midora first."
+  },
+  "safety-suspicious-listing": {
+    "q": "What do I do if a listing looks suspicious?",
+    "a": "Do not send money outside of Midora. Send a request or message through the platform, check owner profiles and external links. If something doesn't seem right, use \"Report listing\" or \"Report Chat\" or contact support."
+  },
+  "safety-report-listing": {
+    "q": "How do I report a listing?",
+    "a": "In the public listing click on \"Report listing\" and choose a reason (eg suspicious listing, wrong information, wrong location). The report is for internal control/moderation — it does not imply dispute management or compensation by Midora."
+  },
+  "safety-no-exact-address": {
+    "q": "Why isn't an exact address displayed?",
+    "a": "The approximate location is shown for privacy reasons. The exact address is shared by the owner after communication, unless the owner has opted for public accurate display."
+  },
+  "safety-real-listing": {
+    "q": "How do I know a listing is real?",
+    "a": "Check: full owner profile, lots of photos, clear description, external link (optional), response to request. Do not pay before confirming availability. External links do not imply verification by Midora."
+  },
+  "safety-external-link-trust": {
+    "q": "What does an external link mean as a trust signal?",
+    "a": "If the owner has a public link to Airbnb/Booking etc., it shows that the listing exists elsewhere. It is not a verification or endorsement by Midora and does not guarantee availability or security."
+  },
+  "safety-last-updated": {
+    "q": "What does \"last listing update\" mean?",
+    "a": "Shows when the listing was last updated by the owner (eg prices, photos). More recent update usually means more active management."
+  },
+  "safety-complete-owner-profile": {
+    "q": "What does a completed owner profile mean?",
+    "a": "Owner with name, photo, bio and languages ​​— not a blank profile. It helps to know who you are communicating with. It doesn't guarantee safety by itself, but it's a positive sign."
+  },
+  "search-how": {
+    "q": "How do I search Midora?",
+    "a": "Go to Search (/listings) or use the search bar on the homepage. Choose Short-term or Monthly, put destination (optionally dates/visitors) and press Search."
+  },
+  "search-dates-required": {
+    "q": "Do I need to enter dates to search?",
+    "a": "No. You can search without dates. In a short-term search, if you do not enter dates, the prices are shown indicatively for 5 nights."
+  },
+  "search-no-location": {
+    "q": "Can I search without a destination?",
+    "a": "Yes. You can search without a city — you will see results in a wider area or throughout Greece, depending on the filters. For more targeted results, enter a destination or use the map."
+  },
+  "search-no-guests": {
+    "q": "Can I search without visitors?",
+    "a": "Yes. Guests are optional. Search works normally without visitor count."
+  },
+  "search-mode-switch": {
+    "q": "How do I change from a short term to a monthly lease?",
+    "a": "In the search bar, click on the Monthly (or Short Term) tab. The change updates the fields — short term uses dates, monthly uses start month and duration."
+  },
+  "search-short-term-meaning": {
+    "q": "What does short stay mean?",
+    "a": "Short stay means renting for a few days or weeks — with arrival and departure dates. In Midora you send an availability request to the owner."
+  },
+  "search-monthly-meaning": {
+    "q": "What does a monthly / medium term lease mean?",
+    "a": "A monthly or medium-term rental is a stay for months (eg 1–12 months). In the search, you select the start month and duration. You send a rental request to the owner."
+  },
+  "search-set-dates": {
+    "q": "How do I put dates?",
+    "a": "In the search bar (home or /listings), press the date field, select arrival and departure and confirm. Prices and results are updated for the period you selected."
+  },
+  "search-pets": {
+    "q": "How do I add pets to the search?",
+    "a": "Open the Visitors/Who field in the search bar and increase the number of Pets. Then listings that allow pets appear."
+  },
+  "search-filters": {
+    "q": "How do filters work?",
+    "a": "Click Filters on the search page for price, rooms, bathrooms, parking, amenities, etc. Filters are applied to the results and the map."
+  },
+  "search-map": {
+    "q": "How do I use the map?",
+    "a": "In the search, open the map to see listings in the area. Zoom in, move the area and use \"Search in this area\" if available."
+  },
+  "search-5-nights-price": {
+    "q": "Why do I see a price for 5 nights?",
+    "a": "In a short search without dates, Midora shows an indicative price for 5 nights. If you enter dates, the price is calculated for the nights you selected."
+  },
+  "search-unavailable-dates": {
+    "q": "Why are some dates unavailable?",
+    "a": "Unavailable dates are closed by the owner or do not meet the minimum stay. Try another range or another listing."
+  },
+  "search-location-only": {
+    "q": "Can I search by region only?",
+    "a": "Yes. Just put destination in the search bar without dates or visitors and press Search."
+  },
+  "search-dates-only": {
+    "q": "Can I search by dates only?",
+    "a": "You can enter dates without a destination — you'll see results in a wider area. For best results, combine it with a destination."
+  },
+  "search-total-price": {
+    "q": "What does the value \"total\" mean?",
+    "a": "Total means an indicative total for the selected period (eg 5 nights or the dates you entered). It is not a final booking — the final price is confirmed by the owner."
+  },
+  "home-what-is-midora": {
+    "q": "What is Midora?",
+    "a": "Midora is a classifieds platform for short-term and monthly/medium-term rentals in Greece. Connects guests with owners through requests — does not complete bookings or payments."
+  },
+  "troubleshoot-calendar-not-opening": {
+    "q": "Calendar does not open. what am i doing",
+    "a": "1. Do a hard refresh (Ctrl+Shift+R).n2. Try another browser.n3. Check if it blocks extension.n4. If it continues, send a request to support from the Midora Assistant."
+  },
+  "troubleshoot-changes-not-saving": {
+    "q": "My changes are not being saved. what am i doing",
+    "a": "1. Check internet connection.n2. Explicitly press Save.n3. Do not close the page before it is finished.n4. Hard refresh and try again.n5. If it persists, contact support."
+  },
+  "troubleshoot-photos-not-showing": {
+    "q": "My photos are not showing.",
+    "a": "1. Wait for the upload.n2 to complete. Check format (JPG, PNG, WebP).n3. Refresh the page.n4. See if the listing is published.n5. If they are still missing, send a support request."
+  },
+  "troubleshoot-cannot-upload-photos": {
+    "q": "I can't upload photos.",
+    "a": "1. Check file size/format.n2. Try fewer photos each time.n3. Check connection.n4. Hard refresh.n5. If it keeps failing, contact support."
+  },
+  "troubleshoot-cannot-find-listing": {
+    "q": "I can't find my listing.",
+    "a": "1. Go to /dashboard/listings.n2. Check filters (active/draft).n3. If it's a draft, open it from the list.n4. If you created a new one, search by title in the list."
+  },
+  "troubleshoot-back-to-search": {
+    "q": "I can't go back to the search.",
+    "a": "Use \"Back to search\" in the listing or browser back. If filters are missed, search again from /listings — criteria may not always be preserved."
+  },
+  "troubleshoot-map-not-working": {
+    "q": "The map is not working.",
+    "a": "1. Hard refresh (Ctrl+Shift+R).n2. Check connection.n3. Try without listing-blocker on the map.n4. If it continues, use result list without map."
+  },
+  "troubleshoot-map-zoom": {
+    "q": "I can't zoom in on the map.",
+    "a": "Use scroll/pinch zoom or the +/- buttons on the map. If it doesn't respond, refresh. On mobile, try two finger pinch."
+  },
+  "troubleshoot-listing-not-public": {
+    "q": "My listing is not showing publicly.",
+    "a": "1. Publish tab — is it active?n2. Completeness — missing photos/prices?n3. Status \"in check\" or pause?n4. Save and repost.n5. If OK but not visible, contact support."
+  },
+  "troubleshoot-no-messages": {
+    "q": "I'm not getting messages.",
+    "a": "1. Check the Requests tab of the listing.n2. Check notifications/email.n3. Make sure the listing is published.n4. If you are co-host, check message permissions.n5. If it continues, send a support request."
+  },
+  "troubleshoot-cannot-add-cohost": {
+    "q": "I can't add a co-host.",
+    "a": "1. Only the owner invites co-host.n2. Max 5 co-hosts per listing.n3. Check correct email.n4. If you are co-host, you cannot invite others (default).n5. If it fails, contact support."
+  },
+  "troubleshoot-cannot-add-external-link": {
+    "q": "I can't post an external link.",
+    "a": "1. Use valid HTTPS URL.n2. Select platform.n3. Save from Listing → Links.n4. Midora does not import — only paste URL.n5. If validation fails, try another link."
+  },
+  "troubleshoot-wrong-price": {
+    "q": "The value is not calculated correctly.",
+    "a": "1. Check prices by day in calendar (weekend, special periods).n2. Check minimum stay.n3. Save and refresh public announcement.n4. Price is indicative — final confirmation by owner."
+  },
+  "troubleshoot-dates-lost": {
+    "q": "The dates I selected were lost.",
+    "a": "Dates may not be preserved after navigation. Select them again in the listing or search. To search, put dates again in the search bar before sending a request."
+  },
+  "troubleshoot-wrong-rental-mode": {
+    "q": "It turns me wrong from short term to monthly.",
+    "a": "Check the Short Term/Monthly tab in the search bar or classifieds. The mode does not change automatically — explicitly select the lease type before searching or requesting."
+  }
+}

@@ -9,7 +9,7 @@ $checks = @(
   },
   @{
     file = "src/components/search/LocationSearchField.tsx"
-    mustContain = @("Πού", "Προσθήκη προορισμού")
+    mustContain = @("drawAreaOnMap", "LocationSearchField")
   },
   @{
     file = "src/components/map/PropertyMapLoader.tsx"

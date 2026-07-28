@@ -3,6 +3,7 @@
 import { useCallback, useState } from "react";
 import dynamic from "next/dynamic";
 import { X, Undo2, Trash2, Check, Search } from "lucide-react";
+import { useTranslations } from "next-intl";
 import type { LatLng } from "@/lib/geo/polygon";
 import { POLYGON_MIN_POINTS } from "@/lib/geo/polygon";
 
@@ -10,13 +11,18 @@ const MapAreaDrawMap = dynamic(
   () => import("./MapAreaDrawMap").then((m) => m.MapAreaDrawMap),
   {
     ssr: false,
-    loading: () => (
-      <div className="flex h-full items-center justify-center bg-sand/40 text-muted">
-        Φόρτωση χάρτη...
-      </div>
-    ),
+    loading: () => <MapDrawLoadingFallback />,
   }
 );
+
+function MapDrawLoadingFallback() {
+  const t = useTranslations("Map");
+  return (
+    <div className="flex h-full items-center justify-center bg-sand/40 text-muted">
+      {t("loading")}
+    </div>
+  );
+}
 
 type Props = {
   open: boolean;
@@ -35,6 +41,7 @@ export function MapAreaDrawModal({
   initialCenter = DEFAULT_CENTER,
   initialZoom = 12,
 }: Props) {
+  const t = useTranslations("Map");
   const [points, setPoints] = useState<LatLng[]>([]);
   const [closed, setClosed] = useState(false);
 
@@ -81,23 +88,22 @@ export function MapAreaDrawModal({
   const canSearch = hasEnoughPoints;
 
   function statusMessage() {
-    if (points.length === 0) {
-      return "Σύρε τον χάρτη ή κάνε κλικ για να ορίσεις την περιοχή";
-    }
+    if (points.length === 0) return t("drawEmpty");
     if (!hasEnoughPoints) {
-      return `${points.length}/${POLYGON_MIN_POINTS} σημεία — πρόσθεσε κι άλλα ή σύρε μια περιοχή`;
+      return t("drawNeedPoints", {
+        current: points.length,
+        min: POLYGON_MIN_POINTS,
+      });
     }
-    if (canFinish) {
-      return "Πάτα «Ολοκλήρωση» ή το πρώτο σημείο — ή διπλό κλικ στον χάρτη";
-    }
-    return "Η περιοχή είναι έτοιμη";
+    if (canFinish) return t("drawFinish");
+    return t("drawReady");
   }
 
   return (
     <div className="fixed inset-0 z-[200] flex items-center justify-center p-3 sm:p-6">
       <button
         type="button"
-        aria-label="Κλείσιμο"
+        aria-label={t("close")}
         className="absolute inset-0 bg-charcoal/50 backdrop-blur-sm"
         onClick={handleClose}
       />
@@ -106,7 +112,7 @@ export function MapAreaDrawModal({
         <div className="flex items-center justify-between border-b border-border px-4 py-3 sm:px-5 sm:py-4">
           <div>
             <h2 className="font-display text-lg font-semibold text-charcoal sm:text-xl">
-              Σχεδίασε την περιοχή
+              {t("drawTitle")}
             </h2>
             <p className="mt-0.5 text-sm text-muted">{statusMessage()}</p>
           </div>
@@ -114,6 +120,7 @@ export function MapAreaDrawModal({
             type="button"
             onClick={handleClose}
             className="rounded-lg p-2 text-muted hover:bg-sand hover:text-charcoal"
+            aria-label={t("close")}
           >
             <X className="h-5 w-5" />
           </button>
@@ -140,7 +147,7 @@ export function MapAreaDrawModal({
               className="flex items-center gap-1.5 rounded-xl border border-border bg-white px-3 py-2 text-xs font-medium text-charcoal hover:bg-sand disabled:opacity-40"
             >
               <Undo2 className="h-3.5 w-3.5" />
-              Αναίρεση
+              {t("undo")}
             </button>
             <button
               type="button"
@@ -149,7 +156,7 @@ export function MapAreaDrawModal({
               className="flex items-center gap-1.5 rounded-xl border border-border bg-white px-3 py-2 text-xs font-medium text-charcoal hover:bg-sand disabled:opacity-40"
             >
               <Trash2 className="h-3.5 w-3.5" />
-              Καθαρισμός
+              {t("clear")}
             </button>
             <button
               type="button"
@@ -158,7 +165,7 @@ export function MapAreaDrawModal({
               className="flex items-center gap-1.5 rounded-xl border border-teal/30 bg-teal/10 px-3 py-2 text-xs font-semibold text-teal hover:bg-teal/15 disabled:opacity-40"
             >
               <Check className="h-3.5 w-3.5" />
-              Ολοκλήρωση
+              {t("finish")}
             </button>
           </div>
 
@@ -170,7 +177,7 @@ export function MapAreaDrawModal({
               className="flex w-full items-center justify-center gap-2 rounded-xl bg-gold px-6 py-2.5 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-40 sm:w-auto"
             >
               <Search className="h-4 w-4" />
-              Αναζήτηση σε αυτή την περιοχή
+              {t("searchArea")}
             </button>
           </div>
         </div>

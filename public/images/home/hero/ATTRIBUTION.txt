@@ -1,0 +1,18 @@
+Midora homepage hero background
+================================
+
+Active asset: warm-interior
+Files:
+  - hero-warm-interior-desktop.webp (2400px wide)
+  - hero-warm-interior-mobile.webp (1200×1800 art-directed crop)
+
+Source: https://unsplash.com/photos/c0JoR_-2x3E
+Photographer / studio: Spacejoy (@spacejoy)
+License: Unsplash License (https://unsplash.com/license)
+  Free to use commercially; no permission required.
+  Do not imply endorsement by Unsplash or the creator.
+
+Selected for Midora because it is a warm, calm living-room interior
+with natural materials and soft light — less visual noise than the
+previous open-plan kitchen render, and better for logo/headline/search
+readability with a light premium overlay.

@@ -1,13 +1,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 
 const ANCHORS = [
-  { id: "gallery", label: "Φωτογραφίες" },
-  { id: "amenities", label: "Παροχές" },
-  { id: "rules", label: "Όροι" },
-  { id: "area", label: "Περιοχή" },
+  { id: "gallery", labelKey: "photos" },
+  { id: "amenities", labelKey: "amenities" },
+  { id: "rules", labelKey: "terms" },
+  { id: "area", labelKey: "area" },
 ] as const;
 
 export function ListingAnchorNav({
@@ -15,6 +16,7 @@ export function ListingAnchorNav({
 }: {
   visibleIds: Set<string>;
 }) {
+  const t = useTranslations("Listing");
   const items = ANCHORS.filter((a) => visibleIds.has(a.id));
   const [active, setActive] = useState(items[0]?.id ?? "");
 
@@ -52,7 +54,7 @@ export function ListingAnchorNav({
                   : "border-transparent text-muted hover:text-charcoal"
               )}
             >
-              {item.label}
+              {t(item.labelKey)}
             </a>
           </li>
         ))}

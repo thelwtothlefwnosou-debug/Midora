@@ -2,31 +2,20 @@
 
 import { motion } from "framer-motion";
 import { Shield, Globe, Clock, CalendarRange, MessageCircle } from "lucide-react";
+import { useTranslations } from "next-intl";
 
-const features = [
-  {
-    icon: Clock,
-    title: "Ευέλικτοι τύποι διαμονής",
-    desc: "Βραχυχρόνια ή μηνιαία/μεσοπρόθεσμη — ανάλογα με αυτό που ψάχνεις.",
-  },
-  {
-    icon: Shield,
-    title: "Ελεγμένες αγγελίες",
-    desc: "Οι αγγελίες μπορούν να ελέγχονται πριν δημοσιευτούν για βασικά στοιχεία και ΑΜΑ/ΕΣΛ/ΜΑΓ όπου απαιτείται.",
-  },
-  {
-    icon: Globe,
-    title: "Πανελλαδική κάλυψη",
-    desc: "Αναζήτησε ακίνητα σε πόλεις, νησιά και δημοφιλείς προορισμούς σε όλη την Ελλάδα.",
-  },
-  {
-    icon: CalendarRange,
-    title: "Διαθεσιμότητα ενημερωτικά",
-    desc: "Δες δηλωμένες περιόδους και επικοινώνησε με τον αγγελιοδότη για επιβεβαίωση.",
-  },
-];
+const FEATURE_ICONS = [Clock, Shield, Globe, CalendarRange] as const;
+
+const BENTO_KEYS = [
+  { title: "bento1Title", desc: "bento1Text" },
+  { title: "bento2Title", desc: "bento2Text" },
+  { title: "bento3Title", desc: "bento3Text" },
+  { title: "bento4Title", desc: "bento4Text" },
+] as const;
 
 export function BentoFeatures() {
+  const t = useTranslations("Home");
+
   return (
     <section className="bg-sand/50 py-24">
       <div className="mx-auto max-w-7xl px-6">
@@ -37,30 +26,33 @@ export function BentoFeatures() {
           className="mb-14 text-center"
         >
           <h2 className="font-display text-3xl font-semibold text-charcoal sm:text-4xl">
-            Γιατί Midora;
+            {t("whyTitle")}
           </h2>
         </motion.div>
 
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-          {features.map((feature, i) => (
-            <motion.div
-              key={feature.title}
-              initial={{ opacity: 0, y: 28 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ delay: i * 0.08 }}
-              whileHover={{ y: -6 }}
-              className="card-3d rounded-2xl border border-border bg-white p-6 shadow-soft"
-            >
-              <div className="mb-4 inline-flex rounded-xl border border-border bg-sand/50 p-3">
-                <feature.icon className="h-5 w-5 text-gold" strokeWidth={1.75} />
-              </div>
-              <h3 className="font-display text-lg font-semibold text-charcoal">
-                {feature.title}
-              </h3>
-              <p className="mt-2 text-sm leading-relaxed text-muted">{feature.desc}</p>
-            </motion.div>
-          ))}
+          {BENTO_KEYS.map((feature, i) => {
+            const Icon = FEATURE_ICONS[i];
+            return (
+              <motion.div
+                key={feature.title}
+                initial={{ opacity: 0, y: 28 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: i * 0.08 }}
+                whileHover={{ y: -6 }}
+                className="card-3d rounded-2xl border border-border bg-white p-6 shadow-soft"
+              >
+                <div className="mb-4 inline-flex rounded-xl border border-border bg-sand/50 p-3">
+                  <Icon className="h-5 w-5 text-gold" strokeWidth={1.75} />
+                </div>
+                <h3 className="font-display text-lg font-semibold text-charcoal">
+                  {t(feature.title)}
+                </h3>
+                <p className="mt-2 text-sm leading-relaxed text-muted">{t(feature.desc)}</p>
+              </motion.div>
+            );
+          })}
         </div>
 
         <motion.div
@@ -76,11 +68,10 @@ export function BentoFeatures() {
           </div>
           <div>
             <h3 className="font-display text-lg font-semibold text-charcoal">
-              Απευθείας επικοινωνία
+              {t("why3Title")}
             </h3>
             <p className="mt-1 text-sm leading-relaxed text-muted sm:text-base">
-              Στείλε ενδιαφέρον και συνεννοήσου απευθείας με τον αγγελιοδότη — χωρίς
-              περιττά βήματα.
+              {t("why3Text")}
             </p>
           </div>
         </motion.div>

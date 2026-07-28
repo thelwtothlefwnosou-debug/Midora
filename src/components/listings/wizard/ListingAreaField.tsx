@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { MapPin } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { getCityAreaExamples } from "@/lib/data/greek-areas";
 import { MAX_LOCATION_SUGGESTIONS, type SearchLocation } from "@/lib/data/locations-shared";
 import {
@@ -35,6 +36,7 @@ export function ListingAreaField({
   className,
   inputClassName,
 }: Props) {
+  const t = useTranslations("Wizard.fields");
   const [open, setOpen] = useState(false);
   const [focused, setFocused] = useState(false);
   const [draft, setDraft] = useState(value);
@@ -49,11 +51,11 @@ export function ListingAreaField({
   const areaExamples = getCityAreaExamples(city, 2);
   const areaPlaceholder = cityReady
     ? areaExamples.length >= 2
-      ? `π.χ. ${areaExamples.join(", ")}`
+      ? t("areaExamplePrefix", { examples: areaExamples.join(", ") })
       : areaExamples.length === 1
-        ? `π.χ. ${areaExamples[0]}`
-        : `Γειτονιά στην ${city.trim()}`
-    : "Πρώτα επίλεξε πόλη";
+        ? t("areaExamplePrefix", { examples: areaExamples[0] })
+        : t("neighborhoodInCity", { city: city.trim() })
+    : t("selectCityFirst");
   const display = focused ? draft : value;
   const queryLen = display.trim().length;
   const dropdownOpen =
@@ -148,7 +150,7 @@ export function ListingAreaField({
             className="z-[200] max-h-72 overflow-y-auto rounded-xl border border-border bg-white py-1 shadow-[0_12px_40px_-8px_rgba(26,26,26,0.22)]"
           >
             {loading && suggestions.length === 0 && (
-              <li className="px-4 py-2.5 text-xs text-muted">Αναζήτηση περιοχών...</li>
+              <li className="px-4 py-2.5 text-xs text-muted">{t("searchingAreas")}</li>
             )}
             {suggestions.map((loc, index) => (
               <li key={`${loc.area}-${loc.label}-${index}`} role="presentation">
@@ -203,7 +205,7 @@ export function ListingAreaField({
         className={cn(inputClassName, !cityReady && "opacity-60")}
       />
       {!cityReady && (
-        <p className="mt-1 text-[11px] text-muted">Επίλεξε πρώτα την πόλη για αναζήτηση περιοχής.</p>
+        <p className="mt-1 text-[11px] text-muted">{t("selectCityFirstHint")}</p>
       )}
       {dropdown}
     </div>

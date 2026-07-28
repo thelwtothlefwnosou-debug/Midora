@@ -1,3 +1,4 @@
+import { getTranslations } from "next-intl/server";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { activateListingFree } from "@/lib/actions";
 import { createClient } from "@/lib/supabase/server";
@@ -31,43 +32,42 @@ export default async function PayListingPage({
     listing.status === "approved" &&
     listing.expires_at &&
     new Date(listing.expires_at) <= new Date();
+  const t = await getTranslations("Owner.payPage");
 
   return (
     <>
       <p className="mb-6 text-sm text-muted">
-        Η χρέωση αφορά μόνο την προβολή της αγγελίας — όχι μισθώσεις ή συμφωνίες.
+        {t("billingNote")}
       </p>
 
       <GlassCard glow className="mx-auto max-w-lg p-8 text-center">
         {errorParam && (
           <p className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-            {errorParam === "config"
-              ? "Η υπηρεσία δεν είναι διαθέσιμη αυτή τη στιγμή. Δοκίμασε ξανά αργότερα."
-              : errorParam}
+            {errorParam === "config" ? t("serviceUnavailable") : errorParam}
           </p>
         )}
         {isFree ? (
           <>
-            <p className="font-display text-5xl font-bold text-gold">Δωρεάν</p>
-            <p className="mt-2 text-muted">Προσφορά launch — χωρίς χρέωση</p>
+            <p className="font-display text-5xl font-bold text-gold">{t("free")}</p>
+            <p className="mt-2 text-muted">{t("launchOffer")}</p>
             <form action={activateListingFree.bind(null, id)} className="mt-8">
               <button
                 type="submit"
                 className="w-full rounded-full bg-gradient-to-r from-gold to-gold-light py-4 font-semibold text-charcoal"
               >
-                {isExpired ? "Ανανέωση αγγελίας" : "Υποβολή για έγκριση"}
+                {isExpired ? t("renewListing") : t("submitForApproval")}
               </button>
             </form>
           </>
         ) : (
           <>
-            <p className="font-display text-5xl font-bold text-gold">1€</p>
-            <p className="mt-2 text-muted">Πακέτο προβολής — 1 μήνας ενεργής προβολής</p>
+            <p className="font-display text-5xl font-bold text-gold">{t("packagePrice")}</p>
+            <p className="mt-2 text-muted">{t("visibilityPackage")}</p>
             <Link
               href={`/api/checkout?listingId=${id}`}
               className="mt-8 block w-full rounded-full bg-gradient-to-r from-gold to-gold-light py-4 font-semibold text-charcoal"
             >
-              Ενεργοποίηση προβολής αγγελίας
+              {t("activateVisibility")}
             </Link>
           </>
         )}

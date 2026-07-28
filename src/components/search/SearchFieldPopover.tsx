@@ -3,6 +3,7 @@
 import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { AnimatePresence, motion } from "framer-motion";
+import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 
 export type PopoverPlacement = "below-anchor" | "below-center";
@@ -121,6 +122,7 @@ export function SearchFieldPopover({
   title,
   labelledBy,
 }: Props) {
+  const t = useTranslations("Search");
   const fallbackTitleId = useId();
   const titleId = labelledBy ?? fallbackTitleId;
   const isMobile = useIsMobile();
@@ -193,7 +195,7 @@ export function SearchFieldPopover({
           <div className="fixed inset-0 z-[210] flex items-end justify-center">
             <motion.button
               type="button"
-              aria-label="Κλείσιμο"
+              aria-label={t("close")}
               className="absolute inset-0 bg-charcoal/25"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}

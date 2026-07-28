@@ -42,6 +42,8 @@ type Props = {
   onViewportChange?: (bounds: MapBounds, meta?: MapViewportChangeMeta) => void;
   reportBoundsOnMove?: boolean;
   clustered?: boolean;
+  /** When false with clustered map, show one pin per listing (no Supercluster). */
+  clusterMarkers?: boolean;
   fitMarkersOnLoad?: boolean;
   fitMaxZoom?: number;
   fitMinZoom?: number;
@@ -77,6 +79,7 @@ export function PropertyMapLoader({
   onMarkerHover,
   onMarkerDeselect,
   flush,
+  clusterMarkers = true,
 }: Props) {
   useEffect(() => {
     void import("@/components/map/MidoraMapCore");
@@ -102,6 +105,7 @@ export function PropertyMapLoader({
         onMarkerHover={onMarkerHover}
         onMarkerDeselect={onMarkerDeselect}
         flush={flush}
+        clusterMarkers={clusterMarkers}
       />
     );
   }

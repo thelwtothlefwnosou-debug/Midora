@@ -1,7 +1,6 @@
 "use client";
 
-
-
+import { useTranslations } from "next-intl";
 import { ListingMediaGallery } from "@/components/listings/ListingMediaGallery";
 
 import { MonthlyListingLayout } from "@/components/listings/MonthlyListingLayout";
@@ -61,6 +60,7 @@ export function MonthlyListingPageShell({
   nearby = [],
 
 }: Props) {
+  const t = useTranslations("Listing");
 
   async function handleShare() {
 
@@ -130,7 +130,7 @@ export function MonthlyListingPageShell({
 
       </div>
 
-      <PublicListingSummary listing={listing} rentalLabel="Μηνιαία / Μεσοπρόθεσμη" />
+      <PublicListingSummary listing={listing} rentalLabel={t("monthlyMidterm")} />
 
       <MonthlyListingLayout
 

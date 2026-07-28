@@ -2,12 +2,14 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { OWNER_TOP_NAV, resolveOwnerTopNavId } from "@/lib/owner-top-nav";
 import { cn } from "@/lib/utils";
 
 export function OwnerTopNav({ className }: { className?: string }) {
   const pathname = usePathname();
   const active = resolveOwnerTopNavId(pathname);
+  const t = useTranslations("OwnerNav");
 
   return (
     <nav
@@ -15,7 +17,7 @@ export function OwnerTopNav({ className }: { className?: string }) {
         "flex items-center gap-1 overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
         className
       )}
-      aria-label="Κύρια πλοήγηση"
+      aria-label={t("ariaMain")}
     >
       {OWNER_TOP_NAV.map((item) => {
         const isActive = active === item.id;
@@ -30,10 +32,11 @@ export function OwnerTopNav({ className }: { className?: string }) {
                 : "text-charcoal/55 hover:bg-sand/60 hover:text-charcoal"
             )}
           >
-            {item.label}
+            {t(item.id)}
           </Link>
         );
       })}
     </nav>
   );
 }
+

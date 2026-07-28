@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import Image from "next/image";
 import { useRouter } from "next/navigation";
 import {
   Eye,
@@ -14,6 +13,7 @@ import {
   Link2,
   ImageIcon,
 } from "lucide-react";
+import { useLocale, useTranslations } from "next-intl";
 import { Button } from "@/components/ui/Button";
 import { ListingViewButton } from "@/components/dashboard/ListingViewButton";
 import { DeleteListingButton } from "@/components/dashboard/DeleteListingButton";
@@ -22,129 +22,150 @@ import { DashboardListingAnalyticsDrawer } from "@/components/dashboard/Dashboar
 import type { OwnerListingRowModel } from "@/lib/owner-listings-page";
 import { listingNeedsCompletenessPanel } from "@/lib/owner-listings-page";
 import {
-  getOwnerListingStatus,
-  ownerListingStatusHelper,
-  formatOwnerListingDate,
-} from "@/lib/dashboard-listings";
+  ownerListingPrimaryAction,
+  resolveOwnerListingUiStatus,
+} from "@/lib/owner-listing-ui-status";
+import { formatOwnerListingDate } from "@/lib/dashboard-listings";
 import {
   buildListingAnalytics,
   formatAnalyticsMetric,
   hasListingPerformanceData,
 } from "@/lib/owner-listing-analytics";
-import { listingPrimaryCta, ownerListingCompletenessItems } from "@/lib/owner-dashboard";
+import { ownerListingCompletenessItems } from "@/lib/owner-dashboard";
 import {
-  formatListingPrice,
+  getFormattedListingPrice,
+  getRentalTypeBadgeLabel,
   listingRentalType,
-  rentalTypeBadgeLabel,
 } from "@/lib/rental-types";
 import { formatListingAvailabilityText } from "@/lib/listing-availability-status";
+import { formatOwnerPropertyMeta } from "@/lib/owner-listing-card-helpers";
 import { listingManageHref } from "@/lib/listing-workspace-nav";
+import { pickListingCoverPhotoUrl } from "@/lib/listing-media";
 import { getListingPublicId, cn } from "@/lib/utils";
 
 type Props = {
   row: OwnerListingRowModel;
   isFree: boolean;
+  onDeleted?: (listingId: string) => void;
 };
 
-function formatPropertyMeta(row: OwnerListingRowModel): string {
-  const { listing } = row;
-  const parts: string[] = [];
-  const guests = listing.max_guests ?? listing.included_guests;
-  if (guests) parts.push(`${guests} επισκέπτες`);
-  if (listing.bedrooms) parts.push(`${listing.bedrooms} υπν.`);
-  if (listing.bathrooms) parts.push(`${listing.bathrooms} μπάνιο`);
-  if (listing.sqm) parts.push(`${listing.sqm} τ.μ.`);
-  return parts.join(" · ");
-}
+type CompletenessItemId =
+  | "photos"
+  | "location"
+  | "price"
+  | "availability"
+  | "verification"
+  | "registry";
 
-function lifecycleLabel(row: OwnerListingRowModel): {
+function lifecycleLabel(
+  row: OwnerListingRowModel,
+  locale: string,
+  t: ReturnType<typeof useTranslations<"Owner.list">>,
+  tUi: ReturnType<typeof useTranslations<"Owner.uiStatus">>
+): {
   text: string;
   tone: "neutral" | "green" | "amber" | "warning" | "expired";
-  cta?: { label: string; href: string };
+  cta?: { labelKey: "renew" | "reactivate"; href: string };
 } {
   const { listing, ownerStatusKey, daysUntilExpiry } = row;
+  const dateLocale = locale.startsWith("el") ? "el-GR" : "en-US";
   const reactivateHref = `/dashboard/listings/${listing.id}/pay?reactivate=1`;
 
   if (ownerStatusKey === "published" || ownerStatusKey === "paused") {
     if (daysUntilExpiry == null) {
-      return { text: "Ενεργή χωρίς ημερομηνία λήξης", tone: "neutral" };
+      return { text: t("activeNoExpiry"), tone: "neutral" };
     }
     if (daysUntilExpiry < 0) {
-      const d = formatOwnerListingDate(listing.expires_at);
+      const d = formatOwnerListingDate(listing.expires_at, dateLocale);
       return {
-        text: d ? `Έληξε στις ${d}` : "Έληξε",
+        text: d ? t("expiredAt", { date: d }) : t("expired"),
         tone: "expired",
-        cta: { label: "Επανενεργοποίηση", href: reactivateHref },
+        cta: { labelKey: "reactivate", href: reactivateHref },
       };
     }
     if (daysUntilExpiry <= 6) {
       return {
-        text: `Λήγει σε ${daysUntilExpiry} ${daysUntilExpiry === 1 ? "ημέρα" : "ημέρες"}`,
+        text: t("expiresIn", { days: daysUntilExpiry }),
         tone: "warning",
-        cta: { label: "Ανανέωση", href: reactivateHref },
+        cta: { labelKey: "renew", href: reactivateHref },
       };
     }
-    if (daysUntilExpiry <= 14) {
-      const d = formatOwnerListingDate(listing.expires_at);
-      return {
-        text: d ? `Ενεργή έως ${d.replace(/^(\d+) /, "$1 ")}` : `Λήγει σε ${daysUntilExpiry} ημέρες`,
-        tone: "amber",
-        cta: { label: "Ανανέωση", href: reactivateHref },
-      };
-    }
-    const d = formatOwnerListingDate(listing.expires_at);
+    const d = formatOwnerListingDate(listing.expires_at, dateLocale);
     return {
-      text: d ? `Ενεργή έως ${d}` : "Ενεργή",
-      tone: "green",
+      text: d ? t("activeUntil", { date: d }) : t("active"),
+      tone: daysUntilExpiry <= 14 ? "amber" : "green",
+      cta: daysUntilExpiry <= 14 ? { labelKey: "renew", href: reactivateHref } : undefined,
     };
   }
 
   if (ownerStatusKey === "expired") {
-    const d = formatOwnerListingDate(listing.expires_at);
+    const d = formatOwnerListingDate(listing.expires_at, dateLocale);
     return {
-      text: d ? `Έληξε στις ${d}` : "Έληξε",
+      text: d ? t("expiredAt", { date: d }) : t("expired"),
       tone: "expired",
-      cta: { label: "Επανενεργοποίηση", href: reactivateHref },
+      cta: { labelKey: "reactivate", href: reactivateHref },
     };
   }
 
   if (ownerStatusKey === "draft") {
-    return { text: "Δεν έχει δημοσιευτεί ακόμα", tone: "neutral" };
+    if (row.missingRequiredCount > 0) {
+      return {
+        text: tUi("helperMissingCount", { count: row.missingRequiredCount }),
+        tone: "amber",
+      };
+    }
+    if (row.completenessPercent >= 100) {
+      return { text: tUi("ready"), tone: "green" };
+    }
+    return { text: tUi("helperNotSubmitted"), tone: "neutral" };
   }
 
-  if (ownerStatusKey === "review" || ownerStatusKey === "needs_fixes") {
-    return { text: "Αναμονή ελέγχου", tone: "neutral" };
+  if (ownerStatusKey === "review") {
+    return { text: tUi("helperSubmittedForReview"), tone: "neutral" };
+  }
+
+  if (ownerStatusKey === "needs_fixes") {
+    return { text: tUi("needsFixes"), tone: "warning" };
   }
 
   return { text: "—", tone: "neutral" };
 }
 
-export function DashboardListingRow({ row, isFree }: Props) {
+export function DashboardListingRow({ row, isFree, onDeleted }: Props) {
+  const locale = useLocale();
   const router = useRouter();
+  const t = useTranslations("Owner.list");
+  const tUi = useTranslations("Owner.uiStatus");
+  const tCta = useTranslations("Owner.cta");
+  const tCompleteness = useTranslations("Owner.completeness");
+  const tListing = useTranslations("Listing");
+  const tCommon = useTranslations("Common");
   const [menuOpen, setMenuOpen] = useState(false);
   const [analyticsOpen, setAnalyticsOpen] = useState(false);
   const [copied, setCopied] = useState(false);
 
   const { listing, effectiveStatus, ownerStatusKey, photoCount, completenessPercent } = row;
-  const ownerStatus = getOwnerListingStatus(listing, effectiveStatus);
-  const helperText = ownerListingStatusHelper(listing, effectiveStatus, ownerStatusKey);
+  const ui = resolveOwnerListingUiStatus(row, locale);
   const analytics = buildListingAnalytics(
     listing,
     effectiveStatus,
     ownerStatusKey,
     row.leadStats
   );
-  const primaryCta = listingPrimaryCta(listing, effectiveStatus);
+  const primaryCta = ownerListingPrimaryAction(row);
   const completenessItems = ownerListingCompletenessItems(listing, photoCount);
   const showCompleteness = listingNeedsCompletenessPanel(ownerStatusKey);
-  const lifecycle = lifecycleLabel(row);
+  const lifecycle = lifecycleLabel(row, locale, t, tUi);
+  const statusLabel = tUi(ui.labelKey);
+  const helperText = ui.helperValues
+    ? tUi(ui.helperKey, ui.helperValues)
+    : tUi(ui.helperKey);
 
-  const images = listing.listing_images ?? [];
-  const cover = images.find((i) => i.media_type !== "video")?.url;
+  const cover = pickListingCoverPhotoUrl(listing);
   const rentalType = listingRentalType(listing);
   const isShortTerm = rentalType === "short_term";
-  const price = formatListingPrice(listing);
-  const propertyMeta = formatPropertyMeta(row);
+  const price = getFormattedListingPrice(listing, tCommon);
+  const propertyMeta = formatOwnerPropertyMeta(row, t);
   const publicId = getListingPublicId(listing);
   const manageHref = listingManageHref(listing.id);
   const editHref = `/dashboard/listings/${listing.id}/edit`;
@@ -194,94 +215,115 @@ export function DashboardListingRow({ row, isFree }: Props) {
             router.push(manageHref);
           }
         }}
-        className="group cursor-pointer overflow-hidden rounded-2xl border border-border bg-white shadow-soft transition-shadow hover:border-gold/25 hover:shadow-card"
+        className="group cursor-pointer overflow-hidden rounded-[22px] border border-border bg-white shadow-soft transition-shadow hover:border-gold/25 hover:shadow-card"
       >
-        <div className="flex flex-col xl:grid xl:grid-cols-[160px_minmax(0,1.4fr)_140px_150px_150px_auto] xl:items-stretch">
-          {/* Thumbnail */}
-          <div className="relative shrink-0 p-3 pb-0 xl:p-4 xl:pb-4">
-            <div className="relative h-[120px] w-full overflow-hidden rounded-[13px] bg-sand/40 sm:w-[160px]">
+        <div className="flex min-h-[190px] flex-col gap-5 p-5 sm:p-6 xl:grid xl:grid-cols-[minmax(0,1.85fr)_minmax(140px,0.5fr)_minmax(130px,0.45fr)_minmax(150px,0.55fr)_minmax(200px,0.7fr)] xl:items-stretch xl:gap-6">
+          {/* Photo + listing summary */}
+          <div className="flex min-w-0 flex-col gap-4 sm:flex-row sm:items-start sm:gap-6">
+            <div className="relative h-[200px] w-full shrink-0 overflow-hidden rounded-2xl bg-sand/50 sm:h-[140px] sm:w-[200px] xl:h-[160px] xl:w-[240px]">
               {cover ? (
-                <Image src={cover} alt="" fill className="object-cover" sizes="160px" />
+                // eslint-disable-next-line @next/next/no-img-element -- avoid next/image hostname crashes blanking dashboard
+                <img
+                  src={cover}
+                  alt=""
+                  className="absolute inset-0 h-full w-full object-cover object-center"
+                />
               ) : (
-                <div className="flex h-full flex-col items-center justify-center gap-2 text-muted">
-                  <ImageIcon className="h-6 w-6 opacity-50" />
-                  <span className="text-[11px]">Χωρίς φωτογραφία</span>
+                <div className="flex h-full flex-col items-center justify-center gap-2 px-4 text-center text-muted">
+                  <ImageIcon className="h-8 w-8 opacity-45" />
+                  <span className="text-xs leading-snug">{t("noPhotoAdded")}</span>
                 </div>
               )}
-              <span className="absolute top-2 left-2 rounded-md bg-charcoal/90 px-2 py-0.5 text-[9px] font-semibold tracking-wide text-white uppercase">
-                {rentalTypeBadgeLabel(rentalType)}
+              <span className="absolute top-2.5 left-2.5 rounded-full bg-charcoal/90 px-2.5 py-1 text-[10px] font-semibold tracking-wide text-white uppercase">
+                {getRentalTypeBadgeLabel(rentalType, tListing)}
               </span>
             </div>
-          </div>
 
-          {/* Identity */}
-          <div className="min-w-0 space-y-2 border-border px-3 py-3 xl:border-r xl:px-4 xl:py-4">
-            <div className="flex items-start justify-between gap-2">
-              <div className="min-w-0">
-                <h3
-                  className="line-clamp-2 font-semibold text-charcoal group-hover:text-gold-dark"
-                  title={listing.title}
+            <div className="min-w-0 flex-1">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <div className="mb-2">
+                    <DashboardListingStatusBadge
+                      statusKey={ui.styleKey}
+                      label={statusLabel}
+                      compact
+                    />
+                  </div>
+                  <h3
+                    className="line-clamp-2 text-lg font-semibold leading-snug text-charcoal sm:text-[19px] group-hover:text-gold-dark"
+                    title={listing.title}
+                  >
+                    {listing.title}
+                  </h3>
+                  <p className="mt-2 text-[15px] leading-snug text-muted">
+                    {listing.area_display_name || listing.area},{" "}
+                    {listing.city_display_name || listing.city}
+                  </p>
+                  <p className="mt-3 font-display text-[21px] font-semibold leading-none text-charcoal">
+                    {price.amount && price.amount > 0 ? price.display : "—"}
+                  </p>
+                  {propertyMeta ? (
+                    <p className="mt-2 text-sm text-muted">{propertyMeta}</p>
+                  ) : null}
+                  <p className="mt-2 truncate text-xs text-muted/80" title={publicId}>
+                    ID: {publicId}
+                  </p>
+                </div>
+                <div className="relative shrink-0 xl:hidden">
+                  <OverflowMenu
+                    open={menuOpen}
+                    onToggle={() => setMenuOpen((v) => !v)}
+                    onClose={() => setMenuOpen(false)}
+                    editHref={editHref}
+                    previewHref={previewHref}
+                    canViewPublic={ownerStatusKey === "published" || ownerStatusKey === "paused"}
+                    reactivateHref={reactivateHref}
+                    showReactivate={ownerStatusKey === "expired"}
+                    listingId={listing.id}
+                    onCopy={copyPublicLink}
+                    copied={copied}
+                    onDeleted={onDeleted}
+                    t={t}
+                    tCta={tCta}
+                  />
+                </div>
+              </div>
+
+              <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
+                <Link
+                  href={isShortTerm ? availabilityHref : editHref}
+                  className="inline-flex items-center gap-1.5 font-medium text-gold-dark hover:underline"
                 >
-                  {listing.title}
-                </h3>
-                <p className="mt-0.5 text-sm text-muted">
-                  {listing.area_display_name || listing.area}, {listing.city_display_name || listing.city}
-                </p>
-                <p className="mt-2 font-display text-lg font-semibold text-charcoal">
-                  {price.amount && price.amount > 0 ? price.display : "—"}
-                </p>
-                {propertyMeta ? (
-                  <p className="mt-1 text-xs text-muted">{propertyMeta}</p>
-                ) : null}
-                <p className="mt-1 text-[10px] text-muted/80">ID: {publicId}</p>
+                  <CalendarDays className="h-3.5 w-3.5" />
+                  {isShortTerm ? t("manageCalendar") : t("editAvailability")}
+                </Link>
+                {!isShortTerm && (
+                  <span className="text-muted">
+                    {formatListingAvailabilityText(listing, (key, values) =>
+                      tListing(key, values)
+                    )}
+                  </span>
+                )}
               </div>
-              <div className="relative shrink-0 xl:hidden">
-                <OverflowMenu
-                  open={menuOpen}
-                  onToggle={() => setMenuOpen((v) => !v)}
-                  onClose={() => setMenuOpen(false)}
-                  editHref={editHref}
-                  previewHref={previewHref}
-                  canViewPublic={ownerStatusKey === "published" || ownerStatusKey === "paused"}
-                  reactivateHref={reactivateHref}
-                  showReactivate={ownerStatusKey === "expired"}
-                  listingId={listing.id}
-                  onCopy={copyPublicLink}
-                  copied={copied}
-                />
-              </div>
-            </div>
-
-            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
-              <Link
-                href={isShortTerm ? availabilityHref : editHref}
-                className="inline-flex items-center gap-1 font-medium text-gold-dark hover:underline"
-              >
-                <CalendarDays className="h-3 w-3" />
-                {isShortTerm ? "Διαχείριση ημερολογίου" : "Επεξεργασία διαθεσιμότητας"}
-              </Link>
-              {!isShortTerm && (
-                <span className="text-muted">{formatListingAvailabilityText(listing)}</span>
-              )}
             </div>
           </div>
 
           {/* Status */}
-          <div className="border-t border-border px-3 py-3 xl:border-t-0 xl:border-r xl:px-4 xl:py-4">
-            <p className="mb-1.5 text-[10px] font-semibold tracking-wide text-muted uppercase xl:hidden">
-              Κατάσταση
+          <div className="border-t border-border pt-4 xl:border-t-0 xl:border-l xl:pl-5 xl:pt-0">
+            <p className="mb-2 text-[10px] font-semibold tracking-wide text-muted uppercase xl:hidden">
+              {t("status")}
             </p>
             <DashboardListingStatusBadge
-              statusKey={ownerStatusKey}
-              label={ownerStatus.label}
+              statusKey={ui.styleKey}
+              label={statusLabel}
               helperText={helperText}
             />
           </div>
 
           {/* Performance */}
-          <div className="border-t border-border px-3 py-3 xl:border-t-0 xl:border-r xl:px-4 xl:py-4">
-            <p className="mb-1.5 text-[10px] font-semibold tracking-wide text-muted uppercase xl:hidden">
-              Απόδοση
+          <div className="border-t border-border pt-4 xl:border-t-0 xl:border-l xl:pl-5 xl:pt-0">
+            <p className="mb-2 text-[10px] font-semibold tracking-wide text-muted uppercase xl:hidden">
+              {t("performance")}
             </p>
             {showPerformance ? (
               hasListingPerformanceData(analytics) ? (
@@ -289,21 +331,21 @@ export function DashboardListingRow({ row, isFree }: Props) {
                   <MetricLine
                     icon={Eye}
                     value={formatAnalyticsMetric(analytics.viewsTotal)}
-                    label="Προβολές · σύνολο"
+                    label={t("viewsTotalLabel")}
                   />
                   <MetricLine
                     icon={Inbox}
                     value={String(analytics.inquiriesLast30Days || analytics.inquiriesTotal)}
                     label={
                       analytics.inquiriesLast30Days > 0
-                        ? "Αιτήματα · 30 ημέρες"
-                        : "Αιτήματα · σύνολο"
+                        ? t("requestsLast30")
+                        : t("requestsTotal")
                     }
                     href={analytics.inquiriesTotal > 0 ? "/dashboard/requests" : undefined}
                   />
                   {analytics.unreadInquiries > 0 && (
                     <p className="text-[11px] font-medium text-gold-dark">
-                      {analytics.unreadInquiries} νέα
+                      {t("newCount", { count: analytics.unreadInquiries })}
                     </p>
                   )}
                   <button
@@ -311,13 +353,11 @@ export function DashboardListingRow({ row, isFree }: Props) {
                     onClick={() => setAnalyticsOpen(true)}
                     className="text-[11px] font-medium text-charcoal/70 hover:text-gold-dark hover:underline"
                   >
-                    Δες στατιστικά
+                    {t("viewStats")}
                   </button>
                 </div>
               ) : (
-                <p className="text-xs leading-snug text-muted">
-                  Δεν υπάρχουν ακόμη αρκετά δεδομένα προβολών.
-                </p>
+                <p className="text-xs leading-snug text-muted">{t("notEnoughData")}</p>
               )
             ) : (
               <p className="text-xs text-muted">—</p>
@@ -325,13 +365,13 @@ export function DashboardListingRow({ row, isFree }: Props) {
           </div>
 
           {/* Lifecycle */}
-          <div className="border-t border-border px-3 py-3 xl:border-t-0 xl:border-r xl:px-4 xl:py-4">
-            <p className="mb-1.5 text-[10px] font-semibold tracking-wide text-muted uppercase xl:hidden">
-              Διάρκεια
+          <div className="border-t border-border pt-4 xl:border-t-0 xl:border-l xl:pl-5 xl:pt-0">
+            <p className="mb-2 text-[10px] font-semibold tracking-wide text-muted uppercase xl:hidden">
+              {t("duration")}
             </p>
             <p
               className={cn(
-                "text-sm font-medium",
+                "text-sm font-medium leading-snug",
                 lifecycle.tone === "green" && "text-teal",
                 lifecycle.tone === "amber" && "text-gold-dark",
                 lifecycle.tone === "warning" && "text-orange-700",
@@ -346,14 +386,14 @@ export function DashboardListingRow({ row, isFree }: Props) {
                 href={lifecycle.cta.href}
                 className="mt-2 inline-block text-xs font-semibold text-gold-dark hover:underline"
               >
-                {lifecycle.cta.label}
+                {t(lifecycle.cta.labelKey)}
               </Link>
             ) : null}
           </div>
 
           {/* Actions */}
-          <div className="flex flex-col justify-between gap-3 border-t border-border p-3 xl:border-t-0 xl:p-4">
-            <div className="hidden xl:block">
+          <div className="flex flex-col justify-between gap-3 border-t border-border pt-4 xl:border-t-0 xl:border-l xl:pl-5 xl:pt-0">
+            <div className="hidden self-end xl:block">
               <OverflowMenu
                 open={menuOpen}
                 onToggle={() => setMenuOpen((v) => !v)}
@@ -366,19 +406,24 @@ export function DashboardListingRow({ row, isFree }: Props) {
                 listingId={listing.id}
                 onCopy={copyPublicLink}
                 copied={copied}
+                onDeleted={onDeleted}
+                t={t}
+                tCta={tCta}
               />
             </div>
             <div className="space-y-2">
               <Button href={primaryCta.href} size="sm" className="w-full justify-center">
-                {primaryCta.label}
+                {tCta(primaryCta.labelKey)}
               </Button>
-              <ListingViewButton listingId={listing.id} className="w-full" />
+              {ownerStatusKey === "published" || ownerStatusKey === "paused" ? (
+                <ListingViewButton listingId={listing.id} className="w-full" />
+              ) : null}
               {primaryCta.secondary ? (
                 <Link
                   href={primaryCta.secondary.href}
                   className="block text-center text-xs font-medium text-charcoal/65 hover:text-gold-dark"
                 >
-                  {primaryCta.secondary.label}
+                  {tCta(primaryCta.secondary.labelKey)}
                 </Link>
               ) : null}
             </div>
@@ -386,11 +431,15 @@ export function DashboardListingRow({ row, isFree }: Props) {
         </div>
 
         {showCompleteness && (
-          <div className="border-t border-border bg-cream/20 px-4 py-4 sm:px-5">
+          <div className="border-t border-amber-200/50 bg-amber-50/30 px-5 py-4 sm:px-6">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
                 <p className="text-xs font-medium text-charcoal">
-                  Πληρότητα αγγελίας: {completenessPercent}%
+                  {ownerStatusKey === "draft" && completenessPercent >= 100
+                    ? tUi("ready")
+                    : row.missingRequiredCount > 0
+                      ? `${tUi("helperMissingCount", { count: row.missingRequiredCount })} · ${completenessPercent}%`
+                      : t("listingCompletenessPercent", { percent: completenessPercent })}
                 </p>
                 <ul className="mt-2 flex flex-wrap gap-x-4 gap-y-1">
                   {completenessItems.map((item) => (
@@ -398,17 +447,17 @@ export function DashboardListingRow({ row, isFree }: Props) {
                       {item.done ? (
                         <Check className="h-3.5 w-3.5 text-teal" />
                       ) : (
-                        <Circle className="h-3.5 w-3.5 text-muted/50" />
+                        <Circle className="h-3.5 w-3.5 text-amber-500/70" />
                       )}
                       <span className={item.done ? "text-charcoal" : "text-muted"}>
-                        {item.label}
+                        {tCompleteness(item.id as CompletenessItemId)}
                       </span>
                     </li>
                   ))}
                 </ul>
               </div>
               <Button href={primaryCta.href} size="sm" variant="outline">
-                Ολοκλήρωσε την αγγελία
+                {tCta(primaryCta.labelKey)}
               </Button>
             </div>
           </div>
@@ -469,6 +518,9 @@ function OverflowMenu({
   listingId,
   onCopy,
   copied,
+  onDeleted,
+  t,
+  tCta,
 }: {
   open: boolean;
   onToggle: () => void;
@@ -481,6 +533,9 @@ function OverflowMenu({
   listingId: string;
   onCopy: () => void;
   copied: boolean;
+  onDeleted?: (listingId: string) => void;
+  t: ReturnType<typeof useTranslations<"Owner.list">>;
+  tCta: ReturnType<typeof useTranslations<"Owner.cta">>;
 }) {
   return (
     <div className="relative">
@@ -488,23 +543,28 @@ function OverflowMenu({
         type="button"
         onClick={onToggle}
         className="flex h-8 w-8 items-center justify-center rounded-lg text-charcoal/60 hover:bg-sand"
-        aria-label="Ενέργειες"
+        aria-label={t("actions")}
       >
         <MoreHorizontal className="h-4 w-4" />
       </button>
       {open && (
         <>
-          <button type="button" className="fixed inset-0 z-10" aria-label="Κλείσιμο" onClick={onClose} />
+          <button
+            type="button"
+            className="fixed inset-0 z-10"
+            aria-label={t("close")}
+            onClick={onClose}
+          />
           <div className="absolute right-0 z-20 mt-1 min-w-[200px] rounded-xl border border-border bg-white p-1.5 shadow-card">
             <MenuLink href={editHref} onClick={onClose}>
-              Επεξεργασία
+              {tCta("edit")}
             </MenuLink>
             <MenuLink href={`/dashboard/listings/${listingId}/view`} onClick={onClose}>
-              Προβολή
+              {tCta("preview")}
             </MenuLink>
             {canViewPublic && (
               <MenuLink href={previewHref} onClick={onClose}>
-                Δημόσια σελίδα
+                {t("publicPage")}
               </MenuLink>
             )}
             {canViewPublic && (
@@ -514,17 +574,17 @@ function OverflowMenu({
                 className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-charcoal hover:bg-sand"
               >
                 <Link2 className="h-3.5 w-3.5 text-muted" />
-                {copied ? "Αντιγράφηκε!" : "Αντιγραφή link"}
+                {copied ? t("copied") : t("copyLink")}
               </button>
             )}
             {showReactivate && (
               <MenuLink href={reactivateHref} onClick={onClose}>
-                Επανενεργοποίηση
+                {t("reactivate")}
               </MenuLink>
             )}
             <div className="my-1 border-t border-border" />
             <div className="px-3 py-1">
-              <DeleteListingButton listingId={listingId} />
+              <DeleteListingButton listingId={listingId} onDeleted={onDeleted} />
             </div>
           </div>
         </>

@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Video } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { DeletePhotoButton } from "@/components/dashboard/DeletePhotoButton";
 import {
@@ -20,6 +21,7 @@ type Props = {
 
 export function ListingVideoUploadCard({ listingId, existingImages }: Props) {
   const router = useRouter();
+  const t = useTranslations("Workspace.videoUpload");
   const [videoPreview, setVideoPreview] = useState<string | null>(null);
   const [videoDuration, setVideoDuration] = useState<number | null>(null);
   const [videoError, setVideoError] = useState<string | null>(null);
@@ -56,7 +58,7 @@ export function ListingVideoUploadCard({ listingId, existingImages }: Props) {
     if (!file) return;
 
     if (!file.type.startsWith("video/")) {
-      setVideoError("Επίλεξε έγκυρο αρχείο βίντεο");
+      setVideoError(t("invalidFile"));
       return;
     }
 
@@ -68,7 +70,7 @@ export function ListingVideoUploadCard({ listingId, existingImages }: Props) {
       URL.revokeObjectURL(url);
       const duration = Math.ceil(video.duration);
       if (duration > MAX_VIDEO_DURATION_SECONDS) {
-        setVideoError(`Μέγιστο ${MAX_VIDEO_DURATION_SECONDS} δευτερόλεπτα`);
+        setVideoError(t("maxDuration", { seconds: MAX_VIDEO_DURATION_SECONDS }));
         setVideoPreview(null);
         setVideoDuration(null);
         return;
@@ -81,7 +83,7 @@ export function ListingVideoUploadCard({ listingId, existingImages }: Props) {
   if (existingVideos.length >= MAX_LISTING_VIDEOS && !videoPreview) {
     return (
       <GlassCard className="mt-6 p-6">
-        <p className="text-sm font-medium text-charcoal">Βίντεο αγγελίας</p>
+        <p className="text-sm font-medium text-charcoal">{t("listingVideo")}</p>
         <div className="relative mt-3 aspect-video max-w-md overflow-hidden rounded-xl">
           <video src={existingVideos[0].url} controls className="h-full w-full object-cover" />
           <DeletePhotoButton listingId={listingId} imageId={existingVideos[0].id} />
@@ -92,9 +94,9 @@ export function ListingVideoUploadCard({ listingId, existingImages }: Props) {
 
   return (
     <GlassCard className="mt-6 p-6">
-      <p className="font-display text-base font-semibold text-charcoal">Βίντεο (προαιρετικό)</p>
+      <p className="font-display text-base font-semibold text-charcoal">{t("titleOptional")}</p>
       <p className="mt-1 text-sm text-muted">
-        Έως {MAX_VIDEO_DURATION_SECONDS} δευτ. · δεν ανήκει σε συγκεκριμένο χώρο.
+        {t("hint", { seconds: MAX_VIDEO_DURATION_SECONDS })}
       </p>
 
       {existingVideos.length > 0 && (
@@ -108,7 +110,7 @@ export function ListingVideoUploadCard({ listingId, existingImages }: Props) {
         <form onSubmit={handleSubmit} className="mt-4 space-y-4">
           <label className="flex cursor-pointer flex-col items-center gap-3 rounded-2xl border-2 border-dashed border-teal/20 bg-teal/[0.03] p-8">
             <Video className="h-8 w-8 text-teal/70" />
-            <span className="text-sm text-muted">Ανέβασε βίντεο</span>
+            <span className="text-sm text-muted">{t("uploadVideo")}</span>
             <input type="file" name="video" accept="video/*" onChange={handleVideo} className="hidden" />
           </label>
           {videoPreview && <video src={videoPreview} controls className="w-full max-w-md rounded-xl" />}
@@ -121,7 +123,7 @@ export function ListingVideoUploadCard({ listingId, existingImages }: Props) {
               disabled={pending}
               className="rounded-xl bg-teal px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-50"
             >
-              {pending ? "Ανέβασμα…" : "Αποθήκευση βίντεο"}
+              {pending ? t("uploading") : t("saveVideo")}
             </button>
           )}
         </form>

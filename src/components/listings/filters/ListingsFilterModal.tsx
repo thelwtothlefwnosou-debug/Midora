@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Loader2, X } from "lucide-react";
+import { useTranslations } from "next-intl";
 import type { RentalType } from "@/lib/rental-types";
 import type { ListingsFilterValues } from "@/components/listings/ListingsFilters";
 import type { PriceHistogramBucket } from "@/lib/listing-price-histogram";
@@ -28,11 +29,6 @@ type Props = {
   buildPreviewQuery: (draft: ListingsFilterValues) => string;
 };
 
-function resultLabel(count: number): string {
-  if (count === 1) return "ακινήτου";
-  return "ακινήτων";
-}
-
 export function ListingsFilterModal({
   open,
   onClose,
@@ -47,6 +43,8 @@ export function ListingsFilterModal({
   onApply,
   buildPreviewQuery,
 }: Props) {
+  const t = useTranslations("Listings");
+  const tf = useTranslations("Listings.filter");
   const [previewCount, setPreviewCount] = useState<number | null>(null);
   const [countLoading, setCountLoading] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
@@ -81,10 +79,10 @@ export function ListingsFilterModal({
 
   useEffect(() => {
     if (!open) return;
-    const t = window.setTimeout(() => {
+    const timeoutId = window.setTimeout(() => {
       void fetchPreviewCount(draft);
     }, 280);
-    return () => window.clearTimeout(t);
+    return () => window.clearTimeout(timeoutId);
   }, [open, draft, fetchPreviewCount]);
 
   useEffect(() => {
@@ -160,7 +158,7 @@ export function ListingsFilterModal({
       <button
         type="button"
         className="absolute inset-0 bg-charcoal/45 backdrop-blur-[2px]"
-        aria-label="Κλείσιμο φίλτρων"
+        aria-label={t("closeFilters")}
         onClick={handleOverlayClick}
       />
 
@@ -175,13 +173,13 @@ export function ListingsFilterModal({
             id="listings-filter-modal-title"
             className="font-display text-lg font-semibold text-charcoal sm:text-xl"
           >
-            Φίλτρα
+            {t("filters")}
           </h2>
           <button
             type="button"
             onClick={onClose}
             className="flex h-11 w-11 items-center justify-center rounded-full border border-charcoal/12 text-charcoal transition-colors hover:bg-charcoal/5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold"
-            aria-label="Κλείσιμο"
+            aria-label={t("close")}
           >
             <X className="h-5 w-5 text-muted" />
           </button>
@@ -204,7 +202,7 @@ export function ListingsFilterModal({
             onClick={onClearDetailed}
             className="min-h-11 rounded-xl px-2 text-sm font-medium text-charcoal underline-offset-2 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold"
           >
-            Εκκαθάριση όλων
+            {t("clearAll")}
           </button>
           <button
             type="button"
@@ -215,7 +213,7 @@ export function ListingsFilterModal({
             {countLoading && (
               <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
             )}
-            Εμφάνιση {displayCount.toLocaleString("el-GR")} {resultLabel(displayCount)}
+            {tf("resultsCount", { count: displayCount })}
           </button>
         </footer>
       </div>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { useTranslations } from "next-intl";
 import { MapContainer, TileLayer, Marker, useMap, useMapEvents } from "react-leaflet";
 import L from "leaflet";
 import { MAP_TILE_ATTRIBUTION, MAP_TILE_URL } from "@/lib/map-tiles";
@@ -55,13 +56,15 @@ export function LocationConfirmMapInner({
   height = "320px",
   onPositionChange,
 }: Props) {
+  const t = useTranslations("Wizard.location");
+
   if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
     return (
       <div
         className="flex min-h-[320px] items-center justify-center rounded-xl bg-sand/40 text-sm text-muted"
         style={{ height }}
       >
-        Δεν βρέθηκαν συντεταγμένες για τον χάρτη.
+        {t("noCoordinates")}
       </div>
     );
   }

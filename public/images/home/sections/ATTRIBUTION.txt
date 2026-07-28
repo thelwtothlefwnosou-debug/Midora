@@ -1,0 +1,14 @@
+Midora homepage section imagery
+================================
+
+All photos: Unsplash License (https://unsplash.com/license)
+
+how-editorial.webp  — Unsplash (boho living / warm interior)
+owner-split.webp    — Unsplash photo-1600585154340 (modern home exterior)
+need-short.webp     — Unsplash photo-1502672260266
+need-monthly.webp   — Unsplash photo-1560448204
+need-work.webp      — Unsplash photo-1493809842364
+need-students.webp  — Unsplash photo-1522708323590
+need-family.webp    — Unsplash photo-1600210492486
+need-pets.webp      — Unsplash photo-1586023492125
+final-cta.webp      — Spacejoy / Unsplash photo-1631679706909 (same series as hero)

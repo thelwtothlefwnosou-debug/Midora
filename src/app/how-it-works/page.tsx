@@ -1,4 +1,5 @@
-import type { Metadata } from "next";
+﻿import type { Metadata } from "next";
+import { getTranslations } from "next-intl/server";
 import { Button } from "@/components/ui/Button";
 import {
   PublicPageLayout,
@@ -8,87 +9,63 @@ import {
 } from "@/components/layout/PublicPageLayout";
 import { OwnerListingLink } from "@/components/owners/OwnerListingLink";
 
-export const metadata: Metadata = {
-  title: "Πώς λειτουργεί",
-  description:
-    "Μάθε πώς λειτουργεί το Midora για ενοικιαστές και ιδιοκτήτες — αναζήτηση, ενδιαφέρον, αγγελίες.",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("Marketing.howItWorks");
+  return {
+    title: t("metaTitle"),
+    description: t("metaDescription"),
+  };
+}
 
-const renterSteps = [
-  {
-    title: "Διάλεξε τύπο μίσθωσης",
-    description:
-      "Επίλεξε αν ψάχνεις βραχυχρόνια ή μηνιαία/μεσοπρόθεσμη διαμονή και φίλτραρε ανά περιοχή, ημερομηνίες ή μήνα έναρξης.",
-  },
-  {
-    title: "Βρες ακίνητα",
-    description:
-      "Δες φωτογραφίες, τιμή, τύπο μίσθωσης, επιπλώσεις και διαθεσιμότητα. Αποθήκευσε αγαπημένα για γρήγορη πρόσβαση.",
-  },
-  {
-    title: "Δες διαθεσιμότητα",
-    description:
-      "Στις αγγελίες μπορείς να δεις ενημερωτικά τη διαθεσιμότητα ή τις μη διαθέσιμες περιόδους.",
-  },
-  {
-    title: "Στείλε ενδιαφέρον",
-    description:
-      "Κάλεσε στο κινητό, στείλε email ή μήνυμα — διάλεξε τον τρόπο επικοινωνίας που σε βολεύει.",
-  },
-];
+const RENTER_STEP_KEYS = [
+  { title: "renter1Title", description: "renter1Text" },
+  { title: "renter2Title", description: "renter2Text" },
+  { title: "renter3Title", description: "renter3Text" },
+  { title: "renter4Title", description: "renter4Text" },
+] as const;
 
-const ownerSteps = [
-  {
-    title: "Ανέβασε αγγελία",
-    description:
-      "Δημιούργησε λογαριασμό και ξεκίνα νέα αγγελία από το dashboard. Πρόσθεσε βασικά στοιχεία και φωτογραφίες.",
-  },
-  {
-    title: "Συμπλήρωσε στοιχεία ακινήτου",
-    description:
-      "Δήλωσε τιμή, διάρκεια, επιπλώσεις, περιοχή και ό,τι χρειάζεται ο ενδιαφερόμενος να ξέρει από την αρχή.",
-  },
-  {
-    title: "Δέξου ενδιαφέροντα",
-    description:
-      "Λαμβάνεις ενδιαφέροντα και μηνύματα. Απαντάς και συνεννοείσαι απευθείας με τον ενδιαφερόμενο.",
-  },
-  {
-    title: "Διαχειρίσου την αγγελία από το dashboard",
-    description:
-      "Ενημέρωσε διαθεσιμότητα, φωτογραφίες και στοιχεία. Όλη η διαχείριση γίνεται από το λογαριασμό σου.",
-  },
-];
+const OWNER_STEP_KEYS = [
+  { title: "owner1Title", description: "owner1Text" },
+  { title: "owner2Title", description: "owner2Text" },
+  { title: "owner3Title", description: "owner3Text" },
+  { title: "owner4Title", description: "owner4Text" },
+] as const;
 
-export default function HowItWorksPage() {
+export default async function HowItWorksPage() {
+  const t = await getTranslations("Marketing.howItWorks");
+
+  const renterSteps = RENTER_STEP_KEYS.map((keys) => ({
+    title: t(keys.title),
+    description: t(keys.description),
+  }));
+
+  const ownerSteps = OWNER_STEP_KEYS.map((keys) => ({
+    title: t(keys.title),
+    description: t(keys.description),
+  }));
+
   return (
     <PublicPageLayout>
       <StaticHero
-        eyebrow="Πώς λειτουργεί"
-        title="Απλή διαδικασία για ενοικιαστές και ιδιοκτήτες"
-        subtitle="Το Midora είναι portal αγγελιών για βραχυχρόνια και μηνιαία/μεσοπρόθεσμη διαμονή — με καθαρές πληροφορίες σε κάθε βήμα."
+        eyebrow={t("eyebrow")}
+        title={t("title")}
+        subtitle={t("subtitle")}
       >
-        <Button href="/listings" size="lg">
-          Ξεκίνα αναζήτηση
+        <Button href="/listings?rentalType=short_term" size="lg">
+          {t("ctaSearch")}
         </Button>
         <OwnerListingLink variant="outline" size="lg">
-          Ανέβασε αγγελία
+          {t("ctaList")}
         </OwnerListingLink>
       </StaticHero>
 
-      <StaticSection title="Για ενοικιαστές">
-        <p>
-          Αν ψάχνεις σπίτι για βραχυχρόνια ή μηνιαία/μεσοπρόθεσμη διαμονή, η διαδικασία
-          είναι απλή:
-        </p>
+      <StaticSection title={t("rentersTitle")}>
+        <p>{t("rentersIntro")}</p>
         <StepList steps={renterSteps} />
       </StaticSection>
 
-      <StaticSection title="Για ιδιοκτήτες">
-        <p>
-          Αν έχεις ακίνητο για βραχυχρόνια ή μηνιαία/μεσοπρόθεσμη διαμονή, μπορείς να
-          δημοσιεύσεις αγγελία και να τη διαχειριστείς από το dashboard:
-        </p>
+      <StaticSection title={t("ownersTitle")}>
+        <p>{t("ownersIntro")}</p>
         <StepList steps={ownerSteps} />
       </StaticSection>
     </PublicPageLayout>

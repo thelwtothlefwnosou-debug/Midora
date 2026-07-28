@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { ChevronDown } from "lucide-react";
+import { useTranslations, useLocale } from "next-intl";
 import { InterestDateRangePicker, type DateRangeFocusField } from "@/components/availability/InterestDateRangePicker";
 import { ListingContactCard } from "@/components/listings/ListingContactCard";
 import { ListingPortalDisclaimer } from "@/components/listings/detail/ListingPortalDisclaimer";
@@ -37,6 +38,10 @@ export function ShortTermInquiryCard({
   contact,
   className,
 }: Props) {
+  const t = useTranslations("Listing");
+  const locale = useLocale();
+  const tCommon = useTranslations("Common");
+  const tLegal = useTranslations("Legal.shared");
   const { openInterest } = useListingInterest();
   const {
     userSelectedRange,
@@ -71,9 +76,10 @@ export function ShortTermInquiryCard({
       displayRange.start,
       displayRange.end,
       guests,
-      periods
+      periods,
+      locale
     );
-  }, [displayRange, listing, priceRules, guests, periods]);
+  }, [displayRange, listing, priceRules, guests, periods, locale]);
 
   const pickerValue = userSelectedRange;
 
@@ -82,7 +88,7 @@ export function ShortTermInquiryCard({
     setPickerOpen(true);
   }
 
-  const guestLabel = `${guests} ${guests === 1 ? "άτομο" : "άτομα"}`;
+  const guestLabel = `${guests} ${guests === 1 ? tCommon("person") : tCommon("peoplePlural")}`;
   const hasDisplayPrice = Boolean(displayRange && rangeMeetsMinStay && displayPrice);
 
   function buildInquiryMessage(): string {
@@ -91,20 +97,29 @@ export function ShortTermInquiryCard({
         ? stayNightsBetween(displayRange.start, displayRange.end)
         : null;
     const parts = [
-      `Καλησπέρα, ενδιαφέρομαι για το ακίνητο${displayRange ? ` από ${formatInterestRangeLabel(displayRange.start, displayRange.end)}` : ""} για ${guestLabel}.`,
+      t("inquiry.prefillShortIntro", {
+        range: displayRange
+          ? t("inquiry.prefillShortRange", {
+              range: formatInterestRangeLabel(displayRange.start, displayRange.end),
+            })
+          : "",
+        guests: guestLabel,
+      }),
     ];
     if (nights) {
-      parts.push(`Διάρκεια: ${nights} ${nights === 1 ? "νύχτα" : "νύχτες"}.`);
+      parts.push(t("inquiry.prefillDurationNights", { count: nights }));
     }
     if (displayPrice) {
       parts.push(
-        `Υπολογισμένη τιμή βάσει ημερολογίου: €${displayPrice.total.toLocaleString("el-GR")}.`
+        t("inquiry.prefillCalendarPrice", {
+          amount: displayPrice.total.toLocaleString("el-GR"),
+        })
       );
       if (displayPrice.discountLabel) {
         parts.push(`${displayPrice.discountLabel}.`);
       }
     }
-    parts.push("Θα ήθελα να επιβεβαιώσω τη διαθεσιμότητα και την τελική τιμή.");
+    parts.push(t("inquiry.prefillConfirm"));
     return parts.join(" ");
   }
 
@@ -127,7 +142,7 @@ export function ShortTermInquiryCard({
     }
     openInterest({
       guests,
-      message: `Καλησπέρα, ενδιαφέρομαι για το ακίνητο για ${guestLabel}. Θα ήθελα περισσότερες πληροφορίες.`,
+      message: t("inquiry.prefillShortSimple", { guests: guestLabel }),
     });
   }
 
@@ -156,14 +171,14 @@ export function ShortTermInquiryCard({
       {activePrice ? (
         <div>
           <p className="listing-price-display text-2xl text-charcoal">
-            {formatPublicStayPriceTotal(activePrice.total)}
+            {formatPublicStayPriceTotal(activePrice.total, locale)}
           </p>
           <p className="mt-0.5 text-sm text-muted">
-            {formatPublicStayPriceNightsLine(activePrice.nights)}
+            {formatPublicStayPriceNightsLine(activePrice.nights, locale)}
           </p>
         </div>
       ) : (
-        <p className="listing-price-display text-2xl text-charcoal">Επίλεξε ημερομηνίες</p>
+        <p className="listing-price-display text-2xl text-charcoal">{t("selectDates")}</p>
       )}
 
       <div className="mt-5 grid gap-3 sm:grid-cols-2">
@@ -172,11 +187,11 @@ export function ShortTermInquiryCard({
           onClick={() => openDatePicker("start")}
           className="flex min-h-12 flex-col justify-center rounded-xl border border-charcoal/12 bg-white px-3.5 py-2 text-left transition-colors hover:border-gold/35"
         >
-          <span className="text-[11px] font-medium text-muted">Άφιξη</span>
+          <span className="text-[11px] font-medium text-muted">{t("checkIn")}</span>
           <span className="text-sm font-medium text-charcoal">
             {pendingCheckIn || displayRange
               ? formatDateKeyDisplay(pendingCheckIn ?? displayRange!.start)
-              : "Επιλογή"}
+              : t("select")}
           </span>
         </button>
         <button
@@ -184,15 +199,15 @@ export function ShortTermInquiryCard({
           onClick={() => openDatePicker("end")}
           className="flex min-h-12 flex-col justify-center rounded-xl border border-charcoal/12 bg-white px-3.5 py-2 text-left transition-colors hover:border-gold/35"
         >
-          <span className="text-[11px] font-medium text-muted">Αναχώρηση</span>
+          <span className="text-[11px] font-medium text-muted">{t("checkOut")}</span>
           <span className="text-sm font-medium text-charcoal">
-            {displayRange ? formatDateKeyDisplay(displayRange.end) : "Επιλογή"}
+            {displayRange ? formatDateKeyDisplay(displayRange.end) : t("select")}
           </span>
         </button>
       </div>
 
       <label className="mt-3 block">
-        <span className="text-[11px] font-medium text-muted">Επισκέπτες</span>
+        <span className="text-[11px] font-medium text-muted">{t("guests")}</span>
         <div className="relative mt-1">
           <select
             value={guests}
@@ -201,7 +216,7 @@ export function ShortTermInquiryCard({
           >
             {Array.from({ length: maxGuests }, (_, i) => i + 1).map((n) => (
               <option key={n} value={n}>
-                {n} {n === 1 ? "άτομο" : "άτομα"}
+                {n} {n === 1 ? tCommon("person") : tCommon("peoplePlural")}
               </option>
             ))}
           </select>
@@ -211,8 +226,7 @@ export function ShortTermInquiryCard({
 
       {displayRange && !rangeMeetsMinStay && minimumStayNights > 1 && (
         <p className="mt-2 text-sm text-amber-800">
-          Ελάχιστη διαμονή {minimumStayNights}{" "}
-          {minimumStayNights === 1 ? "νύχτα" : "νύχτες"}.
+          {t("minStayNights", { count: minimumStayNights })}
         </p>
       )}
 
@@ -220,7 +234,7 @@ export function ShortTermInquiryCard({
         rangeMeetsMinStay &&
         stayRangeHasBlockedNight(displayRange.start, displayRange.end, periods) && (
         <p className="mt-2 text-sm text-amber-800">
-          Οι επιλεγμένες ημερομηνίες δεν είναι διαθέσιμες.
+          {t("datesUnavailable")}
         </p>
       )}
 
@@ -229,16 +243,33 @@ export function ShortTermInquiryCard({
         onClick={openAvailabilityRequest}
         className="mt-5 flex min-h-12 w-full items-center justify-center rounded-xl bg-gold text-sm font-semibold text-white transition-colors hover:bg-gold-dark active:scale-[0.99]"
       >
-        Στείλε αίτημα διαθεσιμότητας
+        {t("sendAvailabilityRequest")}
+      </button>
+
+      <button
+        type="button"
+        onClick={() =>
+          openInterest({
+            intent: "message",
+            rentalMode: "short_term",
+            guests,
+            interestStartDate: displayRange?.start,
+            interestEndDate: displayRange?.end,
+            message: "",
+          })
+        }
+        className="mt-3 w-full text-center text-sm font-medium text-charcoal/80 underline-offset-2 hover:text-charcoal hover:underline"
+      >
+        {tLegal("stickyMessageLinkShort")}
       </button>
 
       {hasDirectContact && (
         <button
           type="button"
           onClick={handleContactOwner}
-          className="mt-3 flex min-h-12 w-full items-center justify-center rounded-xl border border-charcoal/12 bg-white text-sm font-medium text-charcoal transition-colors hover:border-gold/35"
+          className="mt-2 flex min-h-10 w-full items-center justify-center rounded-xl border border-charcoal/10 bg-white text-sm font-medium text-charcoal/70 transition-colors hover:border-gold/35"
         >
-          Επικοινώνησε με τον ιδιοκτήτη
+          {t("otherContactMethods")}
         </button>
       )}
 
@@ -258,17 +289,17 @@ export function ShortTermInquiryCard({
         >
           <p className="listing-price-display text-lg">
             {activePrice
-              ? formatPublicStayPriceTotal(activePrice.total)
-              : "Επίλεξε ημερομηνίες"}
+              ? formatPublicStayPriceTotal(activePrice.total, locale)
+              : t("selectDates")}
           </p>
           <p className="text-[11px] text-muted">
             {displayRange
               ? `${formatDateKeyDisplay(displayRange.start)} – ${formatDateKeyDisplay(displayRange.end)}`
               : pendingCheckIn
-                ? `${formatDateKeyDisplay(pendingCheckIn)} – Επιλογή αναχώρησης`
+                ? `${formatDateKeyDisplay(pendingCheckIn)} – ${t("selectCheckout")}`
                 : activePrice
-                  ? formatPublicStayPriceNightsLine(activePrice.nights)
-                  : "Επίλεξε ημερομηνίες"}
+                  ? formatPublicStayPriceNightsLine(activePrice.nights, locale)
+                  : t("selectDates")}
           </p>
         </button>
         <button
@@ -276,7 +307,7 @@ export function ShortTermInquiryCard({
           onClick={openAvailabilityRequest}
           className="min-h-11 shrink-0 rounded-xl bg-gold px-4 text-sm font-semibold text-white"
         >
-          Αίτημα
+          {t("request")}
         </button>
       </div>
     </div>

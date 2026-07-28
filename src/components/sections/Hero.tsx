@@ -1,59 +1,82 @@
-import Link from "next/link";
-import Image from "next/image";
-import { Home, Sparkles } from "lucide-react";
+import { getImageProps } from "next/image";
+import type { CSSProperties } from "react";
+import { getTranslations } from "next-intl/server";
 import { SearchBar } from "@/components/sections/SearchBar";
-import { HERO_IMAGE, HOME_OWNER_LISTING_HREF } from "@/lib/homepage-content";
-import { MVP_TAGLINE_SENTENCE } from "@/lib/rental-types";
-import { isPreviewV80 } from "@/lib/preview-v80";
+import { HeroExploreCue } from "@/components/sections/HeroExploreCue";
+import { getActiveHeroImage } from "@/lib/hero-images";
 
-export function Hero() {
+export async function Hero() {
+  const t = await getTranslations("Home");
+  const hero = getActiveHeroImage();
+
+  const common = {
+    alt: "",
+    sizes: "100vw",
+    priority: true,
+  } as const;
+
+  const {
+    props: { srcSet: desktopSrcSet },
+  } = getImageProps({
+    ...common,
+    width: 2400,
+    height: 1350,
+    quality: 82,
+    src: hero.desktop,
+  });
+
+  const {
+    props: { srcSet: mobileSrcSet, width: _mw, height: _mh, style: _ms, ...mobileImg },
+  } = getImageProps({
+    ...common,
+    width: 1200,
+    height: 1800,
+    quality: 80,
+    src: hero.mobile,
+  });
   return (
-    <section className="relative min-h-[68vh] bg-cream sm:min-h-[76vh] lg:min-h-[82vh]">
-      <div className="absolute inset-0 overflow-hidden origin-center">
-        <Image
-          src={HERO_IMAGE}
-          alt=""
-          fill
-          priority
-          sizes="100vw"
-          className="object-cover object-[62%_center] opacity-[0.82] saturate-[0.88] sm:object-[55%_center] lg:object-[50%_center]"
-          quality={75}
-        />
+    <section className="home-hero-fullscreen relative isolate flex flex-col overflow-hidden">
+      <div className="absolute inset-0" aria-hidden>
+        <picture>
+          <source media="(min-width: 640px)" srcSet={desktopSrcSet} sizes="100vw" />
+          {/* eslint-disable-next-line @next/next/no-img-element -- art-directed hero via getImageProps */}
+          <img
+            {...mobileImg}
+            srcSet={mobileSrcSet}
+            sizes="100vw"
+            alt=""
+            className="home-hero-bg-img absolute inset-0 h-full w-full"
+            style={
+              {
+                "--hero-object-position-mobile": hero.objectPositionMobile,
+                "--hero-object-position-desktop": hero.objectPositionDesktop,
+              } as CSSProperties
+            }
+          />
+        </picture>
       </div>
-      <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-cream from-0% via-cream/98 via-[40%] to-cream/10 to-[70%] lg:via-cream/96 lg:via-[42%] lg:to-transparent lg:to-[66%]" />
-      <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-cream via-cream/35 via-30% to-transparent" />
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_14%_44%,rgba(253,252,248,0.78),transparent_56%)]" />
+      <div className="home-hero-overlay pointer-events-none absolute inset-0" aria-hidden />
 
-      <div className="relative z-10 mx-auto flex min-h-[68vh] max-w-7xl flex-col justify-center px-4 pb-7 pt-24 sm:min-h-[76vh] sm:px-6 sm:pb-9 sm:pt-28 lg:min-h-[82vh] lg:pb-10">
-        <div className="max-w-2xl">
-          <div className="mb-3 sm:mb-3.5">
-            <span className="inline-flex items-center gap-2 rounded-full border border-border bg-white/80 px-3 py-1.5 text-[11px] font-semibold tracking-[0.14em] text-gold-dark uppercase backdrop-blur-sm">
-              <Sparkles className="h-3.5 w-3.5 text-gold" />
-              Αγγελίες ακινήτων στην Ελλάδα
-            </span>
-          </div>
+      <div className="home-hero-content relative z-10 mx-auto flex w-full max-w-5xl flex-1 flex-col items-center justify-center px-4 pb-24 text-center sm:px-6 sm:pb-28">
+        <h1 className="home-hero-title max-w-3xl font-display font-medium tracking-tight text-white">
+          {t("heroTitle")}
+        </h1>
 
-          <h1 className="max-w-xl font-display text-[1.875rem] font-semibold leading-[1.12] tracking-tight text-charcoal drop-shadow-[0_1px_0_rgba(253,252,248,0.8)] sm:text-5xl lg:text-[3.2rem]">
-            Βρες το επόμενο σπίτι σου στην Ελλάδα
-          </h1>
+        <p className="home-hero-subtitle mt-3 max-w-[760px] text-[0.9375rem] leading-relaxed text-white/88 sm:mt-4 sm:text-lg">
+          {t("heroSubtitle")}
+        </p>
 
-          <p className="mt-3 max-w-lg text-[0.9375rem] leading-relaxed text-charcoal/70 sm:mt-3.5 sm:text-lg">
-            {MVP_TAGLINE_SENTENCE}
-          </p>
-
-          {!isPreviewV80 && (
-            <div className="mt-4 sm:mt-4">
-              <Link href={HOME_OWNER_LISTING_HREF} className="home-btn-outline">
-                <Home className="h-3.5 w-3.5 text-gold/90" strokeWidth={2} />
-                Ανέβασε αγγελία
-              </Link>
-            </div>
-          )}
+        <div className="relative z-20 mt-6 w-full max-w-4xl text-left sm:mt-7" id="search">
+          <SearchBar variant="fullscreen" />
         </div>
 
-        <div className="relative z-20 mt-5 w-full sm:mt-5" id="search">
-          <SearchBar />
-        </div>
+        <p className="home-hero-microcopy mt-3.5 max-w-lg text-center text-[12px] leading-relaxed text-white sm:mt-4 sm:text-[13px]">
+          {t("heroMicrocopy")}
+        </p>
+      </div>
+
+      <div className="absolute inset-x-0 bottom-5 z-20 flex justify-center sm:bottom-7">
+        <HeroExploreCue />
       </div>
     </section>
   );

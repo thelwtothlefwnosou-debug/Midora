@@ -1,5 +1,7 @@
 "use server";
 
+import { getTranslations } from "next-intl/server";
+import { actionError, authActionError, mustSignInError } from "@/lib/action-error-i18n";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
@@ -27,20 +29,23 @@ async function deleteAvatarAtPath(
 
 export async function uploadProfileAvatar(formData: FormData) {
   const supabase = await createClient();
-  if (!supabase) return { error: "Η υπηρεσία δεν είναι διαθέσιμη." };
+  if (!supabase) return { error: await actionError("serviceUnavailable") };
 
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) return { error: "Πρέπει να συνδεθείς." };
+  if (!user) return await mustSignInError();
 
   const file = formData.get("avatar") as File | null;
   if (!file || file.size === 0) {
-    return { error: "Επίλεξε μια φωτογραφία." };
+    return { error: await actionError("selectPhoto") };
   }
 
   const validationError = validateAvatarFile(file);
-  if (validationError) return { error: validationError };
+  if (validationError) {
+    const t = await getTranslations("Owner.profileIdentityCard");
+    return { error: t(validationError) };
+  }
 
   const { data: profile } = await supabase
     .from("profiles")
@@ -90,12 +95,12 @@ export async function uploadProfileAvatar(formData: FormData) {
 
 export async function removeProfileAvatar() {
   const supabase = await createClient();
-  if (!supabase) return { error: "Η υπηρεσία δεν είναι διαθέσιμη." };
+  if (!supabase) return { error: await actionError("serviceUnavailable") };
 
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) return { error: "Πρέπει να συνδεθείς." };
+  if (!user) return await mustSignInError();
 
   const { data: profile } = await supabase
     .from("profiles")
@@ -130,12 +135,12 @@ export async function removeProfileAvatar() {
 
 export async function updateShowProfilePhotoPublic(show: boolean) {
   const supabase = await createClient();
-  if (!supabase) return { error: "Η υπηρεσία δεν είναι διαθέσιμη." };
+  if (!supabase) return { error: await actionError("serviceUnavailable") };
 
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) return { error: "Πρέπει να συνδεθείς." };
+  if (!user) return await mustSignInError();
 
   const { error } = await supabase
     .from("profiles")

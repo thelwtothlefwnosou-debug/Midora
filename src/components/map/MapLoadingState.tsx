@@ -1,3 +1,6 @@
+"use client";
+
+import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 
 type Props = {
@@ -9,8 +12,11 @@ type Props = {
 export function MapLoadingState({
   height = "100%",
   className,
-  message = "Φόρτωση χάρτη…",
+  message,
 }: Props) {
+  const t = useTranslations("Map");
+  const resolvedMessage = message ?? t("loading");
+
   return (
     <div
       className={cn(
@@ -24,7 +30,7 @@ export function MapLoadingState({
       <div className="relative h-10 w-10 overflow-hidden rounded-full border-2 border-gold/25">
         <div className="absolute inset-0 animate-spin rounded-full border-2 border-transparent border-t-gold" />
       </div>
-      <span className="text-sm text-muted">{message}</span>
+      <span className="text-sm text-muted">{resolvedMessage}</span>
     </div>
   );
 }

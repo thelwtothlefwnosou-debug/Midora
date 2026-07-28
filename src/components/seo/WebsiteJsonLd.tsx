@@ -1,15 +1,17 @@
+import { getLocale, getTranslations } from "next-intl/server";
 import { getSiteUrl } from "@/lib/site-url";
 
-export function WebsiteJsonLd() {
+export async function WebsiteJsonLd() {
   const siteUrl = getSiteUrl();
+  const locale = await getLocale();
+  const t = await getTranslations("Seo");
   const data = {
     "@context": "https://schema.org",
     "@type": "WebSite",
     name: "Midora",
     url: siteUrl,
-    description:
-      "Αγγελίες ακινήτων για βραχυχρόνια και μηνιαία/μεσοπρόθεσμη μίσθωση στην Ελλάδα.",
-    inLanguage: "el-GR",
+    description: t("websiteDescription"),
+    inLanguage: locale === "en" ? "en-GB" : "el-GR",
     potentialAction: {
       "@type": "SearchAction",
       target: `${siteUrl}/listings?city={search_term_string}`,

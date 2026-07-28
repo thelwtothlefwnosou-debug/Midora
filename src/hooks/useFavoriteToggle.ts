@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState, useTransition } from "react";
 import { toggleFavorite } from "@/lib/actions";
+import { ACTION_ERROR_CODES } from "@/lib/action-error-i18n";
 import {
   isLocalFavorite,
   toggleLocalFavorite,
@@ -65,7 +66,7 @@ export function useFavoriteToggle(listingId: string, initialFavorited = false) {
       const result = await toggleFavorite(listingId);
       if (result?.error) {
         setFavorited(previous);
-        if (result.error === "Πρέπει να συνδεθείς") {
+        if ("errorCode" in result && result.errorCode === ACTION_ERROR_CODES.mustSignIn) {
           redirectToLogin();
           return;
         }

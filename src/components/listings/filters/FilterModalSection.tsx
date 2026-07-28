@@ -1,6 +1,7 @@
 "use client";
 
 import { ChevronDown } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 
 type Props = {
@@ -57,11 +58,12 @@ export function FilterStepperRow({
   onChange,
   allowHalf = false,
 }: StepperProps) {
+  const tf = useTranslations("Listings.filter");
   const numeric = value ? parseFloat(value) : 0;
 
   const display =
     numeric <= 0
-      ? "Οποιαδήποτε"
+      ? tf("any")
       : allowHalf && numeric % 1 !== 0
         ? `${numeric}+`
         : `${Math.floor(numeric)}+`;
@@ -103,7 +105,7 @@ export function FilterStepperRow({
               ? "cursor-not-allowed opacity-40"
               : "hover:border-gold/40 hover:bg-sand/50"
           )}
-          aria-label={`Μείωση ${label}`}
+          aria-label={tf("decreaseAria", { label })}
         >
           −
         </button>
@@ -112,7 +114,7 @@ export function FilterStepperRow({
           type="button"
           onClick={() => step(1)}
           className="flex h-10 w-10 items-center justify-center rounded-full border border-charcoal/15 text-lg text-charcoal transition-colors hover:border-gold/40 hover:bg-sand/50"
-          aria-label={`Αύξηση ${label}`}
+          aria-label={tf("increaseAria", { label })}
         >
           +
         </button>

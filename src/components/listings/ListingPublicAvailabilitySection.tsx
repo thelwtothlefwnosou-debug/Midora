@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Calendar, CalendarRange, MessageSquare } from "lucide-react";
+import { useTranslations } from "next-intl";
 import {
   InterestDateRangePicker,
   type DateRangeValue,
@@ -34,12 +35,16 @@ type Props = {
 };
 
 export function ListingPublicAvailabilitySection({ listing, periods }: Props) {
+  const t = useTranslations("Listing");
+  const tAvail = useTranslations("Listing.publicAvailability");
   const { mode, showShort, showMonthly } = useListingRentalMode();
   const { openInterest } = useListingInterest();
 
   const minStayMonths = resolveMinimumStayMonths(listing);
   const minimumStayNights = resolveMinimumStayNights(listing);
-  const durationOptions = monthlyDurationOptions(minStayMonths);
+  const durationOptions = monthlyDurationOptions(minStayMonths, (key, values) =>
+    t(key, values)
+  );
 
   const [appliedRange, setAppliedRange] = useState<DateRangeValue>(null);
   const [pickerOpen, setPickerOpen] = useState(false);
@@ -60,11 +65,12 @@ export function ListingPublicAvailabilitySection({ listing, periods }: Props) {
       return;
     }
     const { start, end } = normalizeDateRange(appliedRange.start, appliedRange.end);
+    const rangeLabel = formatInterestRangeLabel(start, end);
     openInterest({
       interestStartDate: start,
       interestEndDate: end,
-      timingNote: formatInterestRangeLabel(start, end),
-      message: `Ενδιαφέρομαι για το ακίνητο από ${formatInterestRangeLabel(start, end)}. Θα ήθελα να επικοινωνήσουμε για περισσότερες πληροφορίες.`,
+      timingNote: rangeLabel,
+      message: tAvail("interestRangeMessage", { range: rangeLabel }),
     });
   }
 
@@ -72,13 +78,14 @@ export function ListingPublicAvailabilitySection({ listing, periods }: Props) {
     if (activeDuration < minStayMonths) return;
     const durationLabel =
       durationOptions.find((o) => o.value === activeDuration)?.label ??
-      `${activeDuration} μήνες`;
+      t("monthsCount", { count: activeDuration });
+    const monthLabel = formatMonthLabel(startMonth);
     openInterest({
       interestStartMonth: startMonth,
       interestDurationMonths: activeDuration,
-      timingNote: formatMonthLabel(startMonth),
+      timingNote: monthLabel,
       duration: durationLabel,
-      message: `Ενδιαφέρομαι για το ακίνητο από ${formatMonthLabel(startMonth)} για διάρκεια ${durationLabel}. Θα ήθελα να επικοινωνήσουμε για περισσότερες πληροφορίες.`,
+      message: tAvail("interestMonthMessage", { month: monthLabel, duration: durationLabel }),
     });
   }
 
@@ -100,14 +107,12 @@ export function ListingPublicAvailabilitySection({ listing, periods }: Props) {
     >
       <h2 className="listing-section-title flex items-center gap-2">
         <Calendar className="h-5 w-5 text-gold" />
-        {viewingMonthly ? "Περίοδος ενδιαφέροντος" : "Διαθεσιμότητα"}
+        {viewingMonthly ? tAvail("interestPeriodTitle") : t("availability")}
       </h2>
 
       {viewingShort && (
         <>
-          <p className="mt-2 text-sm text-muted">
-            Επίλεξε ημερομηνίες ενδιαφέροντος και στείλε μήνυμα στον αγγελιοδότη.
-          </p>
+          <p className="mt-2 text-sm text-muted">{tAvail("shortTermIntro")}</p>
           <button
             type="button"
             onClick={() => setPickerOpen(true)}
@@ -116,7 +121,7 @@ export function ListingPublicAvailabilitySection({ listing, periods }: Props) {
             <CalendarRange className="h-5 w-5 shrink-0 text-gold" />
             <div className="min-w-0 flex-1">
               <p className="text-xs font-medium tracking-wide text-muted uppercase">
-                Ημερομηνίες ενδιαφέροντος
+                {tAvail("interestDatesLabel")}
               </p>
               {resolvedRange ? (
                 <>
@@ -125,11 +130,13 @@ export function ListingPublicAvailabilitySection({ listing, periods }: Props) {
                     {formatDateKeyDisplay(resolvedRange.end)}
                   </p>
                   <p className="text-xs text-gold-dark">
-                    {stayNightsBetween(resolvedRange.start, resolvedRange.end)} νύχτες
+                    {t("nightsCount", {
+                      count: stayNightsBetween(resolvedRange.start, resolvedRange.end),
+                    })}
                   </p>
                 </>
               ) : (
-                <p className="mt-0.5 text-sm text-muted">Επίλεξε άφιξη και αναχώρηση</p>
+                <p className="mt-0.5 text-sm text-muted">{tAvail("selectArrivalCheckout")}</p>
               )}
             </div>
           </button>
@@ -150,7 +157,7 @@ export function ListingPublicAvailabilitySection({ listing, periods }: Props) {
         <div className="mt-5 grid gap-4 sm:grid-cols-2">
           <label className="block text-sm">
             <span className="text-xs font-medium tracking-wide text-muted uppercase">
-              Μήνας έναρξης
+              {t("startMonth")}
             </span>
             <input
               type="month"
@@ -162,7 +169,7 @@ export function ListingPublicAvailabilitySection({ listing, periods }: Props) {
           </label>
           <label className="block text-sm">
             <span className="text-xs font-medium tracking-wide text-muted uppercase">
-              Διάρκεια
+              {t("duration")}
             </span>
             <select
               value={activeDuration}
@@ -181,36 +188,31 @@ export function ListingPublicAvailabilitySection({ listing, periods }: Props) {
 
       {periods.length > 0 && viewingShort ? (
         <>
-          <p className="mt-5 text-sm text-muted">
-            Ορισμένες περίοδοι έχουν δηλωθεί ως μη διαθέσιμες από τον αγγελιοδότη.
-          </p>
+          <p className="mt-5 text-sm text-muted">{tAvail("periodsDeclaredNote")}</p>
           <ul className="mt-3 space-y-2">
             {periods.map((period) => (
               <li
                 key={period.id}
                 className="listing-card px-4 py-2.5 text-sm text-charcoal"
               >
-                Μη διαθέσιμο:{" "}
-                {formatUnavailablePeriodRange(period.start_date, period.end_date)}
+                {tAvail("unavailableRange", {
+                  range: formatUnavailablePeriodRange(period.start_date, period.end_date),
+                })}
               </li>
             ))}
           </ul>
         </>
       ) : (
-        <p className="mt-5 text-sm text-muted">
-          Η διαθεσιμότητα επιβεβαιώνεται απευθείας με τον αγγελιοδότη.
-        </p>
+        <p className="mt-5 text-sm text-muted">{tAvail("confirmedDirectlyNote")}</p>
       )}
 
       <p className="mt-4 text-xs leading-relaxed text-muted">
-        {viewingMonthly
-          ? "Η περίοδος ενδιαφέροντος αποστέλλεται ενημερωτικά στον αγγελιοδότη. Η τελική επιβεβαίωση και οποιαδήποτε συμφωνία γίνονται εκτός Midora."
-          : "Η διαθεσιμότητα εμφανίζεται για ενημέρωση. Η τελική επιβεβαίωση και οποιαδήποτε συμφωνία γίνονται απευθείας με τον αγγελιοδότη, εκτός Midora."}
+        {viewingMonthly ? tAvail("monthlyDisclaimer") : tAvail("shortTermDisclaimer")}
       </p>
 
       {viewingMonthly && periodInvalid && (
         <p className="mt-3 text-sm text-amber-800">
-          Η ελάχιστη διάρκεια για αυτή την αγγελία είναι {minStayMonths} μήνες.
+          {tAvail("minDurationError", { count: minStayMonths })}
         </p>
       )}
 
@@ -221,9 +223,7 @@ export function ListingPublicAvailabilitySection({ listing, periods }: Props) {
           className="mt-4 inline-flex min-h-11 items-center gap-2 rounded-xl bg-gold px-5 text-sm font-semibold text-white hover:bg-gold-dark"
         >
           <MessageSquare className="h-4 w-4" />
-          {hasSelection
-            ? "Στείλε ενδιαφέρον για αυτές τις ημερομηνίες"
-            : "Στείλε ενδιαφέρον"}
+          {hasSelection ? tAvail("sendInterestForDates") : tAvail("sendInterest")}
         </button>
       )}
 
@@ -235,7 +235,7 @@ export function ListingPublicAvailabilitySection({ listing, periods }: Props) {
           className="mt-4 inline-flex min-h-11 items-center gap-2 rounded-xl bg-gold px-5 text-sm font-semibold text-white hover:bg-gold-dark disabled:cursor-not-allowed disabled:opacity-50"
         >
           <MessageSquare className="h-4 w-4" />
-          Στείλε ενδιαφέρον για αυτή την περίοδο
+          {tAvail("sendInterestForPeriod")}
         </button>
       )}
     </section>

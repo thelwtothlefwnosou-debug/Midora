@@ -1,4 +1,7 @@
+"use client";
+
 import { MapPinned } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 
 type Props = {
@@ -8,6 +11,8 @@ type Props = {
 };
 
 export function MapErrorState({ height = "100%", className, onRetry }: Props) {
+  const t = useTranslations("Map");
+
   return (
     <div
       className={cn(
@@ -18,16 +23,14 @@ export function MapErrorState({ height = "100%", className, onRetry }: Props) {
       role="alert"
     >
       <MapPinned className="h-9 w-9 text-gold/70" aria-hidden />
-      <p className="max-w-xs text-sm font-medium text-charcoal">
-        Δεν ήταν δυνατή η φόρτωση του χάρτη. Δοκιμάστε ξανά.
-      </p>
+      <p className="max-w-xs text-sm font-medium text-charcoal">{t("loadFailed")}</p>
       {onRetry ? (
         <button
           type="button"
           onClick={onRetry}
           className="mt-1 rounded-lg border border-border bg-white px-4 py-2 text-sm font-semibold text-charcoal transition hover:border-gold/40"
         >
-          Δοκιμή ξανά
+          {t("retry")}
         </button>
       ) : null}
     </div>

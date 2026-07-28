@@ -3,9 +3,10 @@
 import { useMemo, useState } from "react";
 import Image from "next/image";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { useTranslations } from "next-intl";
 import {
+  getSuggestPhotoRooms,
   groupImagesByRoom,
-  suggestPhotoRooms,
 } from "@/lib/photo-rooms-catalog";
 import type { ListingImage, ListingPublicDetail } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -16,14 +17,20 @@ type Props = {
 };
 
 export function ListingPhotoTourSection({ listing, images }: Props) {
+  const t = useTranslations("Listing.photoTour");
+  const tPhotoRooms = useTranslations("Listing.photoRooms");
   const rooms = useMemo(
-    () => suggestPhotoRooms({ bedrooms: listing.bedrooms, bathrooms: listing.bathrooms }),
-    [listing.bedrooms, listing.bathrooms]
+    () =>
+      getSuggestPhotoRooms(
+        { bedrooms: listing.bedrooms, bathrooms: listing.bathrooms },
+        (key) => tPhotoRooms(key as Parameters<typeof tPhotoRooms>[0])
+      ),
+    [listing.bedrooms, listing.bathrooms, tPhotoRooms]
   );
 
   const grouped = useMemo(
-    () => groupImagesByRoom(images, rooms),
-    [images, rooms]
+    () => groupImagesByRoom(images, rooms, tPhotoRooms("generalPhotos")),
+    [images, rooms, tPhotoRooms]
   );
 
   const [activeRoom, setActiveRoom] = useState<string>(grouped[0]?.room.key ?? "");
@@ -43,10 +50,8 @@ export function ListingPhotoTourSection({ listing, images }: Props) {
 
   return (
     <section id="photo-tour" className="listing-section scroll-mt-32">
-      <h2 className="listing-section-title">Περιήγηση σπιτιού</h2>
-      <p className="listing-meta mt-2">
-        Δες κάθε χώρο ξεχωριστά — όπως θα ήταν μια ξενάγηση στο ακίνητο.
-      </p>
+      <h2 className="listing-section-title">{t("title")}</h2>
+      <p className="listing-meta mt-2">{t("subtitle")}</p>
 
       <div className="mt-5 flex gap-2 overflow-x-auto pb-1">
         {grouped.map(({ room, images: roomImages }) => (
@@ -86,7 +91,7 @@ export function ListingPhotoTourSection({ listing, images }: Props) {
                     setPhotoIndex((i) => (i === 0 ? activePhotos.length - 1 : i - 1))
                   }
                   className="absolute top-1/2 left-3 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-white/90 shadow-md"
-                  aria-label="Προηγούμενη"
+                  aria-label={t("previousAria")}
                 >
                   <ChevronLeft className="h-5 w-5" />
                 </button>
@@ -96,7 +101,7 @@ export function ListingPhotoTourSection({ listing, images }: Props) {
                     setPhotoIndex((i) => (i === activePhotos.length - 1 ? 0 : i + 1))
                   }
                   className="absolute top-1/2 right-3 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-white/90 shadow-md"
-                  aria-label="Επόμενη"
+                  aria-label={t("nextAria")}
                 >
                   <ChevronRight className="h-5 w-5" />
                 </button>

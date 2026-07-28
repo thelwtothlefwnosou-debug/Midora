@@ -1,5 +1,8 @@
+"use client";
+
 import Link from "next/link";
 import { Plus } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/Button";
 import { DashboardListingGridCard } from "@/components/dashboard/DashboardListingGridCard";
 import { DashboardListingsOverviewMetrics } from "@/components/dashboard/DashboardListingsOverviewMetrics";
@@ -37,6 +40,7 @@ export function OwnerHomeOverview({
   overview,
   recentLeads,
 }: Props) {
+  const t = useTranslations("Owner.home");
   const hasPublished = overview.activeCount > 0;
   const showProfileNudge = profileCompletionItems(profile, email).some((i) => !i.done);
 
@@ -44,21 +48,21 @@ export function OwnerHomeOverview({
     return (
       <div className="rounded-2xl border border-dashed border-border bg-white px-6 py-10 text-center shadow-soft">
         <p className="font-display text-lg font-semibold text-charcoal">
-          Δεν έχεις ανεβάσει ακόμα αγγελία
+          {t("emptyTitle")}
         </p>
         <p className="mx-auto mt-2 max-w-md text-sm text-muted">
-          Δημοσίευσε την πρώτη σου αγγελία — βραχυχρόνια ή μηνιαία/μεσοπρόθεσμη διαμονή.
+          {t("emptySubtitle")}
         </p>
         <Button href={OWNER_LISTING_NEW_PATH} className="mt-4">
           <Plus className="h-4 w-4" />
-          Νέα αγγελία
+          {t("newListing")}
         </Button>
       </div>
     );
   }
 
   const primaryRow = pickPrimaryRow(rows);
-  const propertyTitle = rows.length === 1 ? "Το ακίνητό σου" : "Τα ακίνητά σου";
+  const propertyTitle = rows.length === 1 ? t("yourProperty") : t("yourProperties");
 
   return (
     <div className="space-y-4">
@@ -79,7 +83,7 @@ export function OwnerHomeOverview({
                 href="/dashboard/listings"
                 className="text-xs font-medium text-gold-dark hover:underline"
               >
-                Όλα τα ακίνητα →
+                {t("allProperties")}
               </Link>
             )}
           </div>

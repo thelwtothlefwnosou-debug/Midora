@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { getTranslations } from "next-intl/server";
 import { getListingById, getListingCoverImage, isListingActive } from "@/lib/listings";
 import { isPublicMvpListing } from "@/lib/rental-types";
 import { getSiteUrl } from "@/lib/site-url";
@@ -13,9 +14,10 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { id } = await params;
   const listing = await getListingById(id);
+  const t = await getTranslations("Meta");
 
   if (!listing || !isListingActive(listing) || !isPublicMvpListing(listing)) {
-    return { title: "Αγγελία μη διαθέσιμη" };
+    return { title: t("listingUnavailableTitle") };
   }
 
   const title = `${listing.title} — ${listing.area}, ${listing.city}`;

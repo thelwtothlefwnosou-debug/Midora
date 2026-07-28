@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import Image from "next/image";
 import { useRef } from "react";
 import {
   motion,
@@ -18,34 +17,25 @@ import {
   resolveListingBathrooms,
 } from "@/lib/listing-filter-helpers";
 import { getListingBadges, type ListingBadge } from "@/lib/listing-badges";
-import { formatListingPrice, cardRegistryLabel, listingCardDetailLines } from "@/lib/rental-types";
-import { pickListingCoverPhotoUrl } from "@/lib/listing-media";
-import { COPY } from "@/lib/copy";
+import {
+  getFormattedListingPrice,
+  getCardRegistryLabel,
+  getListingCardDetailLines,
+} from "@/lib/rental-types";
+import { resolveListingSearchPrice } from "@/lib/listing-search-links";
+import {
+  formatPublicStayPriceNightsLine,
+  formatPublicStayPriceTotal,
+} from "@/lib/listing-short-term-price";
+import { useTranslations, useLocale } from "next-intl";
 import { cn, getListingPublicId } from "@/lib/utils";
 import { FavoriteButton } from "@/components/listings/FavoriteButton";
 import { ListingImageCarousel } from "@/components/listings/ListingImageCarousel";
+import { ListingCardImageCarousel } from "@/components/listings/ListingCardImageCarousel";
 import { ListingCardBadges } from "@/components/listings/ListingCardBadges";
 import { ListingCardAvailabilityOverlay } from "@/components/listings/ListingCardAvailabilityOverlay";
 import { getListingCardAvailabilityLabel } from "@/lib/listing-card-availability";
 import type { ListingUnavailablePeriod } from "@/lib/unavailable-periods";
-
-function HomeListingCover({ listing, alt }: { listing: ListingWithImages; alt: string }) {
-  const coverUrl = pickListingCoverPhotoUrl(listing);
-
-  if (!coverUrl) {
-    return <div className="h-full w-full bg-gradient-to-br from-sand/90 to-sand/60" />;
-  }
-
-  return (
-    <Image
-      src={coverUrl}
-      alt={alt}
-      fill
-      sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-      className="object-cover transition-transform duration-500 group-hover/card:scale-[1.02]"
-    />
-  );
-}
 
 function ListingCardContent({
   listing,
@@ -66,11 +56,22 @@ function ListingCardContent({
   isHome: boolean;
   unavailablePeriods?: Pick<ListingUnavailablePeriod, "start_date" | "end_date">[];
 }) {
-  const price = formatListingPrice(listing);
-  const registry = cardRegistryLabel(listing);
-  const detailLines = listingCardDetailLines(listing);
-  const floorLabel = formatFloorLabel(listing.floor);
-  const availabilityLabel = getListingCardAvailabilityLabel(listing, unavailablePeriods);
+  const tCommon = useTranslations("Common");
+  const tListing = useTranslations("Listing");
+  const tLabels = useTranslations("Listing.labels");
+  const locale = useLocale();
+  const price = getFormattedListingPrice(listing, tCommon);
+  const searchPrice = isHome
+    ? resolveListingSearchPrice(listing, { unavailablePeriods }, locale)
+    : null;
+  const registry = getCardRegistryLabel(listing, tListing);
+  const detailLines = isHome ? [] : getListingCardDetailLines(listing, tListing);
+  const floorLabel = formatFloorLabel(listing.floor, locale);
+  const availabilityLabel = getListingCardAvailabilityLabel(
+    listing,
+    unavailablePeriods,
+    locale
+  );
 
   return (
     <Link href={href} className="block h-full">
@@ -78,13 +79,19 @@ function ListingCardContent({
         className={cn(
           "group/card flex h-full flex-col overflow-hidden rounded-2xl border border-border bg-white shadow-soft transition-all duration-300",
           isHome
-            ? "hover:-translate-y-0.5 hover:border-gold/25 hover:shadow-card"
+            ? "hover:-translate-y-1 hover:shadow-[0_18px_40px_-18px_rgba(26,26,26,0.22)] border-transparent shadow-[0_8px_28px_-14px_rgba(26,26,26,0.14)]"
             : "group-hover:border-gold/25 group-hover:shadow-card"
         )}
       >
-        <div className="relative aspect-[4/3] overflow-hidden bg-sand/40">
+        <div className={cn(
+          "relative overflow-hidden bg-sand/40",
+          isHome ? "aspect-[3/2]" : "aspect-[4/3]"
+        )}>
           {isHome ? (
-            <HomeListingCover listing={listing} alt={listing.title} />
+            <ListingCardImageCarousel
+              images={images ?? []}
+              alt={listing.title}
+            />
           ) : (
             <ListingImageCarousel
               images={images ?? []}
@@ -123,11 +130,11 @@ function ListingCardContent({
 
           <div className="mt-3 flex flex-wrap items-center gap-x-2.5 gap-y-1 text-xs text-muted sm:text-sm">
             <span className="flex items-center gap-1">
-              <Bed className="h-3.5 w-3.5 text-gold/80" /> {formatBedroomsLabel(listing.bedrooms)}
+              <Bed className="h-3.5 w-3.5 text-gold/80" /> {formatBedroomsLabel(listing.bedrooms, locale)}
             </span>
             <span className="text-border/80">·</span>
             <span className="flex items-center gap-1">
-              <Bath className="h-3.5 w-3.5 text-gold/80" /> {formatBathroomsLabel(bathrooms)}
+              <Bath className="h-3.5 w-3.5 text-gold/80" /> {formatBathroomsLabel(bathrooms, locale)}
             </span>
             {floorLabel && (
               <>
@@ -149,25 +156,54 @@ function ListingCardContent({
               <>
                 <span className="text-border/80">·</span>
                 <span className="flex items-center gap-1">
-                  <Maximize className="h-3.5 w-3.5 text-gold/80" /> {listing.sqm} τ.μ.
+                  <Maximize className="h-3.5 w-3.5 text-gold/80" />{" "}
+                  {tLabels("sqm", { sqm: listing.sqm })}
                 </span>
               </>
             )}
           </div>
 
           <div className="mt-auto pt-4">
-            <p className="font-display text-xl font-semibold tracking-tight text-charcoal">
-              {price.display}
-            </p>
-            {detailLines.map((line) => (
-              <p key={line} className="mt-0.5 text-[11px] text-muted">
-                {line}
-              </p>
-            ))}
-            {registry && (
-              <p className="mt-0.5 text-[11px] font-medium text-teal">{registry}</p>
+            {isHome && searchPrice ? (
+              <>
+                {searchPrice.isStayTotal &&
+                searchPrice.total != null &&
+                searchPrice.nights != null ? (
+                  <>
+                    <p className="font-display text-xl font-semibold tracking-tight text-charcoal">
+                      {formatPublicStayPriceTotal(searchPrice.total, locale)}
+                    </p>
+                    <p className="mt-0.5 text-[11px] text-muted">
+                      {formatPublicStayPriceNightsLine(searchPrice.nights, locale)}
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <p className="font-display text-xl font-semibold tracking-tight text-charcoal">
+                      {searchPrice.display}
+                    </p>
+                    {searchPrice.helper ? (
+                      <p className="mt-0.5 text-[11px] text-muted">{searchPrice.helper}</p>
+                    ) : null}
+                  </>
+                )}
+              </>
+            ) : (
+              <>
+                <p className="font-display text-xl font-semibold tracking-tight text-charcoal">
+                  {price.display}
+                </p>
+                {detailLines.map((line) => (
+                  <p key={line} className="mt-0.5 text-[11px] text-muted">
+                    {line}
+                  </p>
+                ))}
+                {registry && (
+                  <p className="mt-0.5 text-[11px] font-medium text-teal">{registry}</p>
+                )}
+              </>
             )}
-            <p className="mt-1.5 text-xs font-medium text-gold">{COPY.viewListing}</p>
+            <p className="mt-1.5 text-xs font-medium text-gold">{tCommon("viewListing")}</p>
           </div>
         </div>
       </article>
@@ -192,6 +228,7 @@ export function ListingCard({
   variant?: "default" | "home";
   unavailablePeriods?: Pick<ListingUnavailablePeriod, "start_date" | "end_date">[];
 }) {
+  const locale = useLocale();
   const ref = useRef<HTMLDivElement>(null);
   const x = useMotionValue(0);
   const y = useMotionValue(0);
@@ -213,7 +250,7 @@ export function ListingCard({
     badges ??
     (badge
       ? [{ kind: "new" as const, label: badge, priority: 1 }]
-      : getListingBadges(listing));
+      : getListingBadges(listing, locale));
 
   const content = (
     <ListingCardContent

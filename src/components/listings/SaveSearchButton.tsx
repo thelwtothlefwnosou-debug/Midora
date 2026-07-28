@@ -2,7 +2,9 @@
 
 import { useState, useTransition } from "react";
 import { Bell, BookmarkPlus, Check } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { saveSearch } from "@/lib/actions";
+import { ACTION_ERROR_CODES } from "@/lib/action-error-i18n";
 import { buildSavedSearchName } from "@/lib/saved-searches";
 import type { ListingsFilterValues } from "@/components/listings/ListingsFilters";
 import { cn } from "@/lib/utils";
@@ -22,6 +24,27 @@ function filtersToRecord(filters: ListingsFilterValues): Record<string, string> 
 }
 
 export function SaveSearchButton({ filters, className, compact = false }: Props) {
+  const t = useTranslations("Listings.saveSearch");
+  const tDuration = useTranslations("Owner.leads");
+
+  const durationLabelFn = (duration: string) => {
+    const keyMap: Record<string, Parameters<typeof tDuration>[0]> = {
+      "1plus": "duration1plus",
+      "2-3": "duration2_3",
+      "4-6": "duration4_6",
+      "6-12": "duration6_12",
+      "12plus": "duration12plus",
+    };
+    const key = keyMap[duration];
+    return key ? tDuration(key) : duration;
+  };
+
+  const defaultSearchName = (record: Record<string, string>) =>
+    buildSavedSearchName(
+      record,
+      (key, values) => t(key as Parameters<typeof t>[0], values),
+      durationLabelFn
+    );
   const [saved, setSaved] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [name, setName] = useState("");
@@ -44,7 +67,7 @@ export function SaveSearchButton({ filters, className, compact = false }: Props)
 
       const result = await saveSearch(fd);
       if (result?.error) {
-        if (result.error === "Πρέπει να συνδεθείς") {
+        if ("errorCode" in result && result.errorCode === ACTION_ERROR_CODES.mustSignIn) {
           window.location.href = `/login?next=${encodeURIComponent(window.location.pathname + window.location.search)}`;
           return;
         }
@@ -70,7 +93,7 @@ export function SaveSearchButton({ filters, className, compact = false }: Props)
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder={buildSavedSearchName(filterRecord)}
+            placeholder={defaultSearchName(filterRecord)}
             className="w-full rounded-lg border border-border bg-sand/30 px-3 py-2 text-sm text-charcoal outline-none placeholder:text-muted/80 focus:border-gold/40"
             autoFocus
           />
@@ -84,9 +107,9 @@ export function SaveSearchButton({ filters, className, compact = false }: Props)
             <span>
               <span className="flex items-center gap-1 font-medium text-charcoal">
                 <Bell className="h-3.5 w-3.5 text-gold" />
-                Ειδοποίησέ με με email
+                {t("emailAlertsLabel")}
               </span>
-              Θα λάβεις email όταν εγκριθεί νέο ακίνητο που ταιριάζει.
+              {t("emailAlertsHint")}
             </span>
           </label>
           <div className="flex items-center gap-2">
@@ -95,14 +118,14 @@ export function SaveSearchButton({ filters, className, compact = false }: Props)
               disabled={pending}
               className="rounded-lg bg-gold px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-50"
             >
-              Αποθήκευση
+              {t("save")}
             </button>
             <button
               type="button"
               onClick={() => setShowForm(false)}
               className="text-xs text-muted hover:text-charcoal"
             >
-              Άκυρο
+              {t("cancel")}
             </button>
           </div>
         </form>
@@ -111,7 +134,7 @@ export function SaveSearchButton({ filters, className, compact = false }: Props)
           type="button"
           onClick={() => setShowForm(true)}
           disabled={pending || saved}
-          title="Αποθήκευση & ειδοποίηση"
+          title={t("saveAndNotify")}
           className={cn(
             "flex shrink-0 items-center justify-center transition-colors",
             compact
@@ -127,15 +150,15 @@ export function SaveSearchButton({ filters, className, compact = false }: Props)
           {saved ? (
             <>
               <Check className="h-4 w-4" />
-              {!compact && "Αποθηκεύτηκε"}
+              {!compact && t("saved")}
             </>
           ) : (
             <>
               <BookmarkPlus className="h-4 w-4" />
               {!compact && (
                 <>
-                  <span className="hidden sm:inline">Αποθήκευση &amp; ειδοποίηση</span>
-                  <span className="sm:hidden">Αποθήκευση</span>
+                  <span className="hidden sm:inline">{t("saveAndNotify")}</span>
+                  <span className="sm:hidden">{t("save")}</span>
                 </>
               )}
             </>

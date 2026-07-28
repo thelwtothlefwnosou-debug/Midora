@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useTranslations } from "next-intl";
 import { AvailabilityCalendarPanel } from "@/components/availability/AvailabilityCalendarGrid";
 import { OwnerPricePreview } from "@/components/dashboard/OwnerPricePreview";
 import { useListingInquiryDates } from "@/components/listings/detail/ListingInquiryDatesContext";
@@ -8,10 +9,6 @@ import { useListingInterest } from "@/components/listings/ListingInterestContext
 import { useDateRangeSelection } from "@/hooks/useDateRangeSelection";
 import { listingHasPublicCalendarData } from "@/lib/listing-public-calendar";
 import type { ListingUnavailablePeriod } from "@/lib/unavailable-periods";
-import {
-  formatDateKeyDisplay,
-  stayNightsBetween,
-} from "@/lib/availability-calendar";
 import { computeIndicativeStayPrice } from "@/lib/listing-short-term-price";
 import type { ListingPublicDetail } from "@/lib/types";
 
@@ -26,6 +23,8 @@ function monthFromDateKey(dateKey: string): Date {
 }
 
 export function AvailabilityCalendarSection({ listing, periods }: Props) {
+  const t = useTranslations("Listing");
+  const tSection = useTranslations("Listing.availabilitySection");
   const { openInterest } = useListingInterest();
   const {
     displayRange,
@@ -33,7 +32,6 @@ export function AvailabilityCalendarSection({ listing, periods }: Props) {
     setUserSelectedRange,
     minimumStayNights,
     rangeMeetsMinStay,
-    clearDates,
     guests,
   } = useListingInquiryDates();
 
@@ -41,9 +39,6 @@ export function AvailabilityCalendarSection({ listing, periods }: Props) {
   const priceRules = listing.price_rules ?? [];
   const isProgrammaticSync = useRef(false);
   const userChangedSelectionRef = useRef(false);
-
-  const locationLabel =
-    listing.area_display_name ?? listing.area ?? listing.city_display_name ?? listing.city;
 
   const indicativePrice = useMemo(() => {
     if (!displayRange?.start || !displayRange?.end || displayRange.start === displayRange.end) {
@@ -130,33 +125,11 @@ export function AvailabilityCalendarSection({ listing, periods }: Props) {
     [handleDateClick]
   );
 
-  const handleClearDates = useCallback(() => {
-    userChangedSelectionRef.current = false;
-    clearDates();
-  }, [clearDates]);
-
-  const nights =
-    displayRange && displayRange.start !== displayRange.end
-      ? stayNightsBetween(displayRange.start, displayRange.end)
-      : null;
-
-  const calendarTitle =
-    displayRange && nights
-      ? `${locationLabel} – ${nights} ${nights === 1 ? "διανυκτέρευση" : "διανυκτερεύσεις"}`
-      : "Επίλεξε ημερομηνίες";
-
-  const calendarSubtitle =
-    displayRange && nights
-      ? `${formatDateKeyDisplay(displayRange.start)} – ${formatDateKeyDisplay(displayRange.end)}`
-      : null;
-
   return (
     <section id="availability" className="listing-section scroll-mt-32">
-      <h2 className="listing-section-title">Διαθεσιμότητα</h2>
+      <h2 className="listing-section-title">{t("availability")}</h2>
       <p className="mt-2 max-w-2xl text-sm text-charcoal/65">
-        {hasCalendarData
-          ? "Επίλεξε ημερομηνίες και στείλε αίτημα στον ιδιοκτήτη. Η τελική διαθεσιμότητα και τιμή επιβεβαιώνονται από τον ιδιοκτήτη."
-          : "Επικοινώνησε με τον ιδιοκτήτη για διαθεσιμότητα και τελική τιμή."}
+        {hasCalendarData ? tSection("descriptionWithCalendar") : tSection("descriptionNoCalendar")}
       </p>
 
       {!hasCalendarData ? (
@@ -165,39 +138,18 @@ export function AvailabilityCalendarSection({ listing, periods }: Props) {
           onClick={() =>
             openInterest({
               guests,
-              message:
-                "Καλησπέρα, ενδιαφέρομαι για το ακίνητο. Θα ήθελα να επιβεβαιώσω τη διαθεσιμότητα και την τελική τιμή.",
+              message: tSection("inquiryMessage"),
             })
           }
           className="mt-5 inline-flex min-h-11 items-center justify-center rounded-xl border border-charcoal/12 px-5 text-sm font-medium text-charcoal transition-colors hover:border-gold/35"
         >
-          Στείλε αίτημα διαθεσιμότητας
+          {t("sendAvailabilityRequest")}
         </button>
       ) : (
         <>
-          <div className="mt-5">
-            <p className="font-display text-base font-semibold text-charcoal">{calendarTitle}</p>
-            {calendarSubtitle ? (
-              <p className="mt-1 text-sm text-muted">{calendarSubtitle}</p>
-            ) : null}
-          </div>
-
-          {(displayRange || selectionStart) && (
-            <div className="mt-3">
-              <button
-                type="button"
-                onClick={handleClearDates}
-                className="text-sm font-medium text-gold-dark hover:underline"
-              >
-                Εκκαθάριση ημερομηνιών
-              </button>
-            </div>
-          )}
-
           {displayRange && !rangeMeetsMinStay && minimumStayNights > 1 && (
-            <p className="mt-2 text-sm text-amber-800">
-              Ελάχιστη διαμονή {minimumStayNights}{" "}
-              {minimumStayNights === 1 ? "νύχτα" : "νύχτες"}.
+            <p className="mt-4 text-sm text-amber-800">
+              {t("minStayNights", { count: minimumStayNights })}
             </p>
           )}
 

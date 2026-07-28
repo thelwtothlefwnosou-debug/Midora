@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { X, Eye, Inbox } from "lucide-react";
+import { useTranslations } from "next-intl";
 import type { ListingAnalytics } from "@/lib/owner-listing-analytics";
 import { formatAnalyticsMetric } from "@/lib/owner-listing-analytics";
 import { cn } from "@/lib/utils";
@@ -19,6 +20,7 @@ export function DashboardListingAnalyticsDrawer({
   title,
   analytics,
 }: Props) {
+  const t = useTranslations("Owner.analyticsDrawer");
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
@@ -35,13 +37,13 @@ export function DashboardListingAnalyticsDrawer({
       <button
         type="button"
         className="fixed inset-0 z-40 bg-charcoal/30"
-        aria-label="Κλείσιμο"
+        aria-label={t("close")}
         onClick={onClose}
       />
       <aside className="fixed inset-y-0 right-0 z-50 flex w-full max-w-md flex-col border-l border-border bg-white shadow-card">
         <div className="flex items-center justify-between border-b border-border px-5 py-4">
           <div>
-            <p className="text-xs font-medium text-muted">Στατιστικά αγγελίας</p>
+            <p className="text-xs font-medium text-muted">{t("listingStats")}</p>
             <h2 className="mt-0.5 font-display text-lg font-semibold text-charcoal">{title}</h2>
           </div>
           <button
@@ -55,33 +57,32 @@ export function DashboardListingAnalyticsDrawer({
 
         <div className="flex-1 overflow-y-auto p-5">
           <p className="text-xs text-muted">
-            Συγκεντρωτικά δεδομένα από πραγματικές προβολές και αιτήματα επικοινωνίας.
-            Δεν εμφανίζονται στοιχεία ταυτότητας επισκεπτών.
+            {t("description")}
           </p>
 
           <div className="mt-5 grid gap-3 sm:grid-cols-2">
             <MetricBlock
               icon={Eye}
-              label="Συνολικές προβολές"
+              label={t("totalViews")}
               value={formatAnalyticsMetric(analytics.viewsTotal)}
               note={
                 analytics.viewsTotal == null
-                  ? "Δεν υπάρχουν δεδομένα ακόμα"
-                  : "Μετράται μετά ουσιαστική παραμονή στη σελίδα"
+                  ? t("noDataYet")
+                  : t("countedAfterMeaningfulTime")
               }
             />
             <MetricBlock
               icon={Inbox}
-              label="Αιτήματα (30 ημέρες)"
+              label={t("requests30Days")}
               value={formatAnalyticsMetric(
                 analytics.inquiriesLast30Days > 0 ? analytics.inquiriesLast30Days : null
               )}
               note={
                 analytics.inquiriesLast30Days > 0
-                  ? `${analytics.inquiriesTotal} σύνολο`
+                  ? t("totalCount", { count: analytics.inquiriesTotal })
                   : analytics.inquiriesTotal > 0
-                    ? `${analytics.inquiriesTotal} σύνολο · χωρίς νέα τελευταίες 30 ημέρες`
-                    : "Δεν υπάρχουν αιτήματα ακόμα"
+                    ? t("totalCountNoneNew", { count: analytics.inquiriesTotal })
+                    : t("noRequestsYet")
               }
             />
           </div>
@@ -89,13 +90,13 @@ export function DashboardListingAnalyticsDrawer({
           {analytics.unreadInquiries > 0 && (
             <div className="mt-4 rounded-xl border border-gold/25 bg-gold/5 px-4 py-3 text-sm text-charcoal">
               {analytics.unreadInquiries}{" "}
-              {analytics.unreadInquiries === 1 ? "νέο αίτημα" : "νέα αιτήματα"} χωρίς απάντηση
+              {analytics.unreadInquiries === 1 ? t("unreadOne") : t("unreadOther")}{" "}
+              {t("unreadSuffix")}
             </div>
           )}
 
           <div className="mt-6 rounded-xl border border-dashed border-border px-4 py-5 text-center text-sm text-muted">
-            Αναλυτικά γραφήματα ανά ημέρα θα προστεθούν όταν συγκεντρωθούν περισσότερα
-            ιστορικά δεδομένα.
+            {t("chartsComingSoon")}
           </div>
         </div>
       </aside>

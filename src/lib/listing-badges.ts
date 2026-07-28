@@ -1,4 +1,5 @@
 import type { ListingWithImages } from "@/lib/types";
+import { pickLocale } from "@/lib/locale-fallbacks";
 import {
   listingRentalBadgeLabels,
   needsPublicRegistryDisplay,
@@ -21,7 +22,7 @@ export type ListingBadge = {
   priority: number;
 };
 
-const BADGE_LABELS: Record<ListingBadgeKind, string> = {
+const BADGE_LABELS_EL: Record<ListingBadgeKind, string> = {
   new: "Νέο",
   popular: "Δημοφιλές",
   instant: "Άμεση επικοινωνία",
@@ -31,6 +32,34 @@ const BADGE_LABELS: Record<ListingBadgeKind, string> = {
   ama: "Με καταχωρημένο ΑΜΑ",
   checked: "Ελεγμένη αγγελία",
 };
+
+const BADGE_LABELS_EN: Record<ListingBadgeKind, string> = {
+  new: "New",
+  popular: "Popular",
+  instant: "Instant contact",
+  verified: "Verified advertiser",
+  rental_type: "",
+  rental_type_secondary: "",
+  ama: "Registered AMA",
+  checked: "Reviewed listing",
+};
+
+const BADGE_LABEL_KEYS: Partial<Record<ListingBadgeKind, string>> = {
+  new: "new",
+  popular: "popular",
+  instant: "instant",
+  verified: "verified",
+  ama: "ama",
+  checked: "checked",
+};
+
+function badgeLabel(kind: ListingBadgeKind, locale?: string): string {
+  return pickLocale(locale, BADGE_LABELS_EL[kind], BADGE_LABELS_EN[kind]);
+}
+
+export function listingBadgeKey(kind: ListingBadgeKind): string | null {
+  return BADGE_LABEL_KEYS[kind] ?? null;
+}
 
 function isNewListing(createdAt: string): boolean {
   const created = new Date(createdAt);
@@ -49,14 +78,13 @@ function hasDirectContact(listing: ListingWithImages): boolean {
   return Boolean(listing.profiles?.phone?.trim());
 }
 
-function isReviewedListing(listing: ListingWithImages): boolean {
-  return listing.status === "approved" && listing.approval_status === "approved";
-}
-
-/** Homepage cards — rental type, optional new, discrete reviewed badge only. */
-export function getHomepageListingBadges(listing: ListingWithImages): ListingBadge[] {
+/** Homepage cards — rental type + optional “new” only (no verified/checked claims). */
+export function getHomepageListingBadges(
+  listing: ListingWithImages,
+  locale?: string
+): ListingBadge[] {
   const badges: ListingBadge[] = [];
-  const rentalBadges = listingRentalBadgeLabels(listing);
+  const rentalBadges = listingRentalBadgeLabels(listing, locale);
 
   badges.push({
     kind: "rental_type",
@@ -65,18 +93,23 @@ export function getHomepageListingBadges(listing: ListingWithImages): ListingBad
   });
 
   if (isNewListing(listing.created_at)) {
-    badges.push({ kind: "new", label: BADGE_LABELS.new, priority: 1 });
-  } else if (isReviewedListing(listing)) {
-    badges.push({ kind: "checked", label: BADGE_LABELS.checked, priority: 2 });
+    badges.push({
+      kind: "new",
+      label: pickLocale(locale, "Νέα αγγελία", "New listing"),
+      priority: 1,
+    });
   }
 
   return badges.slice(0, 2);
 }
 
 /** Up to 3 badges — rental type + verification prioritized */
-export function getListingBadges(listing: ListingWithImages): ListingBadge[] {
+export function getListingBadges(
+  listing: ListingWithImages,
+  locale?: string
+): ListingBadge[] {
   const badges: ListingBadge[] = [];
-  const rentalBadges = listingRentalBadgeLabels(listing);
+  const rentalBadges = listingRentalBadgeLabels(listing, locale);
 
   badges.push({
     kind: "rental_type",
@@ -85,27 +118,27 @@ export function getListingBadges(listing: ListingWithImages): ListingBadge[] {
   });
 
   if (listing.advertiser_verification_status === "verified") {
-    badges.push({ kind: "verified", label: BADGE_LABELS.verified, priority: 2 });
+    badges.push({ kind: "verified", label: badgeLabel("verified", locale), priority: 2 });
   }
 
   if (needsPublicRegistryDisplay(listing) && listing.ama_number?.trim()) {
     badges.push({
       kind: "ama",
-      label: legalRegistryRegisteredBadge(listing) ?? BADGE_LABELS.ama,
+      label: legalRegistryRegisteredBadge(listing, locale) ?? badgeLabel("ama", locale),
       priority: 3,
     });
   } else if (listing.ama_number?.trim()) {
-    badges.push({ kind: "ama", label: BADGE_LABELS.ama, priority: 3 });
+    badges.push({ kind: "ama", label: badgeLabel("ama", locale), priority: 3 });
   }
 
   if (isNewListing(listing.created_at)) {
-    badges.push({ kind: "new", label: BADGE_LABELS.new, priority: 4 });
+    badges.push({ kind: "new", label: badgeLabel("new", locale), priority: 4 });
   }
   if (isPopularListing(listing.search_boost_until)) {
-    badges.push({ kind: "popular", label: BADGE_LABELS.popular, priority: 5 });
+    badges.push({ kind: "popular", label: badgeLabel("popular", locale), priority: 5 });
   }
   if (hasDirectContact(listing)) {
-    badges.push({ kind: "instant", label: BADGE_LABELS.instant, priority: 6 });
+    badges.push({ kind: "instant", label: badgeLabel("instant", locale), priority: 6 });
   }
 
   return badges.sort((a, b) => a.priority - b.priority).slice(0, 3);

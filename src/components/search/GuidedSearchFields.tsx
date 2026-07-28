@@ -2,6 +2,7 @@
 
 import { useId, useRef } from "react";
 import { Calendar, Clock, Users } from "lucide-react";
+import { useLocale, useTranslations } from "next-intl";
 import {
   InterestDateRangePicker,
   type DateRangeFocusField,
@@ -15,13 +16,12 @@ import {
   type GuestCounts,
 } from "@/components/search/GuestPicker";
 import { SearchInteractiveTile, HeroSearchField } from "@/components/search/SearchInteractiveTile";
-import { MID_TERM_DURATION_OPTIONS } from "@/lib/search-interest-dates";
+import { MonthInput } from "@/components/ui/MonthInput";
+import { MID_TERM_DURATION_OPTIONS, midTermDurationLabel } from "@/lib/search-interest-dates";
 import {
   type ActiveSearchField,
+  type GuestSearchLabels,
   isCompleteDateRange,
-  SEARCH_DATE_PLACEHOLDER,
-  SEARCH_GUESTS_EMPTY_LABEL,
-  SEARCH_GUESTS_FIELD_LABEL,
   formatGuestSearchLabel,
   formatSearchCheckInLabel,
   formatSearchCheckOutLabel,
@@ -84,6 +84,23 @@ type Props = {
 const searchFieldButtonClass =
   "flex min-h-[22px] w-full items-center border-0 bg-transparent p-0 text-left text-[15px] leading-snug text-charcoal outline-none";
 
+function useGuestSearchLabels(): GuestSearchLabels {
+  const tSearch = useTranslations("Search");
+  const t = useTranslations("Search.guestPicker");
+  return {
+    empty: tSearch("addGuests"),
+    guestOne: t("guestOne"),
+    guestOther: t("guestOther"),
+    petOne: t("petOne"),
+    petOther: t("petOther"),
+    childOne: t("childOne"),
+    childOther: t("childOther"),
+    infantOne: t("infantOne"),
+    infantOther: t("infantOther"),
+    fallback: t("fallback"),
+  };
+}
+
 function ShortTermGuidedFields({
   variant,
   state,
@@ -91,6 +108,7 @@ function ShortTermGuidedFields({
   guidedFlow,
   partialDateHint,
 }: Omit<Props, "rentalType" | "defaults"> & { rentalType: "short_term" }) {
+  const t = useTranslations("Search");
   const isSearch = variant === "search";
   const checkInAnchorRef = useRef<HTMLDivElement>(null);
   const checkOutAnchorRef = useRef<HTMLDivElement>(null);
@@ -112,9 +130,15 @@ function ShortTermGuidedFields({
     activeField === "checkIn" ||
     activeField === "checkOut";
 
-  const checkInLabel = formatSearchCheckInLabel(state.dateRange);
-  const checkOutLabel = formatSearchCheckOutLabel(state.dateRange);
-  const guestLabel = formatGuestSearchLabel(state.guestCounts, state.hasGuestSelection);
+  const datePlaceholder = t("when");
+  const guestSearchLabels = useGuestSearchLabels();
+  const checkInLabel = formatSearchCheckInLabel(state.dateRange, datePlaceholder);
+  const checkOutLabel = formatSearchCheckOutLabel(state.dateRange, datePlaceholder);
+  const guestLabel = formatGuestSearchLabel(
+    state.guestCounts,
+    state.hasGuestSelection,
+    guestSearchLabels
+  );
 
   const dateFocus: DateRangeFocusField =
     activeField === "checkOut" ? "end" : "start";
@@ -184,7 +208,7 @@ function ShortTermGuidedFields({
       closeOnAutoApply
       title=""
       subtitle=""
-      clearLabel="Εκκαθάριση ημερομηνιών"
+      clearLabel={t("clearDates")}
       presentation="popover"
       anchorRef={popoverAnchor}
       ignoreRefs={ignoreRefs}
@@ -232,13 +256,13 @@ function ShortTermGuidedFields({
     >
       {isSearch ? (
         <>
-          <span className="listings-search-segment__label">Άφιξη</span>
+          <span className="listings-search-segment__label">{t("checkIn")}</span>
           <button
             type="button"
             onClick={() => openDates("start")}
             className={cn(
               searchFieldButtonClass,
-              checkInLabel === SEARCH_DATE_PLACEHOLDER && "text-charcoal/45"
+              checkInLabel === datePlaceholder && "text-charcoal/45"
             )}
           >
             {checkInLabel}
@@ -248,18 +272,18 @@ function ShortTermGuidedFields({
         <button
           type="button"
           onClick={() => openDates("start")}
-          className="flex h-full w-full items-center gap-3 px-4 py-3 text-left"
+          className="flex h-full w-full items-center gap-3 text-left"
         >
           <Calendar
             className="pointer-events-none h-[18px] w-[18px] shrink-0 text-gold/85"
             strokeWidth={1.75}
           />
-          <div className="pointer-events-none flex min-w-0 flex-1 flex-col justify-center gap-1">
-            <span className="home-search-field-label">Άφιξη</span>
+          <div className="pointer-events-none flex min-w-0 flex-1 flex-col justify-center gap-0.5">
+            <span className="home-search-field-label">{t("checkIn")}</span>
             <span
               className={cn(
-                "text-sm text-charcoal",
-                checkInLabel === SEARCH_DATE_PLACEHOLDER && "text-muted/55"
+                "text-sm leading-snug text-charcoal",
+                checkInLabel === datePlaceholder && "text-muted/55"
               )}
             >
               {checkInLabel}
@@ -289,13 +313,13 @@ function ShortTermGuidedFields({
     >
       {isSearch ? (
         <>
-          <span className="listings-search-segment__label">Αναχώρηση</span>
+          <span className="listings-search-segment__label">{t("checkOut")}</span>
           <button
             type="button"
             onClick={() => openDates("end")}
             className={cn(
               searchFieldButtonClass,
-              checkOutLabel === SEARCH_DATE_PLACEHOLDER && "text-charcoal/45"
+              checkOutLabel === datePlaceholder && "text-charcoal/45"
             )}
           >
             {checkOutLabel}
@@ -308,18 +332,18 @@ function ShortTermGuidedFields({
         <button
           type="button"
           onClick={() => openDates("end")}
-          className="flex h-full w-full items-center gap-3 px-4 py-3 text-left"
+          className="flex h-full w-full items-center gap-3 text-left"
         >
           <Calendar
             className="pointer-events-none h-[18px] w-[18px] shrink-0 text-gold/85"
             strokeWidth={1.75}
           />
-          <div className="pointer-events-none flex min-w-0 flex-1 flex-col justify-center gap-1">
-            <span className="home-search-field-label">Αναχώρηση</span>
+          <div className="pointer-events-none flex min-w-0 flex-1 flex-col justify-center gap-0.5">
+            <span className="home-search-field-label">{t("checkOut")}</span>
             <span
               className={cn(
-                "text-sm text-charcoal",
-                checkOutLabel === SEARCH_DATE_PLACEHOLDER && "text-muted/55"
+                "text-sm leading-snug text-charcoal",
+                checkOutLabel === datePlaceholder && "text-muted/55"
               )}
             >
               {checkOutLabel}
@@ -348,7 +372,7 @@ function ShortTermGuidedFields({
     >
       {isSearch ? (
         <>
-          <span className="listings-search-segment__label">{SEARCH_GUESTS_FIELD_LABEL}</span>
+          <span className="listings-search-segment__label">{t("who")}</span>
           <button
             type="button"
             onClick={() => {
@@ -358,7 +382,7 @@ function ShortTermGuidedFields({
             }}
             className={cn(
               searchFieldButtonClass,
-              guestLabel === SEARCH_GUESTS_EMPTY_LABEL && "text-charcoal/45"
+              guestLabel === guestSearchLabels.empty && "text-charcoal/45"
             )}
           >
             {guestLabel}
@@ -372,18 +396,18 @@ function ShortTermGuidedFields({
             onDatePickerOpenChange(false);
             onGuestPickerOpenChange(true);
           }}
-          className="flex h-full w-full items-center gap-3 px-4 py-3 text-left"
+          className="flex h-full w-full items-center gap-3 text-left"
         >
           <Users
             className="pointer-events-none h-[18px] w-[18px] shrink-0 text-gold/85"
             strokeWidth={1.75}
           />
-          <div className="pointer-events-none flex min-w-0 flex-1 flex-col justify-center gap-1">
-            <span className="home-search-field-label">{SEARCH_GUESTS_FIELD_LABEL}</span>
+          <div className="pointer-events-none flex min-w-0 flex-1 flex-col justify-center gap-0.5">
+            <span className="home-search-field-label">{t("who")}</span>
             <span
               className={cn(
-                "text-sm text-charcoal",
-                guestLabel === SEARCH_GUESTS_EMPTY_LABEL && "text-muted/55"
+                "text-sm leading-snug text-charcoal",
+                guestLabel === guestSearchLabels.empty && "text-muted/55"
               )}
             >
               {guestLabel}
@@ -426,6 +450,8 @@ function MonthlyGuidedFields({
   guidedFlow,
   defaults,
 }: Omit<Props, "rentalType"> & { rentalType: "monthly" }) {
+  const t = useTranslations("Search");
+  const locale = useLocale();
   const isSearch = variant === "search";
   const startMonthId = useId();
   const durationId = useId();
@@ -437,7 +463,12 @@ function MonthlyGuidedFields({
   const safeMonth =
     state.startMonth && !isPastMonthInAthens(state.startMonth) ? state.startMonth : "";
 
-  const guestLabel = formatGuestSearchLabel(state.guestCounts, state.hasGuestSelection);
+  const guestSearchLabels = useGuestSearchLabels();
+  const guestLabel = formatGuestSearchLabel(
+    state.guestCounts,
+    state.hasGuestSelection,
+    guestSearchLabels
+  );
 
   function applyGuests(next: GuestCounts) {
     const hasSelection =
@@ -457,9 +488,8 @@ function MonthlyGuidedFields({
         "listings-search-segment--divided"
       )}
     >
-      <span className="listings-search-segment__label">Έναρξη</span>
-      <input
-        type="month"
+      <span className="listings-search-segment__label">{t("start")}</span>
+      <MonthInput
         name="startMonth"
         value={safeMonth}
         min={minMonth}
@@ -468,10 +498,9 @@ function MonthlyGuidedFields({
       />
     </div>
   ) : (
-    <HeroSearchField icon={Calendar} label="Έναρξη" fieldId={startMonthId} openPicker>
-      <input
+    <HeroSearchField icon={Calendar} label={t("start")} fieldId={startMonthId} openPicker>
+      <MonthInput
         id={startMonthId}
-        type="month"
         name="startMonth"
         value={safeMonth}
         min={minMonth}
@@ -488,23 +517,23 @@ function MonthlyGuidedFields({
         "listings-search-segment--divided"
       )}
     >
-      <span className="listings-search-segment__label">Διάρκεια</span>
+      <span className="listings-search-segment__label">{t("duration")}</span>
       <select
         name="durationMonths"
         value={state.durationMonths || defaults?.durationMonths || ""}
         onChange={(e) => onStateChange({ durationMonths: e.target.value })}
         className={cn(heroInputClass, "cursor-pointer text-[15px]")}
       >
-        <option value="">Οποιαδήποτε</option>
+        <option value="">{t("anyDuration")}</option>
         {MID_TERM_DURATION_OPTIONS.map((o) => (
           <option key={o.value} value={o.value}>
-            {o.label}
+            {midTermDurationLabel(o.value, locale)}
           </option>
         ))}
       </select>
     </div>
   ) : (
-    <HeroSearchField icon={Clock} label="Διάρκεια" fieldId={durationId} openPicker>
+    <HeroSearchField icon={Clock} label={t("duration")} fieldId={durationId} openPicker>
       <select
         id={durationId}
         name="durationMonths"
@@ -512,10 +541,10 @@ function MonthlyGuidedFields({
         onChange={(e) => onStateChange({ durationMonths: e.target.value })}
         className={cn(heroInputClass, "cursor-pointer")}
       >
-        <option value="">Οποιαδήποτε</option>
+        <option value="">{t("anyDuration")}</option>
         {MID_TERM_DURATION_OPTIONS.map((o) => (
           <option key={o.value} value={o.value}>
-            {o.label}
+            {midTermDurationLabel(o.value, locale)}
           </option>
         ))}
       </select>
@@ -531,7 +560,7 @@ function MonthlyGuidedFields({
         activeField === "guests" && "listings-search-segment--active"
       )}
     >
-      <span className="listings-search-segment__label">Άτομα</span>
+      <span className="listings-search-segment__label">{t("guests")}</span>
       <button
         type="button"
         onClick={() => {
@@ -540,7 +569,7 @@ function MonthlyGuidedFields({
         }}
         className={cn(
           searchFieldButtonClass,
-          guestLabel === SEARCH_GUESTS_EMPTY_LABEL && "text-charcoal/45"
+          guestLabel === guestSearchLabels.empty && "text-charcoal/45"
         )}
       >
         {guestLabel}
@@ -559,11 +588,11 @@ function MonthlyGuidedFields({
         strokeWidth={1.75}
       />
       <div className="pointer-events-none flex min-w-0 flex-1 flex-col justify-center gap-1">
-        <span className="home-search-field-label">Άτομα</span>
+        <span className="home-search-field-label">{t("guests")}</span>
         <span
           className={cn(
             heroInputClass,
-            guestLabel === SEARCH_GUESTS_EMPTY_LABEL && "text-muted/55"
+            guestLabel === guestSearchLabels.empty && "text-muted/55"
           )}
         >
           {guestLabel}

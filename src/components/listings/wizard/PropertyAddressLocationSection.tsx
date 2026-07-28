@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useTranslations } from "next-intl";
 import type { AddressSuggestion } from "@/lib/geocoding/types";
 import {
   extractAreaFromPinResult,
@@ -75,68 +76,16 @@ function formatPostalDisplay(code: string | undefined): string | undefined {
   return code.trim();
 }
 
-async function fetchGeocodeSuggestions(
-  query: string,
-  city: string,
-  options?: {
-    streetNumber?: string;
-    postalCode?: string;
-    area?: string;
-    full?: boolean;
-    center?: { lat: number; lng: number };
-  }
-): Promise<AddressSuggestion[]> {
-  if (query.trim().length < 1) return [];
-  const safePostal = postalCodeForCity(options?.postalCode, city);
-  const params = new URLSearchParams({ q: query, city });
-  if (options?.full) params.set("mode", "full");
-  if (safePostal) params.set("postalCode", safePostal);
-  if (options?.area?.trim()) params.set("area", options.area.trim());
-  if (options?.streetNumber?.trim()) {
-    params.set("streetNumber", options.streetNumber.trim());
-  }
-  if (options?.center) {
-    params.set("lat", String(options.center.lat));
-    params.set("lng", String(options.center.lng));
-  }
-  const res = await fetch(`/api/geocode/autocomplete?${params}`);
-  const data = await res.json();
-  return (data.suggestions ?? []) as AddressSuggestion[];
-}
-
-async function fetchGeocode(
-  query: string,
-  city: string,
-  options?: {
-    streetNumber?: string;
-    postalCode?: string;
-    area?: string;
-    full?: boolean;
-    center?: { lat: number; lng: number };
-  }
-): Promise<AddressSuggestion | null> {
-  let suggestions = await fetchGeocodeSuggestions(query, city, options);
-  if (!suggestions.length && !options?.full) {
-    suggestions = await fetchGeocodeSuggestions(query, city, { ...options, full: true });
-  }
-  if (!suggestions.length) return null;
-  if (options?.streetNumber?.trim()) {
-    const exact = suggestions.find((s) => s.streetNumber === options.streetNumber!.trim());
-    if (exact) return exact;
-  }
-  return suggestions[0];
-}
-
 export function PropertyAddressLocationSection({
   state,
   onChange,
   inputClassName,
   onAreaChange,
 }: Props) {
+  const t = useTranslations("Wizard.location");
   const [mapError, setMapError] = useState<string | null>(null);
   const [streetGeocodeHint, setStreetGeocodeHint] = useState<string | null>(null);
   const [reverseLoading, setReverseLoading] = useState(false);
-  const [geocoding, setGeocoding] = useState(false);
   const [cityCenterLoading, setCityCenterLoading] = useState(false);
   const [cityCenterCoords, setCityCenterCoords] = useState<{
     lat: number;
@@ -183,8 +132,6 @@ export function PropertyAddressLocationSection({
     ? { lat: state.latitude!, lng: state.longitude! }
     : areaCenterCoords ?? cityCenterCoords;
 
-  const geocodeCenter = streetSearchCenter ?? undefined;
-
   const buildStreetMeta = useCallback(
     (result: AddressSuggestion): Partial<PropertyLocationState> => {
       if (!lockedCity || areaLockedByUser) return {};
@@ -206,7 +153,7 @@ export function PropertyAddressLocationSection({
   const applyCoords = useCallback(
     (
       result: AddressSuggestion,
-      options?: { preserveFields?: boolean; metaMode?: MetaMode }
+      options?: { preserveFields?: boolean; metaMode?: MetaMode; confirmLocation?: boolean }
     ) => {
       if (
         lockedCity &&
@@ -218,13 +165,12 @@ export function PropertyAddressLocationSection({
         )
       ) {
         const scopeLabel = lockedArea || lockedCity;
-        setStreetGeocodeHint(
-          `Η διεύθυνση μπορεί να είναι εκτός ${scopeLabel}. Έλεγξε τον χάρτη.`
-        );
+        setStreetGeocodeHint(t("outsideScope", { scope: scopeLabel }));
       } else {
         setStreetGeocodeHint(null);
       }
 
+      const confirm = options?.confirmLocation === true;
       const patch: Partial<PropertyLocationState> = {
         latitude: result.lat,
         longitude: result.lng,
@@ -232,8 +178,8 @@ export function PropertyAddressLocationSection({
         suggestedLng: result.lng,
         formattedAddress: result.formattedAddress,
         providerPlaceId: result.placeId,
-        locationConfirmedByOwner: true,
-        locationConfirmedAt: new Date().toISOString(),
+        locationConfirmedByOwner: confirm,
+        locationConfirmedAt: confirm ? new Date().toISOString() : null,
         locationPinMovedManually: false,
         ...(options?.metaMode === "street" ? buildStreetMeta(result) : {}),
       };
@@ -248,7 +194,7 @@ export function PropertyAddressLocationSection({
       onChange(patch);
       setMapError(null);
     },
-    [buildStreetMeta, areaLockedByUser, lockedArea, lockedCity, onChange, areaCenterCoords]
+    [buildStreetMeta, areaLockedByUser, lockedArea, lockedCity, onChange, areaCenterCoords, t]
   );
 
   const applyGeocodeFields = useCallback(
@@ -266,8 +212,9 @@ export function PropertyAddressLocationSection({
         suggestedLng: result.lng,
         formattedAddress: result.formattedAddress,
         providerPlaceId: result.placeId,
-        locationConfirmedByOwner: true,
-        locationConfirmedAt: new Date().toISOString(),
+        // Suggestion/pin apply coords — public visibility stays opt-in via checkbox.
+        locationConfirmedByOwner: false,
+        locationConfirmedAt: null,
         locationPinMovedManually: false,
       };
 
@@ -279,6 +226,7 @@ export function PropertyAddressLocationSection({
         patch.addressSearch = result.street;
       }
 
+      // Only fill number/postal when the selected result actually provides them.
       if (result.streetNumber) {
         patch.addressNumber = result.streetNumber;
       } else if (typedNumber) {
@@ -307,88 +255,6 @@ export function PropertyAddressLocationSection({
     [areaLockedByUser, lockedCity, onAreaChange, onChange]
   );
 
-  const runAddressGeocode = useCallback(
-    async (overrides?: {
-      street?: string;
-      number?: string;
-      postalCode?: string;
-      keepTypedStreet?: boolean;
-    }) => {
-      const live = addressLiveRef.current;
-      const street = (overrides?.street ?? live.street).trim();
-      if (!street || !cityReady) return;
-
-      const number = (overrides?.number ?? live.number).trim();
-      const postalCode = postalCodeForCity(
-        overrides?.postalCode ?? live.postal,
-        lockedCity
-      );
-      const geocodeArea = areaLockedByUser ? live.area || state.area : undefined;
-
-      setGeocoding(true);
-      try {
-        let result = await fetchGeocode(street, lockedCity, {
-          postalCode,
-          area: geocodeArea,
-          center: geocodeCenter,
-        });
-
-        if (number) {
-          const exact = await fetchGeocode(`${street} ${number}`, lockedCity, {
-            streetNumber: number,
-            postalCode,
-            area: geocodeArea,
-            center: geocodeCenter,
-            full: true,
-          });
-          if (exact) result = exact;
-        }
-
-        if (result) {
-          applyGeocodeFields(result, {
-            keepTypedStreet: overrides?.keepTypedStreet ?? true,
-            typedStreet: street,
-            typedNumber: number,
-          });
-          return;
-        }
-
-        setStreetGeocodeHint(
-          areaLockedByUser && lockedArea
-            ? `Δεν βρέθηκε η διεύθυνση στην ${lockedArea}. Διόρθωσε τα πεδία ή μετακίνησε τον πείρο.`
-            : `Δεν βρέθηκε η διεύθυνση στην ${lockedCity}. Διόρθωσε τα πεδία ή μετακίνησε τον πείρο.`
-        );
-      } finally {
-        setGeocoding(false);
-      }
-    },
-    [applyGeocodeFields, areaLockedByUser, cityReady, geocodeCenter, lockedArea, lockedCity, state.area]
-  );
-
-  const scheduleAddressGeocode = useCallback(
-    (delay = 700, overrides?: Parameters<typeof runAddressGeocode>[0]) => {
-      if (geocodeDebounceRef.current) clearTimeout(geocodeDebounceRef.current);
-      geocodeDebounceRef.current = setTimeout(() => {
-        const live = addressLiveRef.current;
-        void runAddressGeocode({
-          street: overrides?.street ?? live.street,
-          number: overrides?.number ?? live.number,
-          postalCode: overrides?.postalCode ?? live.postal,
-          keepTypedStreet: overrides?.keepTypedStreet ?? true,
-        });
-      }, delay);
-    },
-    [runAddressGeocode]
-  );
-
-  const flushAddressGeocode = useCallback(() => {
-    if (geocodeDebounceRef.current) {
-      clearTimeout(geocodeDebounceRef.current);
-      geocodeDebounceRef.current = null;
-    }
-    void runAddressGeocode({ keepTypedStreet: true });
-  }, [runAddressGeocode]);
-
   function handleStreetChange(raw: string) {
     const parsed = parseStreetAndNumber(raw);
     addressLiveRef.current = {
@@ -401,13 +267,14 @@ export function PropertyAddressLocationSection({
       addressSearch: raw,
       ...(parsed.number ? { addressNumber: parsed.number } : {}),
       locationConfirmedByOwner: false,
+      locationConfirmedAt: null,
       locationPinMovedManually: false,
     });
-    scheduleAddressGeocode(parsed.number ? 500 : 700, {
-      street: parsed.street,
-      number: parsed.number || addressLiveRef.current.number,
-      keepTypedStreet: true,
-    });
+    setStreetGeocodeHint(null);
+    scheduleAddressGeocode(
+      parsed.street,
+      parsed.number || addressLiveRef.current.number
+    );
   }
 
   function handleNumberChange(raw: string) {
@@ -415,18 +282,80 @@ export function PropertyAddressLocationSection({
     onChange({
       addressNumber: raw,
       locationConfirmedByOwner: false,
+      locationConfirmedAt: null,
       locationPinMovedManually: false,
     });
-    if (addressLiveRef.current.street) {
-      scheduleAddressGeocode(500, { number: raw, keepTypedStreet: true });
-    }
+    scheduleAddressGeocode(addressLiveRef.current.street, raw);
   }
 
   function handlePostalChange(raw: string) {
     addressLiveRef.current = { ...addressLiveRef.current, postal: raw };
-    onChange({ addressPostalCode: raw });
-    if (addressLiveRef.current.street) {
-      scheduleAddressGeocode(700, { postalCode: raw, keepTypedStreet: true });
+    onChange({
+      addressPostalCode: raw,
+      locationConfirmedByOwner: false,
+      locationConfirmedAt: null,
+    });
+    scheduleAddressGeocode(
+      addressLiveRef.current.street,
+      addressLiveRef.current.number
+    );
+  }
+
+  function scheduleAddressGeocode(street: string, number: string) {
+    if (geocodeDebounceRef.current) {
+      clearTimeout(geocodeDebounceRef.current);
+      geocodeDebounceRef.current = null;
+    }
+    const streetTrim = street.trim();
+    const numberTrim = number.trim();
+    if (!cityReady || streetTrim.length < 2 || !numberTrim) {
+      return;
+    }
+    geocodeDebounceRef.current = setTimeout(() => {
+      void forwardGeocodeStreet(streetTrim, numberTrim);
+    }, 450);
+  }
+
+  async function forwardGeocodeStreet(street: string, number: string) {
+    try {
+      const params = new URLSearchParams({
+        q: street,
+        city: lockedCity,
+        streetNumber: number,
+        mode: "full",
+      });
+      if (areaLockedByUser && lockedArea) params.set("area", lockedArea);
+      if (state.addressPostalCode.trim()) {
+        params.set("postalCode", state.addressPostalCode.trim());
+      }
+      if (streetSearchCenter) {
+        params.set("lat", String(streetSearchCenter.lat));
+        params.set("lng", String(streetSearchCenter.lng));
+      }
+      const res = await fetch(`/api/geocode/autocomplete?${params}`);
+      const data = await res.json();
+      const suggestions = (data.suggestions ?? []) as AddressSuggestion[];
+      const exact =
+        suggestions.find(
+          (s) =>
+            s.streetNumber === number &&
+            (s.street ?? "").toLowerCase().includes(street.toLowerCase().slice(0, 4))
+        ) ??
+        suggestions.find((s) => s.streetNumber === number) ??
+        suggestions[0];
+      if (exact && Number.isFinite(exact.lat) && Number.isFinite(exact.lng)) {
+        applyGeocodeFields(exact, {
+          keepTypedStreet: true,
+          typedStreet: street,
+          typedNumber: number,
+        });
+        setStreetGeocodeHint(t("confirmOnMap"));
+        return;
+      }
+      // Keep existing lat/lng — ask owner to move the pin.
+      setStreetGeocodeHint(t("noExactPosition"));
+    } catch {
+      setStreetGeocodeHint(t("noExactPosition"));
     }
   }
 
@@ -450,15 +379,13 @@ export function PropertyAddressLocationSection({
     let cancelled = false;
     void ensureCityCenterOnMap(lockedCity).then((result) => {
       if (cancelled || !result) return;
-      if (!hasValidCoords(state.latitude, state.longitude)) {
-        applyCoords(result, { preserveFields: true, metaMode: "none" });
-      }
+      // Map preview only — never rewrite street/number/postal/confirmation on initial center.
     });
     return () => {
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [cityReady, lockedCity, ensureCityCenterOnMap, applyCoords]);
+  }, [cityReady, lockedCity, ensureCityCenterOnMap]);
 
   useEffect(() => {
     if (cityScopeRef.current === null) {
@@ -538,7 +465,7 @@ export function PropertyAddressLocationSection({
       suburbName &&
       isKnownSuburbOfCity(suburbName, lockedCity)
     ) {
-      applyCoords(s, { preserveFields: true, metaMode: "street" });
+      applyCoords(s, { preserveFields: true, metaMode: "street", confirmLocation: false });
       onChange({
         area: suburbName,
         areaDisplayName: suburbName,
@@ -552,35 +479,17 @@ export function PropertyAddressLocationSection({
       return;
     }
 
-    applyCoords(s, { preserveFields: true, metaMode: "street" });
     const streetName = s.street ?? s.primary;
     addressLiveRef.current = {
       ...addressLiveRef.current,
       street: streetName,
       number: s.streetNumber ?? addressLiveRef.current.number,
     };
-    const patch: Partial<PropertyLocationState> = {
-      addressStreet: streetName,
-      addressSearch: streetName,
-      ...(s.streetNumber ? { addressNumber: s.streetNumber } : {}),
-      ...(s.postalCode
-        ? {
-            addressPostalCode:
-              formatPostalDisplay(postalCodeForCity(s.postalCode, lockedCity)) ??
-              s.postalCode,
-          }
-        : {}),
-    };
-    if (!areaLockedByUser) {
-      const areaName = extractAreaFromPinResult(s, lockedCity);
-      if (areaName) {
-        patch.area = areaName;
-        patch.areaDisplayName = areaName;
-        addressLiveRef.current.area = areaName;
-        onAreaChange(areaName);
-      }
-    }
-    onChange(patch);
+    applyGeocodeFields(s, {
+      keepTypedStreet: false,
+      typedStreet: streetName,
+      typedNumber: s.streetNumber ?? undefined,
+    });
   }
 
   const applyPinLocation = useCallback(
@@ -623,15 +532,13 @@ export function PropertyAddressLocationSection({
       onChange(patch);
       if (!matchesScope) {
         const scopeLabel = lockedArea || lockedCity;
-        setStreetGeocodeHint(
-          `Ο πείρος φαίνεται εκτός ${scopeLabel}. Έλεγξε τη διεύθυνση ή μετακίνησέ τον.`
-        );
+        setStreetGeocodeHint(t("pinOutsideScope", { scope: scopeLabel }));
       } else {
         setStreetGeocodeHint(null);
       }
       setMapError(null);
     },
-    [areaLockedByUser, lockedArea, lockedCity, onAreaChange, onChange]
+    [areaLockedByUser, lockedArea, lockedCity, onAreaChange, onChange, t]
   );
 
   const reverseGeocode = useCallback(
@@ -685,36 +592,33 @@ export function PropertyAddressLocationSection({
         areaCenter={areaCenterCoords}
         value={state.addressSearch || state.addressStreet}
         onChange={handleStreetChange}
-        onBlur={flushAddressGeocode}
         onSelectStreet={applyStreetSuggestion}
         inputClassName={inputClassName}
       />
 
       <div className="grid gap-4 sm:grid-cols-2">
         <label className="block">
-          <span className="text-xs text-muted uppercase">Αριθμός (οδού) *</span>
+          <span className="text-xs text-muted uppercase">{t("streetNumber")}</span>
           <input
             value={state.addressNumber}
             onChange={(e) => handleNumberChange(e.target.value)}
-            onBlur={flushAddressGeocode}
-            placeholder="π.χ. 17"
+            placeholder={t("streetNumberPlaceholder")}
             className={inputClassName}
           />
           <span className="mt-1 block text-[10px] text-muted">
-            Αριθμός κτιρίου — όχι διαμέρισμα
+            {t("streetNumberHint")}
           </span>
         </label>
         <label className="block">
-          <span className="text-xs text-muted uppercase">Ταχυδρομικός κώδικας *</span>
+          <span className="text-xs text-muted uppercase">{t("postalCode")}</span>
           <input
             value={state.addressPostalCode}
             onChange={(e) => handlePostalChange(e.target.value)}
-            onBlur={flushAddressGeocode}
             className={inputClassName}
           />
           {postalMismatch && (
             <span className="mt-1 block text-[10px] text-amber-800">
-              Ο ΤΚ δεν ταιριάζει με την {lockedCity} — διόρθωσέ τον.
+              {t("postalMismatch", { city: lockedCity })}
             </span>
           )}
         </label>
@@ -726,11 +630,19 @@ export function PropertyAddressLocationSection({
 
       {cityReady && (
         <div className="rounded-xl border border-border bg-sand/20 p-4">
-          <h3 className="text-sm font-semibold text-charcoal">Ακριβής θέση στον χάρτη</h3>
+          <h3 className="text-sm font-semibold text-charcoal">{t("mapTitle")}</h3>
           <p className="mt-1 text-xs leading-relaxed text-muted">
-            Κλικ ή σύρε τον πείρο — συμπληρώνονται αυτόματα οδός, αριθμός, ΤΚ και περιοχή
-            (μέσα στην <strong>{lockedArea || lockedCity}</strong>).
+            {t("mapHint", { scope: lockedArea || lockedCity })}
           </p>
+          {!state.locationConfirmedByOwner &&
+            (state.addressStreet.trim() || state.addressNumber.trim()) && (
+              <p className="mt-2 text-xs font-medium text-amber-800">
+                {t("mapConfirmNeeded")}
+              </p>
+            )}
+          {state.locationConfirmedByOwner && (
+            <p className="mt-2 text-xs font-medium text-teal">{t("mapConfirmed")}</p>
+          )}
 
           {showMap ? (
             <>
@@ -744,16 +656,16 @@ export function PropertyAddressLocationSection({
               </div>
               {state.formattedAddress && (
                 <p className="mt-3 text-xs text-muted">
-                  <span className="font-medium text-charcoal">Τοποθεσία:</span>{" "}
+                  <span className="font-medium text-charcoal">{t("locationLabel")}</span>{" "}
                   {state.formattedAddress}
-                  {geocoding || reverseLoading || cityCenterLoading ? " (ενημέρωση...)" : ""}
+                  {reverseLoading || cityCenterLoading ? t("updating") : ""}
                 </p>
               )}
               {mapError && <p className="mt-2 text-xs text-red-600">{mapError}</p>}
             </>
           ) : (
             <p className="mt-3 text-xs text-muted">
-              {cityCenterLoading || geocoding ? "Φόρτωση χάρτη..." : "Φόρτωση χάρτη πόλης..."}
+              {cityCenterLoading ? t("loadingMap") : t("loadingCityMap")}
             </p>
           )}
         </div>

@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { useTranslations, useLocale } from "next-intl";
 import type { PublicProfileListingItem } from "@/lib/profile-public-queries";
 import type { ListingWithImages } from "@/lib/types";
 import { pickListingCoverPhotoUrl } from "@/lib/listing-media";
@@ -26,6 +27,8 @@ export function PublicProfileListingCard({
   rentalTypeFilter,
   className,
 }: Props) {
+  const t = useTranslations("Profile.public");
+  const locale = useLocale();
   const cover = pickListingCoverPhotoUrl(listing);
   const rentalMode = listingRentalType(listing);
   const resolved = resolveListingSearchPrice(listing as unknown as ListingWithImages, {
@@ -33,12 +36,12 @@ export function PublicProfileListingCard({
     interestTo,
     durationMonths,
     rentalTypeFilter: rentalTypeFilter ?? rentalMode,
-  });
+  }, locale);
 
   const priceDisplay =
     resolved.display && resolved.sortAmount > 0 && !resolved.isUnavailable
       ? resolved.display
-      : formatListingPrice(listing as unknown as ListingWithImages).display;
+      : formatListingPrice(listing as unknown as ListingWithImages, locale).display;
 
   const href = `/listings/${getListingPublicId(listing)}`;
   const location = [
@@ -47,8 +50,10 @@ export function PublicProfileListingCard({
   ]
     .filter(Boolean)
     .join(", ");
-  const rentalLabel = rentalMode === "short_term" ? "Βραχυχρόνια" : "Μηνιαία";
-  const roleLabel = listing.profileRole === "cohost" ? "Συνοικοδεσπότης" : "Ιδιοκτήτης";
+  const rentalLabel =
+    rentalMode === "short_term" ? t("shortTermBadge") : t("monthlyBadge");
+  const roleLabel =
+    listing.profileRole === "cohost" ? t("cohostBadge") : t("ownerBadge");
 
   return (
     <Link

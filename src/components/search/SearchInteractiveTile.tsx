@@ -84,18 +84,39 @@ export function HeroSearchField({
         className
       )}
       onMouseDown={(e) => {
-        const el = document.getElementById(fieldId);
+        const el = document.getElementById(fieldId) as
+          | HTMLInputElement
+          | HTMLSelectElement
+          | null;
         if (!el) return;
-        if (e.target === el || el.contains(e.target as Node)) return;
+
+        const clickedControl = e.target === el || el.contains(e.target as Node);
+
+        if (!openPicker) {
+          if (clickedControl) return;
+          e.preventDefault();
+          focusControl(false);
+          return;
+        }
+
+        // Select: native open works when clicking the control itself.
+        if (el instanceof HTMLSelectElement) {
+          if (clickedControl) return;
+          e.preventDefault();
+          focusControl(true);
+          return;
+        }
+
+        // Month/date inputs: Chromium only opens from the icon — force full-area open.
         e.preventDefault();
-        focusControl(openPicker);
+        focusControl(true);
       }}
     >
       <Icon
         className="pointer-events-none h-[18px] w-[18px] shrink-0 text-gold/85"
         strokeWidth={1.75}
       />
-      <div className="flex min-w-0 flex-1 flex-col justify-center gap-1">
+      <div className="flex min-w-0 flex-1 flex-col justify-center gap-0.5">
         <span className="home-search-field-label pointer-events-none">{label}</span>
         <div className="min-w-0">{children}</div>
       </div>

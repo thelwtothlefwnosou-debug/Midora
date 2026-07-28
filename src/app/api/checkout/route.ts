@@ -1,5 +1,6 @@
 import Stripe from "stripe";
 import { NextRequest, NextResponse } from "next/server";
+import { getTranslations } from "next-intl/server";
 import { createClient } from "@/lib/supabase/server";
 
 export async function GET(request: NextRequest) {
@@ -27,6 +28,7 @@ export async function GET(request: NextRequest) {
   }
 
   const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+  const t = await getTranslations("Owner.checkout");
 
   const session = await stripe.checkout.sessions.create({
     mode: "payment",
@@ -35,7 +37,7 @@ export async function GET(request: NextRequest) {
         price_data: {
           currency: "eur",
           product_data: {
-            name: "Midora — Δημοσίευση αγγελίας (1 μήνας)",
+            name: t("listingPublishProduct"),
           },
           unit_amount: 100,
         },

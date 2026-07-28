@@ -3,6 +3,7 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Minus, Plus } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { SearchFieldPopover } from "@/components/search/SearchFieldPopover";
 import { cn } from "@/lib/utils";
 
@@ -70,31 +71,75 @@ function clampGuests(value: GuestCounts, maxGuests?: number): GuestCounts {
   return { adults, children: nextChildren, infants, pets };
 }
 
-export function formatGuestTileLabel(counts: GuestCounts): string {
+export type GuestTileLabels = {
+  guestOne: string;
+  guestOther: string;
+  petOne: string;
+  petOther: string;
+  childOne: string;
+  childOther: string;
+  infantOne: string;
+  infantOther: string;
+  fallback: string;
+};
+
+const DEFAULT_GUEST_TILE_LABELS: GuestTileLabels = {
+  guestOne: "guest",
+  guestOther: "guests",
+  petOne: "pet",
+  petOther: "pets",
+  childOne: "child",
+  childOther: "children",
+  infantOne: "infant",
+  infantOther: "infants",
+  fallback: "Guests",
+};
+
+export function guestTileLabelsFromTranslations(
+  t: (key: string) => string
+): GuestTileLabels {
+  return {
+    guestOne: t("guestOne"),
+    guestOther: t("guestOther"),
+    petOne: t("petOne"),
+    petOther: t("petOther"),
+    childOne: t("childOne"),
+    childOther: t("childOther"),
+    infantOne: t("infantOne"),
+    infantOther: t("infantOther"),
+    fallback: t("fallback"),
+  };
+}
+
+export function formatGuestTileLabel(
+  counts: GuestCounts,
+  labels: GuestTileLabels = DEFAULT_GUEST_TILE_LABELS
+): string {
   const total = counts.adults + counts.children;
   const parts: string[] = [];
+  let hasGuestPart = false;
 
   if (total > 0) {
-    parts.push(total === 1 ? "1 επισκέπτης" : `${total} επισκέπτες`);
+    parts.push(`${total} ${total === 1 ? labels.guestOne : labels.guestOther}`);
+    hasGuestPart = true;
   }
 
   if (counts.pets > 0) {
-    parts.push(counts.pets === 1 ? "1 κατοικίδιο" : `${counts.pets} κατοικίδια`);
+    parts.push(`${counts.pets} ${counts.pets === 1 ? labels.petOne : labels.petOther}`);
   }
 
-  if (counts.children > 0 && total > 0) {
-    const childPart =
-      counts.children === 1 ? "1 παιδί" : `${counts.children} παιδιά`;
-    if (!parts.some((p) => p.includes("επισκέπ"))) {
-      parts.unshift(childPart);
-    }
+  if (counts.children > 0 && total > 0 && !hasGuestPart) {
+    const childPart = `${counts.children} ${
+      counts.children === 1 ? labels.childOne : labels.childOther
+    }`;
+    parts.unshift(childPart);
   }
 
   if (counts.infants > 0) {
-    parts.push(counts.infants === 1 ? "1 βρέφος" : `${counts.infants} βρέφη`);
+    parts.push(`${counts.infants} ${counts.infants === 1 ? labels.infantOne : labels.infantOther}`);
   }
 
-  return parts.length ? parts.join(", ") : "Επισκέπτες";
+  return parts.length ? parts.join(", ") : labels.fallback;
 }
 
 function CounterRow({
@@ -104,6 +149,8 @@ function CounterRow({
   min,
   max,
   onChange,
+  decreaseLabel,
+  increaseLabel,
 }: {
   label: string;
   hint?: string;
@@ -111,6 +158,8 @@ function CounterRow({
   min: number;
   max: number;
   onChange: (next: number) => void;
+  decreaseLabel: string;
+  increaseLabel: string;
 }) {
   return (
     <div className="flex items-center justify-between gap-4 py-3">
@@ -121,7 +170,7 @@ function CounterRow({
       <div className="flex items-center gap-3">
         <button
           type="button"
-          aria-label={`Μείωση ${label}`}
+          aria-label={decreaseLabel}
           disabled={value <= min}
           onClick={() => onChange(Math.max(min, value - 1))}
           className="flex h-9 w-9 items-center justify-center rounded-full border border-border text-charcoal transition-colors hover:border-gold/35 disabled:cursor-not-allowed disabled:opacity-35"
@@ -131,7 +180,7 @@ function CounterRow({
         <span className="w-6 text-center text-sm font-semibold text-charcoal">{value}</span>
         <button
           type="button"
-          aria-label={`Αύξηση ${label}`}
+          aria-label={increaseLabel}
           disabled={value >= max}
           onClick={() => onChange(Math.min(max, value + 1))}
           className="flex h-9 w-9 items-center justify-center rounded-full border border-border text-charcoal transition-colors hover:border-gold/35 disabled:cursor-not-allowed disabled:opacity-35"
@@ -155,6 +204,7 @@ export function GuestPicker({
   ignoreRefs,
   onClear,
 }: Props) {
+  const t = useTranslations("Search.guestPicker");
   const titleId = useId();
   const panelRef = useRef<HTMLDivElement>(null);
   const [draft, setDraft] = useState(value);
@@ -211,42 +261,50 @@ export function GuestPicker({
     <>
       <div className="divide-y divide-border">
         <CounterRow
-          label="Ενήλικες"
-          hint="Ηλικία 13+"
+          label={t("adults")}
+          hint={t("adultsHint")}
           value={draft.adults}
           min={adultsMin}
           max={adultsMax}
           onChange={(adults) => updateDraft({ ...draft, adults })}
+          decreaseLabel={t("decrease", { label: t("adults") })}
+          increaseLabel={t("increase", { label: t("adults") })}
         />
         <CounterRow
-          label="Παιδιά"
-          hint="Ηλικίες 2–12"
+          label={t("children")}
+          hint={t("childrenHint")}
           value={draft.children}
           min={0}
           max={childrenMax}
           onChange={(children) => updateDraft({ ...draft, children })}
+          decreaseLabel={t("decrease", { label: t("children") })}
+          increaseLabel={t("increase", { label: t("children") })}
         />
         {showInfants && (
           <CounterRow
-            label="Βρέφη"
-            hint="Κάτω των 2"
+            label={t("infants")}
+            hint={t("infantsHint")}
             value={draft.infants}
             min={0}
             max={5}
             onChange={(infants) => updateDraft({ ...draft, infants })}
+            decreaseLabel={t("decrease", { label: t("infants") })}
+            increaseLabel={t("increase", { label: t("infants") })}
           />
         )}
         <CounterRow
-          label="Κατοικίδια"
-          hint="Φέρνεις κατοικίδιο;"
+          label={t("pets")}
+          hint={t("petsHint")}
           value={draft.pets}
           min={0}
           max={5}
           onChange={(pets) => updateDraft({ ...draft, pets })}
+          decreaseLabel={t("decrease", { label: t("pets") })}
+          increaseLabel={t("increase", { label: t("pets") })}
         />
       </div>
       {maxGuests ? (
-        <p className="mt-3 text-xs text-muted">Μέγιστοι επισκέπτες αγγελίας: {maxGuests}</p>
+        <p className="mt-3 text-xs text-muted">{t("maxGuestsNote", { max: maxGuests })}</p>
       ) : null}
       <div className="mt-4 flex gap-2">
         <button
@@ -254,14 +312,14 @@ export function GuestPicker({
           onClick={handleClear}
           className="min-h-10 flex-1 rounded-xl border border-border px-4 text-sm font-medium text-charcoal transition-colors hover:bg-charcoal/5"
         >
-          Καθαρισμός
+          {t("clear")}
         </button>
         <button
           type="button"
           onClick={handleApply}
           className="min-h-10 flex-1 rounded-xl bg-gold text-sm font-semibold text-white hover:bg-gold-dark"
         >
-          Έτοιμο
+          {t("done")}
         </button>
       </div>
     </>
@@ -283,7 +341,7 @@ export function GuestPicker({
         className="px-5 py-3"
       >
         <p id={titleId} className="sr-only">
-          Επισκέπτες
+          {t("title")}
         </p>
         {panelBody}
       </SearchFieldPopover>
@@ -309,7 +367,7 @@ export function GuestPicker({
         )}
       >
         <h3 id={titleId} className="font-display text-lg font-semibold text-charcoal">
-          Επισκέπτες
+          {t("title")}
         </h3>
         <div className="mt-2">{panelBody}</div>
       </div>

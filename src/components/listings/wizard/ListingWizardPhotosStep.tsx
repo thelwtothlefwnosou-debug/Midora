@@ -8,14 +8,12 @@ import {
   useTransition,
   type RefObject,
 } from "react";
-import Image from "next/image";
+import { useTranslations, useLocale } from "next-intl";
 import {
   Camera,
-  GripVertical,
   Images,
   Loader2,
   RefreshCw,
-  Star,
   Trash2,
   Upload,
   X,
@@ -34,12 +32,12 @@ import {
   bulkAssignListingImagesRoom,
   updateListingImageCaption,
 } from "@/lib/listing-photo-rooms";
-import { isCoverPhoto, roomBadgeLabel } from "@/lib/listing-photo-display";
+import { SortableListingPhotoGrid } from "@/components/listings/wizard/SortableListingPhotoGrid";
 import { type PhotoRoomDef } from "@/lib/photo-rooms-catalog";
 import { MIN_LISTING_PHOTOS_FOR_REVIEW, MIN_LISTING_PHOTOS_REQUIRED, PHOTO_UPLOAD_CONCURRENCY } from "@/lib/constants";
 import {
   logListingImageValidationDebug,
-  photoCountStatusMessage,
+  photoCountStatusInfo,
 } from "@/lib/listing-photo-validation";
 import {
   ACCEPTED_LISTING_PHOTO_ACCEPT,
@@ -51,8 +49,13 @@ import { cn } from "@/lib/utils";
 type Props = {
   listingId: string;
   initialImages: ListingImage[];
+  /** Known saved count from draft load — used to avoid empty flash while refetching. */
+  initialPhotoCount?: number;
+  /** Parent already loaded photos (SSR/draft) — skip first-paint empty state. */
+  photosAlreadyHydrated?: boolean;
   onPhotoCountChange?: () => void;
   onUploadBusyChange?: (busy: boolean) => void;
+  onImagesChange?: (images: ListingImage[]) => void;
   stepHeadingRef?: RefObject<HTMLHeadingElement | null>;
   variant?: "wizard" | "manager";
   rooms?: PhotoRoomDef[];
@@ -86,35 +89,55 @@ function uploadWithTimeout<T>(promise: Promise<T>, ms = UPLOAD_TIMEOUT_MS): Prom
     }),
   ]);
 }
-const STATUS_LABEL: Record<QueueStatus, string> = {
-  waiting: "Σε αναμονή",
-  uploading: "Ανέβασμα",
-  uploaded: "Προστέθηκε",
-  failed: "Απέτυχε",
-};
 
 export function ListingWizardPhotosStep({
   listingId,
   initialImages,
+  initialPhotoCount = 0,
+  photosAlreadyHydrated = false,
   onPhotoCountChange,
   onUploadBusyChange,
+  onImagesChange,
   stepHeadingRef,
   variant = "wizard",
   rooms = [],
   hideHeading = false,
 }: Props) {
+  const t = useTranslations("Wizard.photos");
+  const tErrors = useTranslations("Wizard.errors");
+  const locale = useLocale();
   const isManager = variant === "manager";
-  const [images, setImages] = useState(sortPhotos(initialImages));
-  const [savedImageCount, setSavedImageCount] = useState(0);
+
+  const statusLabel: Record<QueueStatus, string> = {
+    waiting: t("pending"),
+    uploading: t("uploading"),
+    uploaded: t("added"),
+    failed: t("failed"),
+  };
+  const [images, setImages] = useState(() => sortPhotos(initialImages));
+  const [savedImageCount, setSavedImageCount] = useState(() =>
+    Math.max(initialPhotoCount, sortPhotos(initialImages).length)
+  );
+  const [photosHydrated, setPhotosHydrated] = useState(photosAlreadyHydrated);
+  const [photosLoading, setPhotosLoading] = useState(!photosAlreadyHydrated);
   const [uploadQueue, setUploadQueue] = useState<UploadQueueItem[]>([]);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [error, setError] = useState<string | null>(null);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
   const [dragActive, setDragActive] = useState(false);
-  const [dragReorderIndex, setDragReorderIndex] = useState<number | null>(null);
+  const [orderSaveStatus, setOrderSaveStatus] = useState<"idle" | "saving" | "saved" | "error">(
+    "idle"
+  );
   const [uploadStats, setUploadStats] = useState({ uploaded: 0, total: 0 });
+  const orderBeforePersistRef = useRef<ListingImage[] | null>(null);
+  const persistGenerationRef = useRef(0);
   const [isProcessingQueue, setIsProcessingQueue] = useState(false);
   const [pending, startTransition] = useTransition();
+  const listingIdRef = useRef(listingId);
+  const imagesRef = useRef(images);
+  const onImagesChangeRef = useRef(onImagesChange);
+  onImagesChangeRef.current = onImagesChange;
+  imagesRef.current = images;
 
   const libraryInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
@@ -154,11 +177,19 @@ export function ListingWizardPhotosStep({
     };
   }, []);
 
-  const refreshImages = useCallback(async () => {
+  const refreshImages = useCallback(async (opts?: { soft?: boolean }) => {
+    const soft = opts?.soft === true || imagesRef.current.length > 0;
+    const startedAt = performance.now();
+    if (!soft) {
+      setPhotosLoading(true);
+    }
+
     const [imagesResult, countResult] = await Promise.all([
       getOwnerListingImages(listingId),
       getSavedListingImageCount(listingId),
     ]);
+
+    if (listingIdRef.current !== listingId) return [];
 
     const savedCount =
       "photoCount" in countResult && typeof countResult.photoCount === "number"
@@ -170,6 +201,19 @@ export function ListingWizardPhotosStep({
     if ("images" in imagesResult && imagesResult.images) {
       photos = sortPhotos(imagesResult.images);
       setImages(photos);
+      onImagesChangeRef.current?.(photos);
+    } else if (!soft) {
+      setImages([]);
+      onImagesChangeRef.current?.([]);
+    }
+
+    if (process.env.NODE_ENV === "development") {
+      console.debug("[MIDORA_PHOTO_LOAD_TIMING]", {
+        draftId: listingId,
+        metadataFetchMs: Math.round(performance.now() - startedAt),
+        photoCount: photos.length || savedCount,
+        soft,
+      });
     }
 
     logListingImageValidationDebug({
@@ -183,14 +227,35 @@ export function ListingWizardPhotosStep({
         .length,
     });
 
+    setPhotosHydrated(true);
+    setPhotosLoading(false);
     onPhotoCountChange?.();
     return photos;
   }, [listingId, onPhotoCountChange]);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- load saved listing images from database
-    void refreshImages();
-  }, [listingId, refreshImages]);
+    listingIdRef.current = listingId;
+  }, [listingId]);
+
+  useEffect(() => {
+    // Seed from parent without clearing; soft-refresh in background.
+    const seeded = sortPhotos(initialImages);
+    if (seeded.length > 0) {
+      setImages(seeded);
+      setSavedImageCount((prev) => Math.max(prev, seeded.length, initialPhotoCount));
+      setPhotosHydrated(true);
+      setPhotosLoading(false);
+      void refreshImages({ soft: true });
+      return;
+    }
+    if (photosAlreadyHydrated) {
+      setPhotosHydrated(true);
+      setPhotosLoading(false);
+      void refreshImages({ soft: true });
+      return;
+    }
+    void refreshImages({ soft: false });
+  }, [listingId, refreshImages]); // eslint-disable-line react-hooks/exhaustive-deps -- remount/fetch per listingId only
 
   const updateQueueItem = useCallback(
     (id: string, patch: Partial<UploadQueueItem>) => {
@@ -242,9 +307,7 @@ export function ListingWizardPhotosStep({
         if (result.error) {
           updateQueueItem(item.id, {
             status: "failed",
-            error:
-              result.error ??
-              "Δεν ήταν δυνατή η αποθήκευση της φωτογραφίας στην αγγελία. Δοκίμασε ξανά.",
+            error: result.error ?? "saveFailed",
           });
           return false;
         }
@@ -263,9 +326,7 @@ export function ListingWizardPhotosStep({
           err instanceof Error && err.message === "UPLOAD_TIMEOUT";
         updateQueueItem(item.id, {
           status: "failed",
-          error: timedOut
-            ? "Το ανέβασμα διήρκεσε πολύ. Δοκίμασε ξανά ή διάλεξε μικρότερο αρχείο."
-            : "Απροσδόκητο σφάλμα κατά το ανέβασμα. Δοκίμασε ξανά.",
+          error: timedOut ? "uploadTimeout" : "uploadUnexpected",
         });
         return false;
       }
@@ -321,8 +382,7 @@ export function ListingWizardPhotosStep({
               ? {
                   ...item,
                   status: "failed" as const,
-                  error:
-                    "Το ανέβασμα διακόπηκε. Πάτησε «Επανάληψη» για να ξαναδοκιμάσεις.",
+                  error: "uploadInterrupted",
                 }
               : item
           )
@@ -340,7 +400,7 @@ export function ListingWizardPhotosStep({
     (files: File[]) => {
       if (files.length === 0) return;
 
-      const { valid, rejected, globalErrors } = partitionListingPhotoFiles(files);
+      const { valid, rejected, globalErrors } = partitionListingPhotoFiles(files, locale);
       setValidationErrors(globalErrors);
 
       const rejectedItems: UploadQueueItem[] = rejected.map((entry, index) => {
@@ -437,7 +497,7 @@ export function ListingWizardPhotosStep({
 
   function handleDelete(imageId: string) {
     if (isManager) {
-      const confirmed = window.confirm("Θέλεις να διαγράψεις αυτή τη φωτογραφία;");
+      const confirmed = window.confirm(t("confirmDelete"));
       if (!confirmed) return;
     }
     startTransition(async () => {
@@ -458,7 +518,7 @@ export function ListingWizardPhotosStep({
   function handleBulkDelete() {
     if (selectedIds.size === 0) return;
     const confirmed = window.confirm(
-      `Θέλεις να διαγράψεις ${selectedIds.size} επιλεγμένες φωτογραφίες;`
+      t("confirmBulkDelete", { count: selectedIds.size })
     );
     if (!confirmed) return;
 
@@ -519,7 +579,7 @@ export function ListingWizardPhotosStep({
   }
 
   function handleCaption(imageId: string, current?: string | null) {
-    const next = window.prompt("Λεζάντα φωτογραφίας (προαιρετικά):", current ?? "");
+    const next = window.prompt(t("captionPrompt"), current ?? "");
     if (next === null) return;
     startTransition(async () => {
       const result = await updateListingImageCaption(listingId, imageId, next);
@@ -537,24 +597,67 @@ export function ListingWizardPhotosStep({
     const next = [...images];
     const [item] = next.splice(idx, 1);
     next.unshift(item);
-    persistOrder(next);
+    orderBeforePersistRef.current = images;
+    setImages(next);
+    void persistOrder(next);
   }
 
-  function persistOrder(next: ListingImage[]) {
-    setImages(next);
-    void reorderListingPhotos(
+  function handleLiveReorder(next: ListingImage[]) {
+    setImages((prev) => {
+      if (!orderBeforePersistRef.current) {
+        orderBeforePersistRef.current = prev;
+      } else if (
+        orderBeforePersistRef.current.length === next.length &&
+        orderBeforePersistRef.current.every((img, i) => img.id === next[i]?.id)
+      ) {
+        orderBeforePersistRef.current = null;
+      }
+      return next;
+    });
+  }
+
+  async function persistOrder(next: ListingImage[]) {
+    const generation = ++persistGenerationRef.current;
+    const rollback = orderBeforePersistRef.current ?? next;
+    setOrderSaveStatus("saving");
+    const result = await reorderListingPhotos(
       listingId,
       next.map((i) => i.id)
-    ).then(() => refreshImages());
+    );
+    if (generation !== persistGenerationRef.current) return;
+    if (result && "error" in result && result.error) {
+      setImages(rollback);
+      orderBeforePersistRef.current = null;
+      setError(result.error);
+      setOrderSaveStatus("error");
+      return;
+    }
+    // Keep first photo as cover for consistent badge ↔ #1.
+    const first = next[0];
+    if (first && first.is_cover !== true) {
+      const coverResult = await setListingCoverPhoto(listingId, first.id);
+      if (coverResult && "error" in coverResult && coverResult.error) {
+        setError(coverResult.error);
+      } else {
+        setImages((prev) =>
+          prev.map((img, i) => ({
+            ...img,
+            is_cover: i === 0,
+          }))
+        );
+      }
+    }
+    orderBeforePersistRef.current = null;
+    setOrderSaveStatus("saved");
+    window.setTimeout(() => {
+      if (persistGenerationRef.current === generation) {
+        setOrderSaveStatus("idle");
+      }
+    }, 1600);
   }
 
-  function handleReorderDrop(targetIndex: number) {
-    if (dragReorderIndex === null || dragReorderIndex === targetIndex) return;
-    const next = [...images];
-    const [item] = next.splice(dragReorderIndex, 1);
-    next.splice(targetIndex, 0, item);
-    setDragReorderIndex(null);
-    persistOrder(next);
+  function handlePersistOrder() {
+    void persistOrder(images);
   }
 
   function toggleSelected(imageId: string) {
@@ -570,7 +673,37 @@ export function ListingWizardPhotosStep({
   const activeUploads = uploadQueue.filter(
     (i) => i.status === "waiting" || i.status === "uploading"
   ).length;
+  const showLoadingShell =
+    uploadQueue.length === 0 &&
+    images.length === 0 &&
+    (!photosHydrated || photosLoading || savedImageCount > 0);
+  const photoStatus = photoCountStatusInfo(savedImageCount);
+
+  function translatePhotoItemError(msg: string | undefined): string | undefined {
+    if (!msg) return undefined;
+    const known = [
+      "saveFailed",
+      "uploadTimeout",
+      "uploadUnexpected",
+      "uploadInterrupted",
+    ] as const;
+    if ((known as readonly string[]).includes(msg)) {
+      return t(msg as (typeof known)[number]);
+    }
+    return msg;
+  }
+
+  function translateWizardErrorMsg(msg: string | null | undefined): string | null {
+    if (!msg) return null;
+    if (msg === "photoMinOne" || msg === "photoMinForReview") {
+      return tErrors(msg, { count: MIN_LISTING_PHOTOS_FOR_REVIEW });
+    }
+    return msg;
+  }
+
   const showGrid = savedImageCount > 0 || uploadQueue.length > 0 || images.length > 0;
+  const showEmptyUpload =
+    photosHydrated && !photosLoading && savedImageCount === 0 && images.length === 0;
 
   return (
     <div className="space-y-4">
@@ -581,36 +714,48 @@ export function ListingWizardPhotosStep({
             tabIndex={-1}
             className="font-display text-xl font-semibold text-charcoal outline-none"
           >
-            {isManager ? "Φωτογραφίες" : "Φωτογραφίες ακινήτου"}
+            {isManager ? t("managerTitle") : t("title")}
           </h2>
           <p className="mt-2 text-sm leading-relaxed text-muted">
-            {isManager
-              ? "Ανέβασε, ταξινόμησε και όρισε εξώφυλλο. Η σειρά εδώ καθορίζει πώς θα εμφανίζονται οι φωτογραφίες στη δημόσια αγγελία."
-              : "Ως ιδιοκτήτης, πρόσθεσε τουλάχιστον μία καθαρή φωτογραφία του ακινήτου. Η πρώτη επιτυχημένη φωτογραφία γίνεται κύρια· μπορείς να αλλάξεις κύρια ή σειρά ανά πάσα στιγμή."}
+            {showLoadingShell
+              ? t("preparing")
+              : isManager
+                ? t("managerSubtitle")
+                : t("subtitle")}
           </p>
-          {!isManager && rooms.length > 0 && (
-            <p className="mt-2 text-xs text-muted">
-              Προαιρετικά: όρισε χώρο σε κάθε φωτογραφία (σαλόνι, υπνοδωμάτιο κ.λπ.) — μπορείς να το
-              συμπληρώσεις και αργότερα.
-            </p>
+          {!isManager && !showLoadingShell && rooms.length > 0 && (
+            <p className="mt-2 text-xs text-muted">{t("roomsHint")}</p>
           )}
-          <p className="mt-2 text-xs text-muted">
-            Επίλεξε από τη βιβλιοθήκη ή σύρε έως 30 αρχεία (JPG, PNG, WebP — έως 10 MB).
-          </p>
+          {!showLoadingShell && (
+            <p className="mt-2 text-xs text-muted">{t("fileHint")}</p>
+          )}
         </div>
       )}
 
-      {isManager && showGrid && (
-        <p className="rounded-xl border border-border bg-sand/30 px-3 py-2 text-xs text-muted">
-          Η σειρά εδώ καθορίζει πώς θα εμφανίζονται οι φωτογραφίες στη δημόσια αγγελία.
-        </p>
+      {showLoadingShell && (
+        <div className="space-y-3" aria-busy="true" aria-live="polite">
+          <div className="flex items-center gap-2 text-sm font-medium text-charcoal">
+            <Loader2 className="h-4 w-4 animate-spin text-gold" />
+            {t("loading")}
+          </div>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div
+                key={i}
+                className="aspect-[4/3] animate-pulse rounded-xl bg-sand/80 ring-1 ring-border/60"
+              />
+            ))}
+          </div>
+        </div>
       )}
 
+      {!showLoadingShell && (
       <div
         className={cn(
           "flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-border bg-sand/30 px-6 py-10 transition-colors",
           dragActive && "border-gold bg-sand/50",
-          isProcessingQueue && "border-gold/40 bg-sand/50"
+          isProcessingQueue && "border-gold/40 bg-sand/50",
+          !showEmptyUpload && showGrid && "py-6"
         )}
         onDragEnter={handleDragEnter}
         onDragOver={handleDragOver}
@@ -623,7 +768,11 @@ export function ListingWizardPhotosStep({
           <Upload className="h-8 w-8 text-gold" />
         )}
         <p className="mt-3 text-sm font-medium text-charcoal">
-          {isProcessingQueue ? "Ανέβασμα φωτογραφιών…" : "Πρόσθεσε φωτογραφίες"}
+          {isProcessingQueue
+            ? t("uploadingBatch")
+            : showEmptyUpload
+              ? t("addPhotos")
+              : t("addMore")}
         </p>
         <div className="mt-4 flex w-full max-w-md flex-col gap-2 sm:flex-row sm:justify-center">
           <button
@@ -633,7 +782,7 @@ export function ListingWizardPhotosStep({
             className="inline-flex items-center justify-center gap-2 rounded-xl border border-border bg-white px-4 py-2.5 text-sm font-medium text-charcoal hover:bg-sand disabled:opacity-50"
           >
             <Images className="h-4 w-4 text-gold" />
-            Από βιβλιοθήκη
+            {t("fromLibrary")}
           </button>
           <button
             type="button"
@@ -642,10 +791,10 @@ export function ListingWizardPhotosStep({
             className="inline-flex items-center justify-center gap-2 rounded-xl border border-border bg-white px-4 py-2.5 text-sm font-medium text-charcoal hover:bg-sand disabled:opacity-50"
           >
             <Camera className="h-4 w-4 text-gold" />
-            Λήψη με κάμερα
+            {t("takePhoto")}
           </button>
         </div>
-        <span className="mt-3 text-xs text-muted">ή σύρε φωτογραφίες εδώ</span>
+        <span className="mt-3 text-xs text-muted">{t("orDrag")}</span>
         <input
           ref={libraryInputRef}
           type="file"
@@ -665,15 +814,25 @@ export function ListingWizardPhotosStep({
           disabled={pending || isProcessingQueue}
         />
       </div>
+      )}
+
+      {isManager && showGrid && !showLoadingShell && (
+        <p className="rounded-xl border border-border bg-sand/30 px-3 py-2 text-xs text-muted">
+          {t("managerSubtitle")}
+        </p>
+      )}
 
       {(uploadStats.total > 0 || isProcessingQueue) && (
         <div className="rounded-xl border border-border bg-white px-4 py-3">
           <div className="mb-2 flex items-center justify-between text-xs text-muted">
             <span>
-              Ανέβηκαν {uploadStats.uploaded} από {uploadStats.total} φωτογραφίες
+              {t("uploadProgress", {
+                uploaded: uploadStats.uploaded,
+                total: uploadStats.total,
+              })}
             </span>
             {activeUploads > 0 && (
-              <span>{activeUploads} σε εξέλιξη</span>
+              <span>{t("uploadsInProgress", { count: activeUploads })}</span>
             )}
           </div>
           <div className="h-2 overflow-hidden rounded-full bg-sand">
@@ -694,13 +853,10 @@ export function ListingWizardPhotosStep({
       {failedCount > 0 && (
         <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
           <p className="font-medium">
-            {failedCount === 1
-              ? "1 φωτογραφία δεν ανέβηκε"
-              : `${failedCount} φωτογραφίες δεν ανέβηκαν`}
+            {t("failedCount", { count: failedCount })}
           </p>
           <p className="mt-1 text-xs leading-relaxed text-red-700/90">
-            Δες τον λόγο κάτω από κάθε εικόνα, διόρθωσε το αρχείο (μορφή JPG/PNG/WEBP/HEIC,
-            έως 10 MB) ή πάτησε <span className="font-semibold">×</span> για να την αφαιρέσεις.
+            {t("failedHint")}
           </p>
           <button
             type="button"
@@ -709,7 +865,7 @@ export function ListingWizardPhotosStep({
             className="mt-3 inline-flex items-center gap-2 rounded-lg border border-red-200 bg-white px-3 py-2 text-sm text-red-700 hover:bg-red-100 disabled:opacity-50"
           >
             <RefreshCw className="h-4 w-4" />
-            Επανάληψη όλων των αποτυχημένων
+            {t("retryAllFailed")}
           </button>
         </div>
       )}
@@ -717,7 +873,7 @@ export function ListingWizardPhotosStep({
       {selectedIds.size > 0 && (
         <div className="flex flex-wrap items-center gap-2 rounded-xl border border-gold/25 bg-gold/5 px-3 py-2">
           <span className="text-sm font-medium text-charcoal">
-            {selectedIds.size} επιλεγμένες
+            {t("selectedCount", { count: selectedIds.size })}
           </span>
           {rooms.length > 0 && (
             <select
@@ -729,9 +885,9 @@ export function ListingWizardPhotosStep({
               className="rounded-lg border border-border bg-white px-2 py-1.5 text-sm"
             >
               <option value="" disabled>
-                Ανάθεση σε χώρο
+                {t("assignRoom")}
               </option>
-              <option value="">Χωρίς χώρο</option>
+              <option value="">{t("noRoom")}</option>
               {rooms.map((r) => (
                 <option key={r.key} value={r.key}>
                   {r.label}
@@ -746,224 +902,132 @@ export function ListingWizardPhotosStep({
             className="inline-flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 hover:bg-red-100 disabled:opacity-50"
           >
             <Trash2 className="h-4 w-4" />
-            Διαγραφή
+            {t("delete")}
           </button>
           <button
             type="button"
             onClick={() => setSelectedIds(new Set())}
             className="text-sm text-muted hover:text-charcoal"
           >
-            Ακύρωση επιλογής
+            {t("cancelSelection")}
           </button>
         </div>
       )}
 
       {showGrid && (
-      <div className={cn("grid gap-4", isManager ? "sm:grid-cols-2 xl:grid-cols-3" : "sm:grid-cols-2 lg:grid-cols-3")}>
-          {images.map((img, index) => {
-            const cover = isCoverPhoto(img, index);
-            const roomLabel = roomBadgeLabel(img.room_key);
-            return (
-              <div
-                key={img.id}
-                draggable
-                onDragStart={() => setDragReorderIndex(index)}
-                onDragOver={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                }}
-                onDrop={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  handleReorderDrop(index);
-                }}
-                className={cn(
-                  "group relative overflow-hidden rounded-xl border border-border bg-white shadow-soft",
-                  dragReorderIndex === index && "ring-2 ring-gold/50"
-                )}
-              >
-                <div className="relative aspect-[4/3]">
-                  <Image
-                    src={img.url}
-                    alt={img.caption ?? img.file_name ?? "Φωτογραφία αγγελίας"}
-                    fill
-                    className="object-cover transition-transform duration-300 group-hover:scale-[1.02]"
-                    sizes="(max-width: 768px) 50vw, 240px"
-                  />
-                  <div className="pointer-events-none absolute inset-0 bg-charcoal/0 transition-colors group-hover:bg-charcoal/10" />
-                  <span className="absolute left-2 top-2 rounded-full bg-white/90 px-2 py-0.5 text-[10px] font-bold text-charcoal">
-                    #{index + 1}
-                  </span>
-                  {cover && (
-                    <span className="absolute left-2 top-9 rounded-full bg-gold px-2 py-0.5 text-[10px] font-semibold text-white">
-                      {isManager ? "Εξώφυλλο" : "Κύρια"}
-                    </span>
-                  )}
-                  {roomLabel && (
-                    <span className="absolute bottom-2 left-2 max-w-[85%] truncate rounded-full bg-charcoal/80 px-2 py-0.5 text-[10px] font-medium text-white">
-                      {roomLabel}
-                    </span>
-                  )}
-                  <label className="absolute right-2 top-2 flex h-6 w-6 cursor-pointer items-center justify-center rounded bg-white/90 shadow">
-                    <input
-                      type="checkbox"
-                      className="h-4 w-4 accent-gold"
-                      checked={selectedIds.has(img.id)}
-                      onChange={() => toggleSelected(img.id)}
-                    />
-                  </label>
-                </div>
-                {img.caption && (
-                  <p className="truncate border-t border-border px-3 py-1.5 text-xs text-muted">
-                    {img.caption}
-                  </p>
-                )}
-                <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border px-2 py-1.5 opacity-100 lg:opacity-0 lg:group-hover:opacity-100">
-                  <div className="flex items-center gap-1 text-muted">
-                    <GripVertical className="h-4 w-4" aria-hidden />
-                    <span className="text-[11px]">Σύρε</span>
-                  </div>
-                  <div className="flex flex-wrap gap-1">
-                    {!cover && (
-                      <button
-                        type="button"
-                        disabled={pending || isProcessingQueue}
-                        onClick={() => handleSetCover(img.id)}
-                        className="inline-flex items-center gap-1 rounded px-2 py-1 text-[11px] text-charcoal hover:bg-sand disabled:opacity-40"
-                      >
-                        <Star className="h-3.5 w-3.5" />
-                        {isManager ? "Εξώφυλλο" : "Κύρια"}
-                      </button>
-                    )}
-                    {isManager && index > 0 && (
-                      <button
-                        type="button"
-                        disabled={pending || isProcessingQueue}
-                        onClick={() => handleMoveToStart(img.id)}
-                        className="rounded px-2 py-1 text-[11px] text-charcoal hover:bg-sand disabled:opacity-40"
-                      >
-                        Αρχή
-                      </button>
-                    )}
-                    {isManager && (
-                      <button
-                        type="button"
-                        disabled={pending || isProcessingQueue}
-                        onClick={() => handleCaption(img.id, img.caption)}
-                        className="rounded px-2 py-1 text-[11px] text-charcoal hover:bg-sand disabled:opacity-40"
-                      >
-                        Λεζάντα
-                      </button>
-                    )}
-                    {rooms.length > 0 && (
-                      <select
-                        value={img.room_key ?? ""}
-                        onChange={(e) => handleAssignRoom(img.id, e.target.value)}
-                        className="max-w-[8.5rem] rounded border border-border px-1 py-0.5 text-[10px]"
-                        aria-label="Χώρος φωτογραφίας"
-                      >
-                        <option value="">Χωρίς χώρο</option>
-                        {rooms.map((r) => (
-                          <option key={r.key} value={r.key}>
-                            {r.label}
-                          </option>
-                        ))}
-                      </select>
-                    )}
-                    <button
-                      type="button"
-                      disabled={pending || isProcessingQueue}
-                      onClick={() => handleDelete(img.id)}
-                      className="inline-flex items-center gap-1 rounded px-2 py-1 text-[11px] text-red-600 hover:bg-red-50 disabled:opacity-40"
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                      Διαγραφή
-                    </button>
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-
-          {uploadQueue
-            .filter((item) => item.status !== "uploaded")
-            .map((item) => (
-              <div
-                key={item.id}
-                className={cn(
-                  "relative overflow-hidden rounded-xl border bg-white",
-                  item.status === "failed" ? "border-red-300" : "border-border",
-                  item.status === "uploading" && "ring-2 ring-gold/40"
-                )}
-              >
-                <div className="relative aspect-[4/3]">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={item.previewUrl}
-                    alt={item.name}
+        <div className="space-y-3">
+          {orderSaveStatus === "saved" && (
+            <p className="text-xs font-medium text-teal">{t("saved")}</p>
+          )}
+          {orderSaveStatus === "saving" && (
+            <p className="text-xs text-muted">{t("savingOrder")}</p>
+          )}
+          {orderSaveStatus === "error" && (
+            <p className="text-xs text-red-600">{t("orderSaveError")}</p>
+          )}
+          <SortableListingPhotoGrid
+            images={images}
+            isManager={isManager}
+            rooms={rooms}
+            selectedIds={selectedIds}
+            pending={pending}
+            isProcessingQueue={isProcessingQueue}
+            onLiveReorder={handleLiveReorder}
+            onPersistOrder={handlePersistOrder}
+            onToggleSelected={toggleSelected}
+            onSetCover={handleSetCover}
+            onMoveToStart={handleMoveToStart}
+            onCaption={handleCaption}
+            onAssignRoom={handleAssignRoom}
+            onDelete={handleDelete}
+          />
+          {uploadQueue.filter((item) => item.status !== "uploaded").length > 0 && (
+            <div
+              className={cn(
+                "grid gap-4",
+                isManager ? "sm:grid-cols-2 xl:grid-cols-3" : "sm:grid-cols-2 lg:grid-cols-3"
+              )}
+            >
+              {uploadQueue
+                .filter((item) => item.status !== "uploaded")
+                .map((item) => (
+                  <div
+                    key={item.id}
                     className={cn(
-                      "h-full w-full object-cover",
-                      item.status === "waiting" && "opacity-70",
-                      item.status === "failed" && "opacity-50"
+                      "relative overflow-hidden rounded-xl border bg-white",
+                      item.status === "failed" ? "border-red-300" : "border-border",
+                      item.status === "uploading" && "ring-2 ring-gold/40"
                     )}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => handleDismissQueueItem(item)}
-                    className="absolute right-2 top-2 z-10 flex h-7 w-7 items-center justify-center rounded-full bg-charcoal/80 text-white shadow hover:bg-charcoal"
-                    aria-label={`Αφαίρεση ${item.name}`}
-                    title="Αφαίρεση"
                   >
-                    <X className="h-4 w-4" />
-                  </button>
-                  {(item.status === "waiting" || item.status === "uploading") && (
-                    <div className="absolute inset-0 flex flex-col items-center justify-center bg-charcoal/45 px-3 text-center">
-                      {item.status === "uploading" ? (
-                        <Loader2 className="h-7 w-7 animate-spin text-white" />
-                      ) : (
-                        <span className="text-xs font-medium text-white/90">
-                          {STATUS_LABEL.waiting}
-                        </span>
+                    <div className="relative aspect-[4/3]">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={item.previewUrl}
+                        alt={item.name}
+                        className={cn(
+                          "h-full w-full object-cover",
+                          item.status === "waiting" && "opacity-70",
+                          item.status === "failed" && "opacity-50"
+                        )}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => handleDismissQueueItem(item)}
+                        className="absolute right-2 top-2 z-10 flex h-7 w-7 items-center justify-center rounded-full bg-charcoal/80 text-white shadow hover:bg-charcoal"
+                        aria-label={t("removeNamed", { name: item.name })}
+                        title={t("remove")}
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                      {(item.status === "waiting" || item.status === "uploading") && (
+                        <div className="absolute inset-0 flex flex-col items-center justify-center bg-charcoal/45 px-3 text-center">
+                          {item.status === "uploading" ? (
+                            <Loader2 className="h-7 w-7 animate-spin text-white" />
+                          ) : (
+                            <span className="text-xs font-medium text-white/90">
+                              {statusLabel.waiting}
+                            </span>
+                          )}
+                        </div>
+                      )}
+                      {item.status === "failed" && (
+                        <div className="absolute inset-0 flex items-center justify-center bg-red-500/25">
+                          <span className="rounded-full bg-white/90 px-2 py-0.5 text-[11px] font-semibold text-red-700">
+                            {statusLabel.failed}
+                          </span>
+                        </div>
                       )}
                     </div>
-                  )}
-                  {item.status === "failed" && (
-                    <div className="absolute inset-0 flex items-center justify-center bg-red-500/25">
-                      <span className="rounded-full bg-white/90 px-2 py-0.5 text-[11px] font-semibold text-red-700">
-                        {STATUS_LABEL.failed}
-                      </span>
+                    <div className="space-y-1 border-t border-border px-2 py-2">
+                      <p
+                        className="truncate text-[11px] font-medium text-charcoal"
+                        title={item.name}
+                      >
+                        {item.name}
+                      </p>
+                      {item.status === "failed" ? (
+                        <p className="text-[11px] leading-snug text-red-600">
+                          {translatePhotoItemError(item.error) ?? t("saveFailed")}
+                        </p>
+                      ) : (
+                        <p className="text-[11px] text-muted">{statusLabel[item.status]}</p>
+                      )}
+                      {item.status === "failed" && !item.id.startsWith("reject-") && (
+                        <button
+                          type="button"
+                          onClick={() => handleRetryItem(item)}
+                          disabled={isProcessingQueue}
+                          className="inline-flex items-center gap-1 rounded px-1 py-0.5 text-[11px] font-medium text-red-700 hover:bg-red-50 disabled:opacity-50"
+                        >
+                          <RefreshCw className="h-3 w-3" />
+                          {t("retry")}
+                        </button>
+                      )}
                     </div>
-                  )}
-                </div>
-                <div className="space-y-1 border-t border-border px-2 py-2">
-                  <p
-                    className="truncate text-[11px] font-medium text-charcoal"
-                    title={item.name}
-                  >
-                    {item.name}
-                  </p>
-                  {item.status === "failed" ? (
-                    <p className="text-[11px] leading-snug text-red-600">
-                      {item.error ??
-                        "Δεν ήταν δυνατή η αποθήκευση της φωτογραφίας στην αγγελία. Δοκίμασε ξανά."}
-                    </p>
-                  ) : (
-                    <p className="text-[11px] text-muted">{STATUS_LABEL[item.status]}</p>
-                  )}
-                  {item.status === "failed" && !item.id.startsWith("reject-") && (
-                    <button
-                      type="button"
-                      onClick={() => handleRetryItem(item)}
-                      disabled={isProcessingQueue}
-                      className="inline-flex items-center gap-1 rounded px-1 py-0.5 text-[11px] font-medium text-red-700 hover:bg-red-50 disabled:opacity-50"
-                    >
-                      <RefreshCw className="h-3 w-3" />
-                      Επανάληψη
-                    </button>
-                  )}
-                </div>
-              </div>
-            ))}
+                  </div>
+                ))}
+            </div>
+          )}
         </div>
       )}
 
@@ -978,8 +1042,8 @@ export function ListingWizardPhotosStep({
         )}
       >
         {isProcessingQueue
-          ? "Μην κλείσεις τη σελίδα μέχρι να ολοκληρωθεί το ανέβασμα."
-          : photoCountStatusMessage(savedImageCount)}
+          ? t("dontClose")
+          : t(photoStatus.key, photoStatus.params ?? {})}
       </p>
 
       {validationErrors.map((msg) => (
@@ -988,7 +1052,9 @@ export function ListingWizardPhotosStep({
         </p>
       ))}
 
-      {error && <p className="text-sm text-red-500">{error}</p>}
+      {error && (
+        <p className="text-sm text-red-500">{translateWizardErrorMsg(error)}</p>
+      )}
     </div>
   );
 }

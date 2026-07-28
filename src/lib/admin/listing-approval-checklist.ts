@@ -43,6 +43,10 @@ export async function getListingApprovalChecklist(
     listing.owner_responsibility_accepted &&
       listing.platform_role_accepted &&
       listing.terms_privacy_accepted &&
+      (listing.tax_obligation_accepted === true ||
+        Boolean(listing.declarations_submitted_at)) &&
+      (listing.authority_disclosure_accepted === true ||
+        Boolean(listing.declarations_submitted_at)) &&
       (!needsRegistry || listing.ama_declaration_accepted)
   );
 

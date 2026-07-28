@@ -1,24 +1,40 @@
 import type { OwnerListingStatusKey } from "@/lib/dashboard-listings";
+import { pickLocale } from "@/lib/locale-fallbacks";
 
 export type ListingPreviewStatusMessage = {
   tone: "neutral" | "info" | "success" | "warning";
   text: string;
+  textKey?: string;
 };
 
+type PreviewStatusT = (key: string) => string;
+
 export function listingPreviewStatusMessage(
-  ownerStatusKey: OwnerListingStatusKey
+  ownerStatusKey: OwnerListingStatusKey,
+  t?: PreviewStatusT,
+  locale?: string
 ): ListingPreviewStatusMessage {
   switch (ownerStatusKey) {
     case "published":
     case "paused":
       return {
         tone: "success",
-        text: "Η αγγελία εμφανίζεται δημόσια.",
+        textKey: "published",
+        text: t
+          ? t("published")
+          : pickLocale(locale, "Η αγγελία εμφανίζεται δημόσια.", "This listing is visible publicly."),
       };
     case "review":
       return {
         tone: "info",
-        text: "Η αγγελία είναι σε έλεγχο και θα εμφανιστεί δημόσια μετά την έγκριση.",
+        textKey: "review",
+        text: t
+          ? t("review")
+          : pickLocale(
+              locale,
+              "Η αγγελία είναι σε έλεγχο και θα εμφανιστεί δημόσια μετά την έγκριση.",
+              "This listing is under review and will appear publicly after approval."
+            ),
       };
     case "draft":
     case "needs_fixes":
@@ -27,7 +43,14 @@ export function listingPreviewStatusMessage(
     default:
       return {
         tone: "warning",
-        text: "Αυτή είναι προεπισκόπηση. Η αγγελία δεν εμφανίζεται ακόμα δημόσια.",
+        textKey: "previewOnly",
+        text: t
+          ? t("previewOnly")
+          : pickLocale(
+              locale,
+              "Αυτή είναι προεπισκόπηση. Η αγγελία δεν εμφανίζεται ακόμα δημόσια.",
+              "This is a preview. The listing is not public yet."
+            ),
       };
   }
 }

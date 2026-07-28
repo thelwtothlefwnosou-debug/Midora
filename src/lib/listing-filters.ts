@@ -144,12 +144,11 @@ export function applyListingFilters(
       isListingAvailableForStay(l, filters.moveIn!, l.min_months)
     );
   }
-  if (filters.rentalType) {
-    const rt = filters.rentalType;
-    if (rt === "short_term" || rt === "monthly") {
-      results = results.filter((l) => listingMatchesRentalTypeFilter(l, rt));
-    }
-  }
+  // Strict mode separation: never mix short-term and monthly in one result set.
+  // Missing/invalid rentalType defaults to short_term so UI and catalog stay aligned.
+  const rentalMode =
+    filters.rentalType === "monthly" ? "monthly" : "short_term";
+  results = results.filter((l) => listingMatchesRentalTypeFilter(l, rentalMode));
   if (filters.propertyType) {
     results = results.filter((l) => l.property_type === filters.propertyType);
   }
@@ -346,7 +345,7 @@ function buildListingFilters(
     ? durationRangeToMaxListingMinMonths(duration)
     : undefined;
 
-  const rentalType = parsePublicRentalType(params.rentalType);
+  const rentalType = parsePublicRentalType(params.rentalType) ?? "short_term";
   const isShort = rentalType === "short_term";
 
   let city = params.city ? decodeURIComponent(params.city) : undefined;

@@ -15,14 +15,13 @@ function futureDayParts(offsetDays: number): { year: number; month: number; day:
   };
 }
 
-function dayAria(year: number, month: number, day: number): RegExp {
+function dayAria(year: number, month: number, day: number): string {
   const date = new Date(year, month - 1, day);
-  const label = new Intl.DateTimeFormat("el-GR", {
+  return new Intl.DateTimeFormat("el-GR", {
     day: "numeric",
     month: "short",
     year: "numeric",
   }).format(date);
-  return new RegExp(label.replace(/\./g, "\\.?"), "i");
 }
 
 async function openSearchCheckIn(page: import("@playwright/test").Page) {
@@ -38,17 +37,22 @@ async function datePopover(page: import("@playwright/test").Page) {
   return page.getByRole("dialog").last();
 }
 
+/**
+ * Navigate until the target day is a visible button.
+ * Important: past days are not rendered as buttons, so never probe day=1 of the month.
+ */
 async function goToMonthIfNeeded(
   page: import("@playwright/test").Page,
   year: number,
-  month: number
+  month: number,
+  day: number
 ) {
-  const popover = await datePopover(page);
-  const target = new Date(year, month - 1, 1);
+  const name = dayAria(year, month, day);
   for (let i = 0; i < 14; i++) {
-    const dayBtn = popover.getByRole("button", { name: dayAria(year, month, 1) });
+    const popover = await datePopover(page);
+    const dayBtn = popover.getByRole("button", { name, exact: true });
     if ((await dayBtn.count()) > 0) return;
-    // Prefer next month when targeting future dates
+
     const next = popover.getByRole("button", { name: "Επόμενος μήνας" });
     if (await next.isEnabled()) {
       await next.click();
@@ -56,7 +60,6 @@ async function goToMonthIfNeeded(
     }
     const prev = popover.getByRole("button", { name: "Προηγούμενος μήνας" });
     await prev.click();
-    void target;
   }
 }
 
@@ -66,9 +69,9 @@ async function clickCalendarDay(
   month: number,
   day: number
 ) {
-  await goToMonthIfNeeded(page, year, month);
+  await goToMonthIfNeeded(page, year, month, day);
   const popover = await datePopover(page);
-  await popover.getByRole("button", { name: dayAria(year, month, day) }).click();
+  await popover.getByRole("button", { name: dayAria(year, month, day), exact: true }).click();
 }
 
 async function calendarOpen(page: import("@playwright/test").Page) {

@@ -1,17 +1,19 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { ArrowUpDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { ListingSort } from "@/lib/types";
 import { resetListingsPage } from "@/lib/listings-pagination";
 
-const SORT_OPTIONS: { value: ListingSort; label: string }[] = [
-  { value: "recommended", label: "Προτεινόμενα" },
-  { value: "newest", label: "Νεότερες αγγελίες" },
-  { value: "price_asc", label: "Τιμή: χαμηλότερη πρώτα" },
-  { value: "price_desc", label: "Τιμή: υψηλότερη πρώτα" },
-  { value: "amenities_desc", label: "Περισσότερες παροχές" },
+const SORT_VALUES: ListingSort[] = [
+  "recommended",
+  "newest",
+  "price_asc",
+  "price_desc",
+  "amenities_desc",
+  "bedrooms_desc",
 ];
 
 type Props = {
@@ -20,9 +22,19 @@ type Props = {
 };
 
 export function ListingsSortSelect({ className, compact }: Props) {
+  const t = useTranslations("Listings.sort");
   const router = useRouter();
   const searchParams = useSearchParams();
   const current = (searchParams.get("sort") as ListingSort) || "recommended";
+
+  const labelByValue: Record<ListingSort, string> = {
+    recommended: t("recommended"),
+    newest: t("newest"),
+    price_asc: t("priceAsc"),
+    price_desc: t("priceDesc"),
+    amenities_desc: t("amenitiesDesc"),
+    bedrooms_desc: t("bedroomsDesc"),
+  };
 
   function handleChange(value: string) {
     const params = resetListingsPage(new URLSearchParams(searchParams.toString()));
@@ -42,18 +54,18 @@ export function ListingsSortSelect({ className, compact }: Props) {
       <ArrowUpDown className="h-4 w-4 shrink-0 text-gold/80" />
       {!compact && (
         <span className="hidden text-[9px] font-medium tracking-wider text-muted uppercase sm:inline">
-          Ταξινόμηση
+          {t("label")}
         </span>
       )}
       <select
         value={current}
         onChange={(e) => handleChange(e.target.value)}
-        aria-label="Ταξινόμηση αποτελεσμάτων"
+        aria-label={t("ariaLabel")}
         className="max-w-[9.5rem] cursor-pointer bg-transparent text-sm font-medium text-charcoal outline-none sm:max-w-none"
       >
-        {SORT_OPTIONS.map((option) => (
-          <option key={option.value} value={option.value} className="bg-white">
-            {option.label}
+        {SORT_VALUES.map((value) => (
+          <option key={value} value={value} className="bg-white">
+            {labelByValue[value]}
           </option>
         ))}
       </select>

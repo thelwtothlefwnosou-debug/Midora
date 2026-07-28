@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { X, ZoomIn, ZoomOut } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 
 type Props = {
@@ -14,6 +15,7 @@ type Props = {
 const OUTPUT_SIZE = 512;
 
 export function AvatarCropModal({ file, open, onClose, onConfirm }: Props) {
+  const t = useTranslations("Owner.avatarCrop");
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const imgRef = useRef<HTMLImageElement | null>(null);
   const [zoom, setZoom] = useState(1);
@@ -126,13 +128,13 @@ export function AvatarCropModal({ file, open, onClose, onConfirm }: Props) {
       >
         <div className="flex items-center justify-between border-b border-border px-5 py-4">
           <h2 id="crop-title" className="font-display text-lg font-semibold text-charcoal">
-            Κόψιμο φωτογραφίας
+            {t("title")}
           </h2>
           <button
             type="button"
             onClick={onClose}
             className="flex h-8 w-8 items-center justify-center rounded-lg text-muted hover:bg-sand"
-            aria-label="Κλείσιμο"
+            aria-label={t("close")}
           >
             <X className="h-4 w-4" />
           </button>
@@ -159,7 +161,7 @@ export function AvatarCropModal({ file, open, onClose, onConfirm }: Props) {
               type="button"
               onClick={() => setZoom((z) => Math.max(0.5, z - 0.1))}
               className="flex h-9 w-9 items-center justify-center rounded-lg border border-border hover:bg-sand"
-              aria-label="Μείωση"
+              aria-label={t("zoomOut")}
             >
               <ZoomOut className="h-4 w-4" />
             </button>
@@ -176,14 +178,12 @@ export function AvatarCropModal({ file, open, onClose, onConfirm }: Props) {
               type="button"
               onClick={() => setZoom((z) => Math.min(2.5, z + 0.1))}
               className="flex h-9 w-9 items-center justify-center rounded-lg border border-border hover:bg-sand"
-              aria-label="Μεγέθυνση"
+              aria-label={t("zoomIn")}
             >
               <ZoomIn className="h-4 w-4" />
             </button>
           </div>
-          <p className="mt-3 text-center text-xs text-muted">
-            Σύρε για να τοποθετήσεις · Χρησιμοποίησε το slider για zoom
-          </p>
+          <p className="mt-3 text-center text-xs text-muted">{t("hint")}</p>
         </div>
 
         <div className="flex gap-3 border-t border-border px-5 py-4">
@@ -192,7 +192,7 @@ export function AvatarCropModal({ file, open, onClose, onConfirm }: Props) {
             onClick={onClose}
             className="flex-1 rounded-xl border border-border py-2.5 text-sm font-medium text-charcoal hover:bg-sand"
           >
-            Ακύρωση
+            {t("cancel")}
           </button>
           <button
             type="button"
@@ -200,7 +200,7 @@ export function AvatarCropModal({ file, open, onClose, onConfirm }: Props) {
             onClick={handleConfirm}
             className="flex-1 rounded-xl bg-gold py-2.5 text-sm font-semibold text-white hover:bg-gold-dark disabled:opacity-60"
           >
-            {processing ? "Αποθήκευση…" : "Αποθήκευση"}
+            {processing ? t("saving") : t("save")}
           </button>
         </div>
       </div>

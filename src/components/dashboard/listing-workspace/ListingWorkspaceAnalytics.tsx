@@ -1,6 +1,7 @@
 "use client";
 
 import { BarChart3, Eye } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { DashboardEmptyState } from "@/components/dashboard/DashboardEmptyState";
 import type { ListingWorkspaceContext } from "@/lib/listing-workspace-types";
 import {
@@ -14,6 +15,7 @@ type Props = {
 };
 
 export function ListingWorkspaceAnalytics({ ctx }: Props) {
+  const t = useTranslations("Workspace.analytics");
   const analytics = buildListingAnalytics(
     ctx.listing,
     ctx.effectiveStatus,
@@ -23,24 +25,22 @@ export function ListingWorkspaceAnalytics({ ctx }: Props) {
 
   return (
     <div>
-      <h2 className="mb-1 font-display text-base font-semibold text-charcoal">Στατιστικά</h2>
-      <p className="mb-4 text-sm text-muted">
-        Πραγματικά δεδομένα προβολών — χωρίς ταυτότητα επισκεπτών.
-      </p>
+      <h2 className="mb-1 font-display text-base font-semibold text-charcoal">{t("title")}</h2>
+      <p className="mb-4 text-sm text-muted">{t("subtitle")}</p>
 
       {!hasData ? (
         <DashboardEmptyState
           compact
           icon={BarChart3}
-          title="Χωρίς στατιστικά ακόμα"
-          text="Δεν υπάρχουν ακόμη αρκετά δεδομένα προβολών. Τα στατιστικά θα εμφανιστούν όταν η αγγελία λάβει επισκέψεις."
+          title={t("emptyTitle")}
+          text={t("emptyBody")}
         />
       ) : (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           <MetricCard
             icon={Eye}
             value={formatAnalyticsMetric(analytics.viewsTotal)}
-            label="Προβολές · σύνολο"
+            label={t("viewsTotal")}
           />
         </div>
       )}

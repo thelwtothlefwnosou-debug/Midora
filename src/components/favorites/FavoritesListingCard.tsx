@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { MapPin, Eye } from "lucide-react";
+import { useTranslations } from "next-intl";
 import type { ListingWithImages } from "@/lib/types";
 import { getListingPublicId } from "@/lib/utils";
 import { FavoriteButton } from "@/components/listings/FavoriteButton";
@@ -9,6 +10,8 @@ import { ListingImageCarousel } from "@/components/listings/ListingImageCarousel
 import { GlassCard } from "@/components/ui/GlassCard";
 
 export function FavoritesListingCard({ listing }: { listing: ListingWithImages }) {
+  const t = useTranslations("Favorites");
+  const tCommon = useTranslations("Common");
   const href = `/listings/${getListingPublicId(listing)}`;
   const images = listing.listing_images ?? [];
 
@@ -39,7 +42,7 @@ export function FavoritesListingCard({ listing }: { listing: ListingWithImages }
 
           <p className="font-display text-xl font-semibold text-charcoal">
             €{listing.price_monthly.toLocaleString("el-GR")}
-            <span className="ml-1 text-sm font-normal text-muted">/ μήνα</span>
+            <span className="ml-1 text-sm font-normal text-muted">{tCommon("perMonth")}</span>
           </p>
 
           <div className="mt-auto">
@@ -48,7 +51,7 @@ export function FavoritesListingCard({ listing }: { listing: ListingWithImages }
               className="inline-flex min-h-10 items-center gap-2 rounded-full border border-border bg-white px-4 text-sm font-medium text-charcoal transition-colors hover:border-gold/40 hover:text-gold"
             >
               <Eye className="h-4 w-4" />
-              Προβολή
+              {t("viewListing")}
             </Link>
           </div>
         </div>

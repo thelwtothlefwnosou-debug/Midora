@@ -1,82 +1,102 @@
+"use client";
+
 import Link from "next/link";
 import { ImageIcon } from "lucide-react";
+import { useLocale, useTranslations } from "next-intl";
 import { Button } from "@/components/ui/Button";
 import { DashboardListingStatusBadge } from "@/components/dashboard/DashboardListingStatusBadge";
 import type { OwnerListingRowModel } from "@/lib/owner-listings-page";
-import { getOwnerListingStatus } from "@/lib/dashboard-listings";
+import { resolveOwnerListingUiStatus } from "@/lib/owner-listing-ui-status";
 import { formatSubmittedDate } from "@/lib/owner-listing-card-helpers";
-import { formatListingPrice, listingRentalType, rentalTypeBadgeLabel } from "@/lib/rental-types";
+import {
+  getFormattedListingPrice,
+  getRentalTypeBadgeLabel,
+  listingRentalType,
+} from "@/lib/rental-types";
 import { listingManageHref } from "@/lib/listing-workspace-nav";
+import { pickListingCoverPhotoUrl } from "@/lib/listing-media";
 
 type Props = {
   row: OwnerListingRowModel;
 };
 
-function statusCopy(row: OwnerListingRowModel): {
+type StatusCopy = {
   title: string;
   description: string;
   primaryCta: { label: string; href: string };
   secondaryCta?: { label: string; href: string };
-} {
+};
+
+function statusCopy(
+  row: OwnerListingRowModel,
+  t: ReturnType<typeof useTranslations<"Owner.home.hero">>
+): StatusCopy {
   const manage = listingManageHref(row.listing.id);
   const publish = `${manage}/publish`;
 
   switch (row.ownerStatusKey) {
     case "review":
       return {
-        title: "Η αγγελία σου είναι σε έλεγχο",
-        description: "Θα εμφανιστεί δημόσια μόλις ολοκληρωθεί ο έλεγχος.",
-        primaryCta: { label: "Δες την αγγελία", href: manage },
-        secondaryCta: { label: "Δες την κατάσταση ελέγχου", href: publish },
+        title: t("reviewTitle"),
+        description: t("reviewDesc"),
+        primaryCta: { label: t("seeListing"), href: manage },
+        secondaryCta: { label: t("seeReviewStatus"), href: publish },
       };
     case "needs_fixes":
       return {
-        title: "Η αγγελία χρειάζεται διόρθωση",
+        title: t("needsFixesTitle"),
         description:
-          row.listing.admin_verification_notes?.slice(0, 160) ||
-          "Δες τις παρατηρήσεις και ενημέρωσε την αγγελία.",
-        primaryCta: { label: "Διόρθωσε την αγγελία", href: `${manage}/edit` },
-        secondaryCta: { label: "Δες την κατάσταση", href: publish },
+          row.listing.admin_verification_notes?.slice(0, 160) || t("needsFixesFallback"),
+        primaryCta: { label: t("fixListing"), href: `${manage}/edit` },
+        secondaryCta: { label: t("seeStatus"), href: publish },
       };
     case "draft":
       return {
-        title: "Η αγγελία είναι πρόχειρη",
-        description: "Ολοκλήρωσε τα στοιχεία και υποβάλε για έλεγχο.",
-        primaryCta: { label: "Συνέχισε τη συμπλήρωση", href: manage },
+        title: t("draftTitle"),
+        description: t("draftDesc"),
+        primaryCta: { label: t("continueDraft"), href: manage },
       };
     case "published":
     case "paused":
       return {
-        title: "Η αγγελία σου είναι δημοσιευμένη",
-        description: "Διαχειρίσου διαθεσιμότητα, αιτήματα και στατιστικά από το workspace.",
-        primaryCta: { label: "Διαχείριση ακινήτου", href: manage },
+        title: t("publishedTitle"),
+        description: t("publishedDesc"),
+        primaryCta: { label: t("manageProperty"), href: manage },
       };
     case "expired":
       return {
-        title: "Η αγγελία έληξε",
-        description: "Ανανέωσε την προβολή για να εμφανίζεται ξανά δημόσια.",
+        title: t("expiredTitle"),
+        description: t("expiredDesc"),
         primaryCta: {
-          label: "Ανανέωση αγγελίας",
+          label: t("renewListing"),
           href: `${manage}/pay?reactivate=1`,
         },
       };
     default:
       return {
         title: row.listing.title,
-        description: "Δες την κατάσταση και τα επόμενα βήματα.",
-        primaryCta: { label: "Διαχείριση ακινήτου", href: manage },
+        description: t("defaultDesc"),
+        primaryCta: { label: t("manageProperty"), href: manage },
       };
   }
 }
 
 export function OwnerListingStatusHero({ row }: Props) {
-  const { listing, effectiveStatus, ownerStatusKey, completenessPercent } = row;
-  const ownerStatus = getOwnerListingStatus(listing, effectiveStatus);
-  const copy = statusCopy(row);
+  const locale = useLocale();
+  const t = useTranslations("Owner.home.hero");
+  const tUi = useTranslations("Owner.uiStatus");
+  const tListing = useTranslations("Listing");
+  const tCommon = useTranslations("Common");
+  const { listing, ownerStatusKey, completenessPercent } = row;
+  const ui = resolveOwnerListingUiStatus(row, locale);
+  const copy = statusCopy(row, t);
   const rentalType = listingRentalType(listing);
-  const price = formatListingPrice(listing);
-  const submitted = formatSubmittedDate(listing.updated_at ?? listing.created_at);
-  const cover = listing.listing_images?.find((i) => i.media_type !== "video")?.url;
+  const price = getFormattedListingPrice(listing, tCommon);
+  const submitted = formatSubmittedDate(
+    listing.updated_at ?? listing.created_at,
+    locale
+  );
+  const cover = pickListingCoverPhotoUrl(listing);
   const location = [listing.area_display_name || listing.area, listing.city_display_name || listing.city]
     .filter(Boolean)
     .join(", ");
@@ -100,14 +120,17 @@ export function OwnerListingStatusHero({ row }: Props) {
           </Link>
 
           <div className="min-w-0 flex-1">
-            <DashboardListingStatusBadge statusKey={ownerStatusKey} label={ownerStatus.label} />
+            <DashboardListingStatusBadge
+              statusKey={ui.styleKey}
+              label={tUi(ui.labelKey)}
+            />
             <h2 className="mt-2 font-display text-lg font-semibold text-charcoal sm:text-xl">
               {copy.title}
             </h2>
             <p className="mt-1 text-sm leading-relaxed text-muted">{copy.description}</p>
             {submitted &&
               (ownerStatusKey === "review" || ownerStatusKey === "needs_fixes") && (
-                <p className="mt-2 text-xs text-muted">Υποβλήθηκε στις {submitted}</p>
+                <p className="mt-2 text-xs text-muted">{t("submittedOn", { date: submitted })}</p>
               )}
             <div className="mt-4 flex flex-wrap gap-2">
               <Button href={copy.primaryCta.href} size="sm">
@@ -125,21 +148,21 @@ export function OwnerListingStatusHero({ row }: Props) {
         <aside className="border-t border-border bg-cream/30 p-4 sm:p-5 lg:border-t-0 lg:border-l">
           <dl className="space-y-3 text-sm">
             <div>
-              <dt className="text-[11px] font-medium tracking-wide text-muted uppercase">Τύπος</dt>
+              <dt className="text-[11px] font-medium tracking-wide text-muted uppercase">{t("type")}</dt>
               <dd className="mt-0.5 font-medium text-charcoal">
-                {rentalTypeBadgeLabel(rentalType)}
+                {getRentalTypeBadgeLabel(rentalType, tListing)}
               </dd>
             </div>
             {location && (
               <div>
                 <dt className="text-[11px] font-medium tracking-wide text-muted uppercase">
-                  Περιοχή
+                  {t("area")}
                 </dt>
                 <dd className="mt-0.5 font-medium text-charcoal">{location}</dd>
               </div>
             )}
             <div>
-              <dt className="text-[11px] font-medium tracking-wide text-muted uppercase">Τιμή</dt>
+              <dt className="text-[11px] font-medium tracking-wide text-muted uppercase">{t("price")}</dt>
               <dd className="mt-0.5 font-medium text-charcoal">
                 {price.amount && price.amount > 0 ? price.display : "—"}
               </dd>
@@ -147,7 +170,7 @@ export function OwnerListingStatusHero({ row }: Props) {
             {completenessPercent < 100 && (
               <div>
                 <dt className="text-[11px] font-medium tracking-wide text-muted uppercase">
-                  Πληρότητα
+                  {t("completeness")}
                 </dt>
                 <dd className="mt-1 flex items-center gap-2">
                   <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-sand">

@@ -12,6 +12,7 @@ import { isListingActive } from "@/lib/listings";
 import { isPublicMvpListing } from "@/lib/rental-types";
 import { canShowPublicAvatar, resolveProfileAvatarUrl } from "@/lib/profile-avatar";
 import { profileDisplayName } from "@/lib/profile-display";
+import { pickLocale } from "@/lib/locale-fallbacks";
 import { isUuidLike } from "@/lib/profile-slug";
 import type { ListingWithImages, Profile } from "@/lib/types";
 
@@ -211,14 +212,18 @@ function dedupeListings(items: PublicProfileListingItem[]): PublicProfileListing
   return [...map.values()];
 }
 
+
 export function resolvePublicProfileRoleLabel(
   ownedCount: number,
-  cohostedCount: number
+  cohostedCount: number,
+  locale?: string
 ): string {
-  if (ownedCount > 0 && cohostedCount > 0) return "Ιδιοκτήτης και συνοικοδεσπότης";
-  if (cohostedCount > 0) return "Συνοικοδεσπότης";
-  if (ownedCount > 0) return "Ιδιοκτήτης";
-  return "Χρήστης Midora";
+  if (ownedCount > 0 && cohostedCount > 0) {
+    return pickLocale(locale, "Ιδιοκτήτης και συνοικοδεσπότης", "Owner and co-host");
+  }
+  if (cohostedCount > 0) return pickLocale(locale, "Συνοικοδεσπότης", "Co-host");
+  if (ownedCount > 0) return pickLocale(locale, "Ιδιοκτήτης", "Owner");
+  return pickLocale(locale, "Χρήστης Midora", "Midora user");
 }
 
 export async function getPublicProfileBySlugOrId(
@@ -338,7 +343,8 @@ function finishCohostRows(
 }
 
 export async function getPublicProfilePageData(
-  profile: PublicProfileRecord
+  profile: PublicProfileRecord,
+  locale?: string
 ): Promise<PublicProfilePageData | null> {
   const showOwned = profile.show_owned_listings_on_profile !== false;
   const showCohosted = profile.show_cohosted_listings_on_profile !== false;
@@ -362,10 +368,14 @@ export async function getPublicProfilePageData(
 
   return {
     profile,
-    displayName: profileDisplayName(profile),
+    displayName: profileDisplayName(profile, locale),
     avatarUrl,
     phoneVerified: Boolean(profile.primary_phone_verified_at),
-    roleLabel: resolvePublicProfileRoleLabel(ownedListings.length, cohostedListings.length),
+    roleLabel: resolvePublicProfileRoleLabel(
+      ownedListings.length,
+      cohostedListings.length,
+      locale
+    ),
     ownedListings,
     cohostedListings,
     activeListingsCount: totalVisible,

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { getTranslations } from "next-intl/server";
 import {
   PublicPageLayout,
   StaticHero,
@@ -9,90 +10,78 @@ import {
 const supportEmail =
   process.env.NEXT_PUBLIC_CONTACT_EMAIL ?? "support@midora.gr";
 
-export const metadata: Metadata = {
-  title: "Πολιτική απορρήτου",
-  description: "Πώς το Midora χειρίζεται προσωπικά δεδομένα και cookies.",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("Legal.privacy");
+  return {
+    title: t("metaTitle"),
+    description: t("metaDescription"),
+  };
+}
 
-export default function PrivacyPage() {
+export default async function PrivacyPage() {
+  const t = await getTranslations("Legal.privacy");
+  const tLegal = await getTranslations("Legal");
+  const tShared = await getTranslations("Legal.shared");
+
   return (
     <PublicPageLayout narrow>
       <StaticHero
-        eyebrow="Νομικά"
-        title="Πολιτική απορρήτου"
-        subtitle="Η παρούσα πολιτική περιγράφει γενικά ποια δεδομένα μπορεί να συλλέγονται και πώς χρησιμοποιούνται. Μπορεί να ενημερώνεται περιοδικά."
+        eyebrow={tLegal("eyebrow")}
+        title={t("title")}
+        subtitle={t("subtitle")}
       />
 
-      <LegalSection title="Ποια δεδομένα μπορεί να συλλέγονται">
-        <p>
-          Για τη λειτουργία της πλατφόρμας μπορεί να συλλέγονται στοιχεία όπως email,
-          όνομα, τηλέφωνο (όπου δηλώνεται), στοιχεία αγγελιών, ιδιωτική διεύθυνση για
-          εσωτερικό έλεγχο, μηνύματα επικοινωνίας, καθώς και τεχνικά
-          δεδομένα σύνδεσης (π.χ. logs, IP) όπου απαιτείται για ασφάλεια.
-        </p>
+      <LegalSection title={t("dataTitle")}>
+        <p>{t("dataP1")}</p>
       </LegalSection>
 
-      <LegalSection title="Διεύθυνση και επικοινωνία">
-        <p>
-          Η πλήρης διεύθυνση ακινήτου δεν εμφανίζεται δημόσια από προεπιλογή —
-          χρησιμοποιείται για έλεγχο και διαχείριση της αγγελίας.
-        </p>
-        <p>
-          Τηλέφωνα και email εμφανίζονται στους ενδιαφερόμενους μόνο σύμφωνα με τις
-          ρυθμίσεις επικοινωνίας της αγγελίας.
-        </p>
+      <LegalSection title={t("addressTitle")}>
+        <p>{t("addressP1")}</p>
+        <p>{t("addressP2")}</p>
       </LegalSection>
 
-      <LegalSection title="Πώς χρησιμοποιούνται">
-        <p>
-          Τα δεδομένα χρησιμοποιούνται για δημιουργία και διαχείριση λογαριασμού,
-          δημοσίευση και αναζήτηση αγγελιών, αποστολή αιτημάτων, επικοινωνία και
-          βελτίωση της εμπειρίας χρήσης.
-        </p>
-        <p>
-          Δεν πωλούμε προσωπικά δεδομένα σε τρίτους για marketing.
-        </p>
+      <LegalSection title={t("messagesTitle")}>
+        <p>{tShared("privacyMessages")}</p>
       </LegalSection>
 
-      <LegalSection title="Λογαριασμός και επικοινωνία">
-        <p>
-          Μπορείς να ζητήσεις πρόσβαση, διόρθωση ή διαγραφή δεδομένων λογαριασμού
-          επικοινωνώντας μαζί μας, υπό την επιφύλαξη νομικών υποχρεώσεων
-          τήρησης.
-        </p>
+      <LegalSection title={t("useTitle")}>
+        <p>{t("useP1")}</p>
+        <p>{t("useP2")}</p>
       </LegalSection>
 
-      <LegalSection title="Cookies / analytics">
-        <p>
-          Χρησιμοποιούμε cookies και παρόμοια τεχνολογία για authentication,
-          προτιμήσεις συνεδρίας και βασική λειτουργία του ιστότοπου. Αν
-          ενσωματωθούν εργαλεία analytics στο μέλλον, θα ενημερώνεται η παρούσα
-          πολιτική.
-        </p>
+      <LegalSection title={t("accountTitle")}>
+        <p>{t("accountP1")}</p>
       </LegalSection>
 
-      <LegalSection title="Ασφάλεια δεδομένων">
-        <p>
-          Εφαρμόζουμε reasonable τεχνικά και οργανωτικά μέτρα για την προστασία
-          δεδομένων. Καμία μέθοδος μετάδοσης ή αποθήκευσης στο διαδίκτυο δεν
-          είναι απόλυτα ασφαλής.
-        </p>
+      <LegalSection id="cookies" title={t("cookiesTitle")}>
+        <p>{t("cookiesP1")}</p>
       </LegalSection>
 
-      <LegalSection title="Επικοινωνία">
+      <LegalSection id="security" title={t("securityTitle")}>
+        <p>{t("securityP1")}</p>
+      </LegalSection>
+
+      <LegalSection title={t("contactTitle")}>
         <p>
-          Για ερωτήσεις σχετικά με την πολιτική απορρήτου, επικοινώνησε στο{" "}
-          <a href={`mailto:${supportEmail}`} className="text-gold hover:underline">
-            {supportEmail}
-          </a>{" "}
-          ή μέσω της{" "}
-          <Link href="/contact" className="text-gold hover:underline">
-            σελίδας επικοινωνίας
-          </Link>
-          .
+          {t.rich("contactP1", {
+            email: supportEmail,
+            mailto: (chunks) => (
+              <a
+                href={`mailto:${supportEmail}`}
+                className="text-gold hover:underline"
+              >
+                {chunks}
+              </a>
+            ),
+            contactLink: (chunks) => (
+              <Link href="/contact" className="text-gold hover:underline">
+                {chunks}
+              </Link>
+            ),
+          })}
         </p>
         <p className="text-xs text-muted">
-          Τελευταία ενημέρωση: {new Date().getFullYear()}
+          {t("lastUpdated")}: {new Date().getFullYear()}
         </p>
       </LegalSection>
     </PublicPageLayout>

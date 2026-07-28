@@ -1,5 +1,6 @@
 "use server";
 
+import { actionError, authActionError, mustSignInError } from "@/lib/action-error-i18n";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { readStoredBedrooms, writeStoredBedrooms } from "@/lib/listing-bedroom-storage";
@@ -26,12 +27,12 @@ export type BedroomInput = {
 
 async function requireListingOwner(listingId: string) {
   const supabase = await createClient();
-  if (!supabase) return { error: "Η υπηρεσία δεν είναι διαθέσιμη." } as const;
+  if (!supabase) return { error: await actionError("serviceUnavailable") } as const;
 
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) return { error: "Πρέπει να συνδεθείς." } as const;
+  if (!user) return await mustSignInError();
 
   const { data: listing } = await supabase
     .from("listings")
@@ -40,7 +41,7 @@ async function requireListingOwner(listingId: string) {
     .eq("user_id", user.id)
     .maybeSingle();
 
-  if (!listing) return { error: "Η αγγελία δεν βρέθηκε." } as const;
+  if (!listing) return { error: await actionError("listingNotFound") } as const;
   return { supabase, user } as const;
 }
 
@@ -98,7 +99,7 @@ async function saveToStorage(
   rows: ListingSleepingArrangement[]
 ): Promise<{ arrangements: ListingSleepingArrangement[] } | { error: string }> {
   const ok = await writeStoredBedrooms(listingId, rows);
-  if (!ok) return { error: "Δεν ήταν δυνατή η αποθήκευση των υπνοδωματίων." };
+  if (!ok) return { error: await actionError("bedroomsSaveFailed") };
   return { arrangements: rows };
 }
 
@@ -121,7 +122,7 @@ export async function saveOwnerSleepingArrangements(
     .filter((row) => row.room_name && row.bed_type);
 
   if (cleaned.length > 8) {
-    return { error: "Μπορείς να προσθέσεις έως 8 υπνοδωμάτια." };
+    return { error: await actionError("maxBedrooms") };
   }
 
   const { error: deleteError } = await auth.supabase
@@ -151,7 +152,7 @@ export async function saveOwnerSleepingArrangements(
 
   if (deleteError) {
     console.error("[sleeping-arrangements] delete", deleteError.message);
-    return { error: "Δεν ήταν δυνατή η αποθήκευση των υπνοδωματίων." };
+    return { error: await actionError("bedroomsSaveFailed") };
   }
 
   if (cleaned.length === 0) {
@@ -197,7 +198,7 @@ export async function saveOwnerSleepingArrangements(
 
   if (insertError) {
     console.error("[sleeping-arrangements] insert", insertError.message);
-    return { error: "Δεν ήταν δυνατή η αποθήκευση των υπνοδωματίων." };
+    return { error: await actionError("bedroomsSaveFailed") };
   }
 
   revalidatePath(`/dashboard/listings/${listingId}/edit`);

@@ -1,9 +1,10 @@
-"use client";
+﻿"use client";
 
 import { useState, useMemo, useCallback, useRef, useEffect } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Map as MapIcon, Search, PanelRightClose, Loader2 } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { PropertyMapLoader } from "@/components/map/PropertyMapLoader";
 import type { ListingWithImages } from "@/lib/types";
 import type { ListingUnavailablePeriod } from "@/lib/unavailable-periods";
@@ -98,11 +99,11 @@ export function ListingsSearchView({
   favoriteIds = [],
   unavailablePeriodsByListingId = {},
 }: Props) {
+  const t = useTranslations("Listings");
   const router = useRouter();
   const searchParams = useSearchParams();
   const isLgUp = useIsLgUp();
   const listingRefs = useRef(new globalThis.Map<string, HTMLDivElement>());
-  const listScrollRef = useRef<HTMLDivElement>(null);
   const baselineBoundsRef = useRef<MapBounds | undefined>(undefined);
   const pendingBoundsRef = useRef<MapBounds | null>(null);
   const viewportDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -113,6 +114,10 @@ export function ListingsSearchView({
   const mapBoundsMode = !searchPolygon?.length;
   const rentalType = searchParams.get("rentalType");
   const durationMonths = parseSearchDurationMonths(searchParams.get("durationMonths"));
+  const guestsRaw = searchParams.get("guests");
+  const guests = guestsRaw ? parseInt(guestsRaw, 10) : undefined;
+  const selectedGuests =
+    guests != null && Number.isFinite(guests) && guests > 0 ? guests : undefined;
   const interestFrom =
     searchParams.get("interestFrom")?.trim() ||
     searchParams.get("start")?.trim() ||
@@ -161,10 +166,11 @@ export function ListingsSearchView({
     return hrefs;
   }, [visibleListings, searchKey]);
 
+  // Map pins match the current results page (up to 18) — one pin per card.
   const mapMarkers = useMemo(() => {
     const stayParams = new URLSearchParams(searchKey);
     return buildMapMarkersFromListings(
-      visibleListings,
+      listings,
       rentalType,
       (listing) => buildListingDetailHref(listing, stayParams),
       {
@@ -172,19 +178,33 @@ export function ListingsSearchView({
         interestTo,
         durationMonths,
         rentalTypeFilter: rentalType,
-      }
+        guests: selectedGuests,
+      },
+      { fallbackCenter: mapCenter }
     );
-  }, [visibleListings, rentalType, searchKey, interestFrom, interestTo, durationMonths]);
-
-  const { title: pageTitle } = buildResultsPageTitle({
+  }, [
+    listings,
     rentalType,
-    cityLabel,
-    districtLabel,
-    nearbySearch,
-    mapAreaSearch,
-    boundsSearch,
-  });
-  const pageSubtitle = buildResultsSubtitle(pagination.totalCount);
+    searchKey,
+    interestFrom,
+    interestTo,
+    durationMonths,
+    selectedGuests,
+    mapCenter,
+  ]);
+
+  const { title: pageTitle } = buildResultsPageTitle(
+    {
+      rentalType,
+      cityLabel,
+      districtLabel,
+      nearbySearch,
+      mapAreaSearch,
+      boundsSearch,
+    },
+    t
+  );
+  const pageSubtitle = buildResultsSubtitle(pagination.totalCount, t);
   const showDatesHint =
     rentalType === "short_term" && !interestFrom && !interestTo && listings.length > 0;
 
@@ -231,7 +251,7 @@ export function ListingsSearchView({
       setViewportDirty(false);
       setMapSearchPending(false);
       syncBoundsToUrl(bounds);
-      listScrollRef.current?.scrollTo({ top: 0, behavior: "smooth" });
+      window.scrollTo({ top: 0, behavior: "smooth" });
     },
     [syncBoundsToUrl]
   );
@@ -260,7 +280,7 @@ export function ListingsSearchView({
       return;
     }
     setHoveredId(null);
-    listScrollRef.current?.scrollTo({ top: 0, behavior: "smooth" });
+    window.scrollTo({ top: 0, behavior: "smooth" });
   }, [clientPage]);
 
   const favoriteSet = useMemo(() => new Set(favoriteIds), [favoriteIds]);
@@ -366,7 +386,7 @@ export function ListingsSearchView({
       ) : (
         <Search className="h-4 w-4 text-gold" aria-hidden />
       )}
-      {mapSearchPending ? "Αναζήτηση σε αυτή την περιοχή…" : "Αναζήτηση σε αυτή την περιοχή"}
+      {mapSearchPending ? t("searchThisAreaPending") : t("searchThisArea")}
     </button>
   );
 
@@ -380,11 +400,11 @@ export function ListingsSearchView({
           className="absolute top-3 right-3 z-[500] inline-flex items-center gap-1.5 rounded-lg border border-charcoal/15 bg-white px-3 py-2 text-xs font-semibold text-charcoal shadow-[0_2px_8px_rgba(0,0,0,0.08)] transition hover:border-charcoal/25"
         >
           <PanelRightClose className="h-3.5 w-3.5" />
-          Απόκρυψη χάρτη
+          {t("hideMap")}
         </button>
       )}
       <PropertyMapLoader
-        key={searchKey}
+        key={`${searchKey}|p${pagination.currentPage}`}
         lat={mapCenter.lat}
         lng={mapCenter.lng}
         markers={mapMarkers}
@@ -397,6 +417,7 @@ export function ListingsSearchView({
         reportBoundsOnMove={false}
         onViewportChange={handleViewportChange}
         clustered
+        clusterMarkers={false}
         fitMarkersOnLoad={fitMapToMarkers && !boundsSearch && !searchPolygon?.length}
         fitMaxZoom={fitMapMaxZoom}
         fitMinZoom={fitMapMinZoom}
@@ -425,14 +446,10 @@ export function ListingsSearchView({
       {listings.length === 0 ? (
         <div className="flex flex-col items-center justify-center px-6 py-20 text-center">
           <p className="font-display text-lg font-semibold text-charcoal">
-            {emptyDueToMinStay
-              ? "Δεν βρέθηκαν αγγελίες που να δέχονται αυτή τη διάρκεια διαμονής."
-              : "Δεν βρέθηκαν αγγελίες με αυτά τα κριτήρια."}
+            {emptyDueToMinStay ? t("emptyMinStayTitle") : t("emptyCriteriaTitle")}
           </p>
           <p className="mt-2 max-w-sm text-sm text-muted">
-            {emptyDueToMinStay
-              ? "Δοκίμασε μεγαλύτερη περίοδο ημερομηνιών ή δες όλες τις διαθέσιμες αγγελίες."
-              : "Δοκίμασε άλλες ημερομηνίες, περιοχή ή λιγότερα φίλτρα."}
+            {emptyDueToMinStay ? t("emptyMinStayHint") : t("emptyCriteriaHint")}
           </p>
           <div className="mt-6 flex flex-wrap justify-center gap-3">
             {emptyDueToMinStay ? (
@@ -449,29 +466,29 @@ export function ListingsSearchView({
                   }}
                   className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-border bg-white px-5 py-2.5 text-sm font-medium text-charcoal hover:border-gold/30"
                 >
-                  Άλλαξε ημερομηνίες
+                  {t("changeDates")}
                 </button>
                 <Link
                   href="/listings?rentalType=short_term"
                   className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-gold px-5 py-2.5 text-sm font-semibold text-white"
                 >
-                  Δες όλες τις αγγελίες
+                  {t("viewAllListings")}
                 </Link>
               </>
             ) : (
               <>
                 <Link
-                  href="/listings"
+                  href="/listings?rentalType=short_term"
                   className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-border bg-white px-5 py-2.5 text-sm font-medium text-charcoal hover:border-gold/30"
                 >
-                  Καθαρισμός φίλτρων
+                  {t("clearFilters")}
                 </Link>
                 <button
                   type="button"
                   onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
                   className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-gold px-5 py-2.5 text-sm font-semibold text-white"
                 >
-                  Αλλαγή αναζήτησης
+                  {t("changeSearch")}
                 </button>
               </>
             )}
@@ -501,6 +518,7 @@ export function ListingsSearchView({
                   interestTo={interestTo}
                   durationMonths={durationMonths}
                   rentalTypeFilter={rentalType}
+                  guests={selectedGuests}
                   listingHref={listingHrefs.get(listing.id)}
                   unavailablePeriods={unavailablePeriodsByListingId[listing.id] ?? []}
                 />
@@ -521,12 +539,15 @@ export function ListingsSearchView({
         <p className="mt-0.5 text-sm text-muted">
           {pageSubtitle}
           {pagination.totalPages > 1
-            ? ` · ${pagination.rangeStart}–${pagination.rangeEnd}`
+            ? t("showingRange", {
+                start: pagination.rangeStart,
+                end: pagination.rangeEnd,
+              })
             : ""}
         </p>
         {showDatesHint ? (
           <p className="mt-1 text-xs text-muted/90">
-            Πρόσθεσε ημερομηνίες για πιο ακριβή διαθεσιμότητα.
+            {t("addDatesHint")}
           </p>
         ) : null}
       </div>
@@ -537,18 +558,7 @@ export function ListingsSearchView({
     </div>
   );
 
-  const desktopListPanel = (
-    <div
-      ref={listScrollRef}
-      className="min-h-0 flex-1 overflow-y-auto overscroll-contain"
-    >
-      {listingsColumnHeader}
-      {listingsGrid}
-      {listingsPagination}
-    </div>
-  );
-
-  const mobileListPanel = (
+  const listingsColumn = (
     <div className="bg-white">
       {listingsColumnHeader}
       {listingsGrid}
@@ -556,82 +566,92 @@ export function ListingsSearchView({
     </div>
   );
 
+  const desktopMapCard = (
+    <aside
+      className="sticky top-[calc(var(--listings-header-offset)+0.75rem)] z-10 hidden w-[46%] shrink-0 self-start lg:block"
+      style={{
+        height: "calc(100dvh - var(--listings-header-offset) - 1.75rem)",
+      }}
+    >
+      <div className="h-full pb-6 pl-2 pr-6 pt-1 xl:pl-3 xl:pr-8">
+        <div className="relative h-full overflow-hidden rounded-[24px] border border-charcoal/10 bg-[#e8e8e8] shadow-[0_10px_36px_-18px_rgba(26,26,26,0.28)]">
+          {mapPanel}
+        </div>
+      </div>
+    </aside>
+  );
+
   return (
-    <div className="flex flex-col bg-white lg:min-h-0 lg:flex-1 lg:overflow-hidden">
-      {/* Desktop split view */}
-      <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-        {isLgUp ? (
-          <div className="flex h-full min-h-0 flex-1 overflow-hidden">
-            <div
-              className={cn(
-                "flex min-h-0 flex-1 flex-col bg-white transition-[width] duration-300",
-                mapOpen ? "max-w-[54%] shrink-0 grow-0 basis-[54%] border-r border-border" : "w-full"
-              )}
+    <div className="bg-white">
+      {isLgUp ? (
+        <div className="flex items-start">
+          <div
+            className={cn(
+              "min-w-0 bg-white transition-[width] duration-300",
+              mapOpen ? "w-[54%] shrink-0" : "w-full"
+            )}
+          >
+            {listingsColumn}
+          </div>
+          {mapOpen ? (
+            desktopMapCard
+          ) : (
+            <button
+              type="button"
+              onClick={() => setMapOpen(true)}
+              className="fixed bottom-6 right-6 z-[90] inline-flex items-center gap-2 rounded-full border border-charcoal/15 bg-white px-4 py-2.5 text-sm font-semibold text-charcoal shadow-float transition hover:border-gold/30"
             >
-              {desktopListPanel}
-            </div>
-            {mapOpen ? (
-              <div className="relative h-full min-h-0 min-w-0 flex-1">
-                {mapPanel}
-              </div>
-            ) : (
+              <MapIcon className="h-4 w-4 text-gold" />
+              {t("showMap")}
+            </button>
+          )}
+        </div>
+      ) : (
+        <div>
+          {mobileView === "list" && (
+            <>
+              {listingsColumn}
               <button
                 type="button"
-                onClick={() => setMapOpen(true)}
-                className="fixed bottom-6 right-6 z-[90] inline-flex items-center gap-2 rounded-full border border-charcoal/15 bg-white px-4 py-2.5 text-sm font-semibold text-charcoal shadow-float transition hover:border-gold/30"
+                onClick={() => setMobileView("map")}
+                className="fixed right-4 bottom-[5.5rem] z-[110] inline-flex min-h-11 items-center gap-2 rounded-full border border-border bg-white px-4 text-sm font-semibold text-charcoal shadow-float transition hover:border-gold/40"
+                aria-label={t("showMap")}
               >
                 <MapIcon className="h-4 w-4 text-gold" />
-                Εμφάνιση χάρτη
+                {t("map")}
               </button>
-            )}
-          </div>
-        ) : (
-          <div>
-            {mobileView === "list" && (
-              <>
-                {mobileListPanel}
-                <button
-                  type="button"
-                  onClick={() => setMobileView("map")}
-                  className="fixed right-4 bottom-[5.5rem] z-[110] inline-flex min-h-11 items-center gap-2 rounded-full border border-border bg-white px-4 text-sm font-semibold text-charcoal shadow-float transition hover:border-gold/40"
-                  aria-label="Εμφάνιση χάρτη"
-                >
-                  <MapIcon className="h-4 w-4 text-gold" />
-                  Χάρτης
-                </button>
-              </>
-            )}
+            </>
+          )}
 
-            {mobileView === "map" && (
-              <div className="fixed inset-0 z-[120] flex flex-col bg-white pt-[var(--listings-header-offset)]">
-                <div className="flex shrink-0 items-center border-b border-border px-4 py-2.5">
-                  <button
-                    type="button"
-                    onClick={() => setMobileView("list")}
-                    className="inline-flex min-h-10 items-center rounded-xl border border-border bg-white px-4 text-sm font-medium text-charcoal"
-                  >
-                    Λίστα
-                  </button>
-                </div>
-                <div className="relative min-h-0 flex-1">
-                  {mapPanel}
-                  <MapListingPreviewSheet
-                    marker={mobilePreviewMarker}
-                    onClose={clearMarkerSelection}
-                  />
-                </div>
+          {mobileView === "map" && (
+            <div className="fixed inset-0 z-[120] flex flex-col bg-white pt-[var(--listings-header-offset)]">
+              <div className="flex shrink-0 items-center border-b border-border px-4 py-2.5">
                 <button
                   type="button"
                   onClick={() => setMobileView("list")}
-                  className="fixed bottom-[5.5rem] left-1/2 z-[130] -translate-x-1/2 rounded-full bg-gold px-6 py-3 text-sm font-semibold text-white shadow-float"
+                  className="inline-flex min-h-10 items-center rounded-xl border border-border bg-white px-4 text-sm font-medium text-charcoal"
                 >
-                  Δες αγγελίες
+                  {t("list")}
                 </button>
               </div>
-            )}
-          </div>
-        )}
-      </div>
+              <div className="relative min-h-0 flex-1">
+                {mapPanel}
+                <MapListingPreviewSheet
+                  marker={mobilePreviewMarker}
+                  onClose={clearMarkerSelection}
+                />
+              </div>
+              <button
+                type="button"
+                onClick={() => setMobileView("list")}
+                className="fixed bottom-[5.5rem] left-1/2 z-[130] -translate-x-1/2 rounded-full bg-gold px-6 py-3 text-sm font-semibold text-white shadow-float"
+              >
+                {t("viewListings")}
+              </button>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

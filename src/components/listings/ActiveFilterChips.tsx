@@ -2,6 +2,7 @@
 
 import { useRouter, useSearchParams } from "next/navigation";
 import { X } from "lucide-react";
+import { useLocale, useTranslations } from "next-intl";
 import {
   buildFilterChips,
   removeFilterChip,
@@ -12,7 +13,15 @@ import { resetListingsPage } from "@/lib/listings-pagination";
 export function ActiveFilterChips() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const chips = buildFilterChips(searchParams);
+  const t = useTranslations("Listings");
+  const tChip = useTranslations("Listings.chip");
+  const tType = useTranslations("PropertyTypes");
+  const locale = useLocale();
+  const chips = buildFilterChips(searchParams, {
+    t: (key, values) => tChip(key, values),
+    propertyTypeT: (key) => tType(key),
+    locale,
+  });
 
   if (chips.length === 0) return null;
 
@@ -20,12 +29,17 @@ export function ActiveFilterChips() {
     const next = resetListingsPage(
       removeFilterChip(new URLSearchParams(searchParams.toString()), chip)
     );
-    const qs = next.toString();
-    router.push(qs ? `/listings?${qs}` : "/listings");
+    if (!next.get("rentalType")) next.set("rentalType", "short_term");
+    router.push(`/listings?${next.toString()}`);
   }
 
   function clearAll() {
-    router.push("/listings");
+    const rt = searchParams.get("rentalType");
+    router.push(
+      rt === "monthly" || rt === "short_term"
+        ? `/listings?rentalType=${rt}`
+        : "/listings?rentalType=short_term"
+    );
   }
 
   return (
@@ -39,7 +53,7 @@ export function ActiveFilterChips() {
         >
           <span className="truncate">{chip.label}</span>
           <X className="h-3 w-3 shrink-0 text-muted" aria-hidden />
-          <span className="sr-only">Αφαίρεση φίλτρου</span>
+          <span className="sr-only">{t("removeFilter")}</span>
         </button>
       ))}
       <button
@@ -47,7 +61,7 @@ export function ActiveFilterChips() {
         onClick={clearAll}
         className="text-xs font-medium text-muted underline-offset-2 hover:text-charcoal hover:underline"
       >
-        Καθαρισμός όλων
+        {t("clearAll")}
       </button>
     </div>
   );

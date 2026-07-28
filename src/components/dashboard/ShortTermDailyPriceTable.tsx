@@ -1,5 +1,6 @@
 "use client";
 
+import { useLocale, useTranslations } from "next-intl";
 import { addDays, todayDateKey } from "@/lib/availability-calendar";
 import { cn } from "@/lib/utils";
 
@@ -13,11 +14,12 @@ type Props = {
   onDateClick?: (dateKey: string) => void;
 };
 
-function formatRowDate(dateKey: string): string {
+function formatRowDate(dateKey: string, locale: string): string {
   const [y, m, d] = dateKey.split("-").map(Number);
   const date = new Date(y, m - 1, d);
-  const weekday = date.toLocaleDateString("el-GR", { weekday: "short" });
-  const label = date.toLocaleDateString("el-GR", { day: "2-digit", month: "2-digit" });
+  const intlLocale = locale === "en" ? "en-GB" : "el-GR";
+  const weekday = date.toLocaleDateString(intlLocale, { weekday: "short" });
+  const label = date.toLocaleDateString(intlLocale, { day: "2-digit", month: "2-digit" });
   return `${label} · ${weekday}`;
 }
 
@@ -42,26 +44,29 @@ export function ShortTermDailyPriceTable({
   selectionEnd,
   onDateClick,
 }: Props) {
+  const t = useTranslations("Workspace.dailyPriceTable");
+  const locale = useLocale();
   const today = todayDateKey();
   const rows = Array.from({ length: days }, (_, i) => addDays(today, i));
+  const priceLocale = locale === "en" ? "en-GB" : "el-GR";
 
   return (
     <div className="rounded-2xl border border-border bg-white shadow-soft">
       <div className="border-b border-border px-4 py-3">
         <h3 className="font-display text-sm font-semibold text-charcoal">
-          Τιμές ανά ημέρα
+          {t("title")}
         </h3>
         <p className="mt-0.5 text-xs text-muted">
-          Επόμενες {days} ημέρες — πάτησε μια γραμμή για να την επεξεργαστείς στο ημερολόγιο.
+          {t("subtitle", { days })}
         </p>
       </div>
       <div className="max-h-[320px] overflow-y-auto">
         <table className="w-full text-sm">
           <thead className="sticky top-0 z-10 bg-cream/95 backdrop-blur-sm">
             <tr className="text-left text-[11px] font-medium tracking-wide text-muted uppercase">
-              <th className="px-4 py-2.5">Ημερομηνία</th>
-              <th className="px-4 py-2.5">Κατάσταση</th>
-              <th className="px-4 py-2.5 text-right">Τιμή / βράδυ</th>
+              <th className="px-4 py-2.5">{t("colDate")}</th>
+              <th className="px-4 py-2.5">{t("colStatus")}</th>
+              <th className="px-4 py-2.5 text-right">{t("colPrice")}</th>
             </tr>
           </thead>
           <tbody>
@@ -90,10 +95,10 @@ export function ShortTermDailyPriceTable({
                           selected ? "text-charcoal" : "text-charcoal/90"
                         )}
                       >
-                        {formatRowDate(dateKey)}
+                        {formatRowDate(dateKey, locale)}
                         {isToday && (
                           <span className="ml-2 text-[10px] font-semibold uppercase text-gold-dark">
-                            Σήμερα
+                            {t("today")}
                           </span>
                         )}
                       </span>
@@ -103,7 +108,7 @@ export function ShortTermDailyPriceTable({
                           blocked ? "text-muted" : "text-teal"
                         )}
                       >
-                        {blocked ? "Μη διαθέσιμο" : "Διαθέσιμο"}
+                        {blocked ? t("unavailable") : t("available")}
                       </span>
                       <span
                         className={cn(
@@ -117,7 +122,7 @@ export function ShortTermDailyPriceTable({
                                 : "text-muted"
                         )}
                       >
-                        {blocked ? "—" : price != null ? `€${price.toLocaleString("el-GR")}` : "—"}
+                        {blocked ? "—" : price != null ? `€${price.toLocaleString(priceLocale)}` : "—"}
                       </span>
                     </button>
                   </td>

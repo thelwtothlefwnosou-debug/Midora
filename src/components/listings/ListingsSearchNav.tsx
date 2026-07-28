@@ -2,17 +2,19 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 
-const LINKS = [
-  { label: "Ακίνητα", href: "/listings" },
-  { label: "Πώς λειτουργεί", href: "/how-it-works" },
-  { label: "Για ιδιοκτήτες", href: "/owners" },
-  { label: "Αγαπημένα", href: "/dashboard/favorites" },
-] as const;
+const LINK_DEFS = [
+  { key: "listings" as const, href: "/listings" },
+  { key: "howItWorks" as const, href: "/how-it-works" },
+  { key: "forOwners" as const, href: "/owners" },
+  { key: "favorites" as const, href: "/dashboard/favorites" },
+];
 
 export function ListingsSearchNav({ className }: { className?: string }) {
   const pathname = usePathname();
+  const t = useTranslations("Nav");
 
   return (
     <nav
@@ -20,9 +22,9 @@ export function ListingsSearchNav({ className }: { className?: string }) {
         "hidden items-center justify-center gap-7 md:flex lg:gap-9",
         className
       )}
-      aria-label="Κύρια πλοήγηση"
+      aria-label={t("ariaMain")}
     >
-      {LINKS.map((link) => {
+      {LINK_DEFS.map((link) => {
         const active =
           pathname === link.href || pathname.startsWith(`${link.href}/`);
         return (
@@ -37,7 +39,7 @@ export function ListingsSearchNav({ className }: { className?: string }) {
             )}
             aria-current={active ? "page" : undefined}
           >
-            {link.label}
+            {t(link.key)}
           </Link>
         );
       })}

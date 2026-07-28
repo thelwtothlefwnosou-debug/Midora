@@ -1,51 +1,45 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import type { WizardPhaseId } from "@/lib/listing-wizard-steps";
 
 export type PhaseIntroContent = {
   id: WizardPhaseId;
-  title: string;
-  subtitle: string;
-  body: string;
 };
 
-/** Calm Midora phase interstitials — not Airbnb copy. */
+/** Calm Midora phase interstitials — copy lives in Wizard.phaseIntro messages. */
 export const WIZARD_PHASE_INTROS: Record<WizardPhaseId, PhaseIntroContent> = {
-  about: {
-    id: "about",
-    title: "Το ακίνητό σου",
-    subtitle: "Ξεκινάμε με τα βασικά",
-    body: "Τύπος μίσθωσης, είδος ακινήτου, τοποθεσία και χωρητικότητα — ώστε η αγγελία να στηρίζεται σε σωστά στοιχεία από την αρχή.",
-  },
-  stand_out: {
-    id: "stand_out",
-    title: "Να ξεχωρίζει",
-    subtitle: "Κάνε την αγγελία σου ελκυστική",
-    body: "Τίτλος, περιγραφή, παροχές και φωτογραφίες — ό,τι βοηθά τους ενδιαφερόμενους να καταλάβουν γρήγορα αν ταιριάζει το ακίνητο.",
-  },
-  finish: {
-    id: "finish",
-    title: "Ολοκλήρωση",
-    subtitle: "Τιμή, επικοινωνία και έλεγχος",
-    body: "Όρισε τιμές και διαθεσιμότητα, τρόπους επικοινωνίας και δηλώσεις — μετά έλεγξε τα πάντα πριν την υποβολή για έλεγχο.",
-  },
+  about: { id: "about" },
+  stand_out: { id: "stand_out" },
+  finish: { id: "finish" },
 };
+
+function phaseIntroKeyPrefix(id: WizardPhaseId): "about" | "standOut" | "finish" {
+  if (id === "stand_out") return "standOut";
+  return id;
+}
 
 export function WizardPhaseIntro({ intro }: { intro: PhaseIntroContent }) {
+  const t = useTranslations("Wizard.phaseIntro");
+  const prefix = phaseIntroKeyPrefix(intro.id);
+
   return (
     <div className="flex min-h-[42vh] flex-col justify-center py-6 sm:min-h-[48vh] sm:py-10">
       <p className="text-xs font-medium uppercase tracking-[0.18em] text-gold">
-        {intro.subtitle}
+        {t(`${prefix}Subtitle`)}
       </p>
       <h2 className="mt-4 font-display text-3xl font-semibold tracking-tight text-charcoal sm:text-4xl">
-        {intro.title}
+        {t(`${prefix}Title`)}
       </h2>
       <p className="mt-5 max-w-lg text-base leading-relaxed text-muted sm:text-lg">
-        {intro.body}
+        {t(`${prefix}Body`)}
       </p>
       <p className="mt-10 text-sm text-muted">
-        Πάτα <span className="font-medium text-charcoal">Επόμενο</span> για να συνεχίσεις — ή
-        πίσω αν θέλεις να επιστρέψεις.
+        {t.rich("ctaHint", {
+          next: (chunks) => (
+            <span className="font-medium text-charcoal">{chunks}</span>
+          ),
+        })}
       </p>
     </div>
   );

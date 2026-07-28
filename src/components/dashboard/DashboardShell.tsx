@@ -1,9 +1,10 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { Menu, X, LogOut } from "lucide-react";
 import { AccountNav, AccountNavCollapseButton } from "@/components/account/AccountNav";
-import { dashboardBreadcrumb, type AccountNavId } from "@/components/account/account-nav";
+import { dashboardBreadcrumbKey, type AccountNavId } from "@/components/account/account-nav";
 import { DashboardBreadcrumbTrail } from "@/components/dashboard/DashboardBreadcrumbTrail";
 import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
 import { DashboardProfileCard } from "@/components/dashboard/DashboardProfileCard";
@@ -24,6 +25,9 @@ export function DashboardShell({
   variant?: "default" | "workspace";
   children: React.ReactNode;
 }) {
+  const tAccount = useTranslations("AccountNav");
+  const tShell = useTranslations("Dashboard.shell");
+  const tDash = useTranslations("Dashboard");
   const ctx = useDashboardLayout();
   if (!ctx) {
     // Never blank the whole dashboard — show a recoverable shell instead of throwing.
@@ -31,16 +35,14 @@ export function DashboardShell({
       <div className="min-h-screen bg-cream px-4 py-10">
         <div className="mx-auto max-w-lg rounded-2xl border border-border bg-white p-6 text-center shadow-soft">
           <p className="font-display text-lg font-semibold text-charcoal">
-            Δεν φορτώθηκε το dashboard
+            {tShell("notLoadedTitle")}
           </p>
-          <p className="mt-2 text-sm text-muted">
-            Ανανέωσε τη σελίδα. Αν συνεχίζει, αποσυνδέσου και ξανασυνδέσου.
-          </p>
+          <p className="mt-2 text-sm text-muted">{tShell("notLoadedBody")}</p>
           <a
             href="/dashboard"
             className="mt-4 inline-flex rounded-full bg-gold px-5 py-2.5 text-sm font-medium text-white"
           >
-            Ανανέωση
+            {tShell("refresh")}
           </a>
         </div>
         {children}
@@ -76,7 +78,7 @@ export function DashboardShell({
               type="button"
               onClick={() => setMobileOpen(false)}
               className="flex h-9 w-9 items-center justify-center rounded-lg border border-border"
-              aria-label="Κλείσιμο"
+              aria-label={tShell("close")}
             >
               <X className="h-4 w-4" />
             </button>
@@ -112,7 +114,7 @@ export function DashboardShell({
                 )}
               >
                 <LogOut className="h-3.5 w-3.5 shrink-0" />
-                {!sidebarCollapsed && "Αποσύνδεση"}
+                {!sidebarCollapsed && tDash("signOut")}
               </button>
             </form>
           </div>
@@ -123,7 +125,7 @@ export function DashboardShell({
             type="button"
             className="fixed inset-0 z-20 bg-charcoal/30 lg:hidden"
             onClick={() => setMobileOpen(false)}
-            aria-label="Κλείσιμο μενού"
+            aria-label={tShell("closeMenu")}
           />
         )}
 
@@ -133,11 +135,13 @@ export function DashboardShell({
               type="button"
               onClick={() => setMobileOpen(true)}
               className="flex h-9 w-9 items-center justify-center rounded-lg border border-border bg-white"
-              aria-label="Μενού"
+              aria-label={tShell("menu")}
             >
               <Menu className="h-4 w-4" />
             </button>
-            <p className="text-xs text-muted">Dashboard / {dashboardBreadcrumb("", active)}</p>
+            <p className="text-xs text-muted">
+              Dashboard / {tAccount(dashboardBreadcrumbKey("", active))}
+            </p>
           </div>
 
           <div className="mb-5 lg:mb-6">
@@ -146,7 +150,7 @@ export function DashboardShell({
                 className="mb-3"
                 items={[
                   { label: "Midora", href: "/dashboard/listings" },
-                  { label: "Οι αγγελίες μου" },
+                  { label: tDash("myListings") },
                 ]}
               />
             )}

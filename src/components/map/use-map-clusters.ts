@@ -43,9 +43,19 @@ export function lowestPriceLabelFromMarkers(markers: MapMarker[]): string {
   return bestLabel;
 }
 
+/** Cluster badge: price + count so multi-listing pins are not mistaken for one listing. */
+export function formatClusterMarkerLabel(
+  markers: MapMarker[],
+  pointCount: number
+): string {
+  const price = lowestPriceLabelFromMarkers(markers);
+  if (pointCount <= 1) return price;
+  return `${price} · ${pointCount}`;
+}
+
 export function buildSuperclusterIndex(markers: MapMarker[]) {
   const index = new Supercluster<{ marker: MapMarker }>({
-    radius: 56,
+    radius: 42,
     maxZoom: MIDORA_MAP_MAX_ZOOM - 1,
     minZoom: 0,
   });
@@ -112,7 +122,7 @@ function clusterItemsFromIndex(
         longitude,
         latitude,
         pointCount: point_count,
-        label: lowestPriceLabelFromMarkers(leaves),
+        label: formatClusterMarkerLabel(leaves, point_count),
       });
       continue;
     }

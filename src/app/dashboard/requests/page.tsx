@@ -1,4 +1,5 @@
 import { Inbox, Camera, CalendarDays, Tag } from "lucide-react";
+import { getTranslations } from "next-intl/server";
 import { AccountShell } from "@/components/account/AccountShell";
 import { PropertyLeadRow } from "@/components/dashboard/PropertyLeadRow";
 import { Button } from "@/components/ui/Button";
@@ -6,24 +7,25 @@ import { GlassCard } from "@/components/ui/GlassCard";
 import { requireDashboardContext } from "@/lib/dashboard-context";
 import { getOwnerLeads } from "@/lib/leads";
 
-const TIPS = [
-  { icon: Camera, text: "Πρόσθεσε 5+ καθαρές φωτογραφίες" },
-  { icon: CalendarDays, text: "Συμπλήρωσε τη διαθεσιμότητα" },
-  { icon: Tag, text: "Κράτα την τιμή ενημερωμένη" },
-] as const;
-
 export default async function DashboardRequestsPage() {
   const { profile, email } = await requireDashboardContext("/dashboard/requests");
   const leads = await getOwnerLeads(profile.id);
   const activeLeads = leads.filter((l) => l.status !== "archived");
+  const t = await getTranslations("Owner.requestsPage");
+
+  const tips = [
+    { icon: Camera, text: t("tipPhotos") },
+    { icon: CalendarDays, text: t("tipAvailability") },
+    { icon: Tag, text: t("tipPrice") },
+  ] as const;
 
   return (
     <AccountShell
       profile={profile}
       email={email}
       active="requests"
-      title="Αιτήματα"
-      subtitle="Ενδιαφέροντα από επισκέπτες για τις αγγελίες σου."
+      title={t("title")}
+      subtitle={t("subtitle")}
     >
       {activeLeads.length === 0 ? (
         <GlassCard className="overflow-hidden">
@@ -32,19 +34,18 @@ export default async function DashboardRequestsPage() {
               <Inbox className="h-7 w-7 text-gold" strokeWidth={1.5} />
             </div>
             <h2 className="mt-5 font-display text-xl font-semibold text-charcoal">
-              Δεν έχεις ακόμα ενδιαφέροντα
+              {t("emptyTitle")}
             </h2>
             <p className="mt-2 max-w-md text-sm leading-relaxed text-muted">
-              Όταν κάποιος επικοινωνήσει για αγγελία σου, θα εμφανιστεί εδώ με τα στοιχεία
-              επικοινωνίας του.
+              {t("emptyDesc")}
             </p>
 
             <div className="mt-8 w-full max-w-sm rounded-xl border border-border bg-sand/30 p-4 text-left">
               <p className="text-xs font-medium tracking-wide text-muted uppercase">
-                Συμβουλές για περισσότερα ενδιαφέροντα
+                {t("tipsTitle")}
               </p>
               <ul className="mt-3 space-y-2.5">
-                {TIPS.map(({ icon: Icon, text }) => (
+                {tips.map(({ icon: Icon, text }) => (
                   <li key={text} className="flex items-center gap-2.5 text-sm text-charcoal">
                     <Icon className="h-4 w-4 shrink-0 text-gold" />
                     {text}
@@ -54,7 +55,7 @@ export default async function DashboardRequestsPage() {
             </div>
 
             <Button href="/dashboard/listings" className="mt-6">
-              Δες τις αγγελίες μου
+              {t("viewMyListings")}
             </Button>
           </div>
         </GlassCard>

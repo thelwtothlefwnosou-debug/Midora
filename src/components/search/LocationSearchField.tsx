@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { PenLine, Type } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { CitySearchInput } from "@/components/search/CitySearchInput";
 import { MapAreaDrawModal } from "@/components/map/MapAreaDrawModal";
 import type { LatLng } from "@/lib/geo/polygon";
@@ -38,6 +39,8 @@ export function LocationSearchField({
   inputId,
   onFocus,
 }: Props) {
+  const tListings = useTranslations("Listings");
+  const t = useTranslations("Search.locationField");
   const [menuOpen, setMenuOpen] = useState(false);
   const [drawOpen, setDrawOpen] = useState(false);
   const [hasQuery, setHasQuery] = useState(Boolean(defaultValue.trim()));
@@ -78,10 +81,10 @@ export function LocationSearchField({
           </span>
           <span>
             <span className="block text-sm font-semibold text-teal">
-              Αναζήτηση με όνομα
+              {t("searchByName")}
             </span>
             <span className="mt-0.5 block text-xs text-muted">
-              Αναζήτηση ανά πόλη, δήμο ή γειτονιά
+              {t("searchByNameHint")}
             </span>
           </span>
         </button>
@@ -98,10 +101,10 @@ export function LocationSearchField({
           </span>
           <span>
             <span className="block text-sm font-semibold text-teal">
-              Σχεδίασε περιοχή στον χάρτη
+              {t("drawAreaOnMap")}
             </span>
             <span className="mt-0.5 block text-xs text-muted">
-              Επίλεξε την περιοχή αναζήτησης απευθείας στον χάρτη
+              {t("drawAreaHint")}
             </span>
           </span>
         </button>
@@ -132,11 +135,11 @@ export function LocationSearchField({
         >
           {variant === "toolbar" ? (
             <div className="flex min-w-0 flex-1 flex-col justify-center gap-0.5">
-              <span className="listings-search-segment__label">Πού</span>
+              <span className="listings-search-segment__label">{tListings("where")}</span>
               <div className="flex min-w-0 items-center gap-2">
                 <PenLine className="h-4 w-4 shrink-0 text-teal" aria-hidden />
                 <span className="listings-search-segment__value text-teal">
-                  Σχεδιασμένη περιοχή στον χάρτη
+                  {t("drawnArea")}
                 </span>
               </div>
             </div>
@@ -146,11 +149,11 @@ export function LocationSearchField({
               <div className="flex min-w-0 flex-1 flex-col">
                 {variant === "hero" && (
                   <span className="text-[10px] font-medium tracking-wider text-muted uppercase">
-                    Περιοχή αναζήτησης
+                    {t("searchArea")}
                   </span>
                 )}
                 <span className="text-sm font-medium text-teal">
-                  Σχεδιασμένη περιοχή στον χάρτη
+                  {t("drawnArea")}
                 </span>
               </div>
             </>
@@ -163,7 +166,7 @@ export function LocationSearchField({
             }}
             className="shrink-0 text-xs font-medium text-gold hover:underline"
           >
-            Αλλαγή
+            {t("change")}
           </button>
         </div>
         {drawModal}
@@ -178,7 +181,7 @@ export function LocationSearchField({
           inputId={inputId}
           variant="embedded"
           defaultValue={defaultValue}
-          placeholder={placeholder ?? "Αθήνα, Πάρος, Θεσσαλονίκη…"}
+          placeholder={placeholder ?? t("cityPlaceholderLong")}
           onFocus={onFocus}
           onValueChange={onValueChange}
           onSelect={(loc) => {
@@ -199,7 +202,7 @@ export function LocationSearchField({
           <CitySearchInput
             variant="hero"
             defaultValue={defaultValue}
-            placeholder={placeholder ?? "Π.χ. Αθήνα, Θεσσαλονίκη, Πάτρα"}
+            placeholder={placeholder ?? t("cityPlaceholderExample")}
             onValueChange={(v) => {
               setHasQuery(Boolean(v.trim()));
               if (v.trim()) setMenuOpen(false);
@@ -240,11 +243,11 @@ export function LocationSearchField({
           onFocusCapture={() => !hasQuery && setMenuOpen(true)}
         >
           {isToolbar && (
-            <span className="listings-search-segment__label">Πού</span>
+            <span className="listings-search-segment__label">{tListings("where")}</span>
           )}
           {!isToolbar && variant === "compact" && (
             <span className="text-[9px] font-medium tracking-wide text-muted uppercase">
-              Περιοχή
+              {t("areaLabel")}
             </span>
           )}
           <CitySearchInput
@@ -252,8 +255,8 @@ export function LocationSearchField({
             defaultValue={defaultValue}
             placeholder={
               isToolbar
-                ? (placeholder ?? "Προσθήκη προορισμού")
-                : (placeholder ?? "Πόλη ή περιοχή...")
+                ? (placeholder ?? tListings("addDestination"))
+                : (placeholder ?? t("cityOrAreaPlaceholder"))
             }
             className="w-full"
             onFocus={onFocus}

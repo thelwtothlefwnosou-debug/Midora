@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Search, SlidersHorizontal } from "lucide-react";
+import { useTranslations } from "next-intl";
 import type { User } from "@supabase/supabase-js";
 import { LocationSearchField } from "@/components/search/LocationSearchField";
 import {
@@ -104,6 +105,8 @@ export function ListingsFilters({
   totalCount = 0,
   priceHistogram = DEFAULT_PRICE_HISTOGRAM,
 }: Props) {
+  const tListings = useTranslations("Listings");
+  const tSearch = useTranslations("Search");
   const router = useRouter();
   const formRef = useRef<HTMLFormElement>(null);
   const [filtersOpen, setFiltersOpen] = useState(false);
@@ -583,7 +586,7 @@ export function ListingsFilters({
               )}
             >
               <SlidersHorizontal className="h-4 w-4 shrink-0 text-charcoal/55" aria-hidden />
-              <span className="hidden sm:inline">Φίλτρα</span>
+              <span className="hidden sm:inline">{tListings("filters")}</span>
               {filterBadge > 0 && (
                 <span className="listings-search-dock__filters-badge">{filterBadge}</span>
               )}
@@ -592,10 +595,10 @@ export function ListingsFilters({
             <button
               type="submit"
               className="listings-search-dock__submit"
-              aria-label="Αναζήτηση"
+              aria-label={tSearch("search")}
             >
               <Search className="h-4 w-4" strokeWidth={2.25} />
-              <span className="hidden sm:inline">Αναζήτηση</span>
+              <span className="hidden sm:inline">{tSearch("search")}</span>
             </button>
           </div>
         </div>

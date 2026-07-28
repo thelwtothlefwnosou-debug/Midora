@@ -1,102 +1,75 @@
 import type { Metadata } from "next";
+import { getTranslations } from "next-intl/server";
 import {
   PublicPageLayout,
   StaticHero,
   LegalSection,
 } from "@/components/layout/PublicPageLayout";
 
-export const metadata: Metadata = {
-  title: "Όροι χρήσης",
-  description: "Όροι χρήσης της πλατφόρμας Midora.",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("Legal.terms");
+  return {
+    title: t("metaTitle"),
+    description: t("metaDescription"),
+  };
+}
 
-export default function TermsPage() {
+export default async function TermsPage() {
+  const t = await getTranslations("Legal.terms");
+  const tLegal = await getTranslations("Legal");
+  const tShared = await getTranslations("Legal.shared");
+  const damagesParagraphs = tShared("termsDamages").split("\n\n");
+
   return (
     <PublicPageLayout narrow>
       <StaticHero
-        eyebrow="Νομικά"
-        title="Όροι χρήσης"
-        subtitle="Οι παρακάτω όροι περιγράφουν γενικά τη χρήση της πλατφόρμας Midora. Μπορούν να ενημερώνονται περιοδικά — η τρέχουσα έκδοση ισχύει κατά τη χρήση του ιστότοπου."
+        eyebrow={tLegal("eyebrow")}
+        title={t("title")}
+        subtitle={t("subtitle")}
       />
 
-      <LegalSection title="Χρήση της πλατφόρμας">
-        <p>
-          Το Midora είναι πλατφόρμα αγγελιών ακινήτων στην Ελλάδα — για βραχυχρόνια,
-          μηνιαία/μεσοπρόθεσμη διαμονή. Παρέχει εργαλεία αναζήτησης,
-          δημοσίευσης αγγελιών και αρχικής επικοινωνίας μεταξύ ενδιαφερόμενων και
-          αγγελιοδοτών.
-        </p>
-        <p>
-          Η πλατφόρμα δεν συμμετέχει στη σύμβαση ενοικίασης μεταξύ ιδιοκτήτη και
-          ενοικιαστή. Οι συμφωνίες, πληρωμές και νομικές υποχρεώσεις γίνονται
-          απευθείας μεταξύ των μερών.
-        </p>
+      <LegalSection id="role" title={t("roleTitle")}>
+        <p>{tShared("roleFull")}</p>
+        <p>{t("roleP2")}</p>
       </LegalSection>
 
-      <LegalSection title="Λογαριασμοί και κανόνες">
-        <p>
-          Για ορισμένες λειτουργίες (π.χ. αγαπημένα, επικοινωνία, δημοσίευση αγγελιών)
-          απαιτείται λογαριασμός. Είσαι υπεύθυνος για την ασφάλεια των στοιχείων
-          σύνδεσής σου και για τη δραστηριότητα στον λογαριασμό σου.
-        </p>
-        <p>
-          Το Midora μπορεί να αναστείλει ή να περιορίσει λογαριασμούς που παραβιάζουν
-          τους όρους ή τους κανόνες δημοσίευσης.
-        </p>
+      <LegalSection title={t("accountsTitle")}>
+        <p>{t("accountsP1")}</p>
+        <p>{t("accountsP2")}</p>
       </LegalSection>
 
-      <LegalSection title="Αγγελίες">
+      <LegalSection title={t("listingsTitle")}>
+        <p>{t("listingsP1")}</p>
+        <p>{t("listingsP2")}</p>
         <p>
-          Οι ιδιοκτήτες είναι υπεύθυνοι για την ακρίβεια των πληροφοριών στις
-          αγγελίες τους — τιμή, διάρκεια, επιπλώσεις, διαθεσιμότητα και περιγραφή
-          ακινήτου.
-        </p>
-        <p>
-          Η πλατφόρμα διατηρεί το δικαίωμα έγκρισης, απόρριψης, τροποποίησης, απόκρυψης
-          ή αφαίρεσης αγγελιών που δεν πληρούν τους κανόνες ή περιέχουν παραπλανητικές
-          πληροφορίες.
-        </p>
-        <p>
-          Δες τους{" "}
+          {t("listingsRulesPrefix")}{" "}
           <a href="/listing-rules" className="text-gold hover:underline">
-            Κανόνες Δημοσίευσης Αγγελιών
+            {t("listingsRulesLink")}
           </a>
           .
         </p>
       </LegalSection>
 
-      <LegalSection title="Επικοινωνία">
-        <p>
-          Τα μηνύματα και η αρχική επικοινωνία μεταφέρονται μεταξύ χρηστών μέσω της
-          πλατφόρμας όπου υποστηρίζεται. Η επικοινωνία και η τελική συμφωνία
-          γίνονται ευθύνη των εμπλεκόμενων.
-        </p>
-        <p>
-          Απαγορεύεται η χρήση της πλατφόρμας για παράνομες, παραπλανητικές ή
-          καταχρηστικές δραστηριότητες.
-        </p>
+      <LegalSection title={t("contactTitle")}>
+        <p>{t("contactP1")}</p>
+        <p>{t("contactP2")}</p>
       </LegalSection>
 
-      <LegalSection title="Περιορισμός ευθύνης">
-        <p>
-          Το Midora καταβάλλει προσπάθεια για ακριβή πληροφόρηση, αλλά δεν
-          εγγυάται την πληρότητα ή την ορθότητα κάθε αγγελίας. Δεν φέρει ευθύνη
-          για ζημίες που προκύπτουν από συμφωνίες μεταξύ χρηστών, καθυστερήσεις
-          επικοινωνίας ή ανακρίβειες σε αγγελίες.
-        </p>
-        <p>
-          Η χρήση της πλατφόρμας γίνεται με δική σου ευθύνη και κρίση.
-        </p>
+      <LegalSection title={t("paymentsTitle")}>
+        <p>{tShared("termsPayments")}</p>
       </LegalSection>
 
-      <LegalSection title="Ενημερώσεις όρων">
-        <p>
-          Μπορούμε να ενημερώνουμε τους όρους χρήσης όταν αλλάζουν οι λειτουργίες ή
-          οι νομικές απαιτήσεις. Η συνέχιση χρήσης μετά από ενημέρωση σημαίνει
-          αποδοχή των τρεχόντων όρων, εκτός αν ορίζεται διαφορετικά.
-        </p>
+      <LegalSection title={t("damagesTitle")}>
+        {damagesParagraphs.map((para) => (
+          <p key={para.slice(0, 48)}>{para}</p>
+        ))}
+        <p>{t("damagesP3")}</p>
+      </LegalSection>
+
+      <LegalSection title={t("updatesTitle")}>
+        <p>{t("updatesP1")}</p>
         <p className="text-xs text-muted">
-          Τελευταία ενημέρωση: {new Date().getFullYear()}
+          {t("lastUpdated")}: {new Date().getFullYear()}
         </p>
       </LegalSection>
     </PublicPageLayout>

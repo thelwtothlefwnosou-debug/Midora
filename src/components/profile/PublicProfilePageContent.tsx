@@ -1,13 +1,10 @@
+import { getTranslations } from "next-intl/server";
 import {
   AdvertiserPublicProfileBlock,
   buildAdvertiserPublicProfileData,
 } from "@/components/profile/AdvertiserPublicProfileBlock";
 import { PublicProfileListingsSection } from "@/components/profile/PublicProfileListingsSection";
 import { ListingTrustNote } from "@/components/listings/detail/ListingTrustNote";
-import {
-  OWNER_PUBLIC_PROFILE_NEUTRAL_BIO,
-  formatActiveListingsLabel,
-} from "@/lib/profile-display";
 import type { PublicProfilePageData } from "@/lib/profile-public-queries";
 
 type Props = {
@@ -18,13 +15,15 @@ type Props = {
   rentalTypeFilter?: string | null;
 };
 
-export function PublicProfilePageContent({
+export async function PublicProfilePageContent({
   data,
   interestFrom,
   interestTo,
   durationMonths,
   rentalTypeFilter,
 }: Props) {
+  const t = await getTranslations("Profile.public");
+
   const blockData = buildAdvertiserPublicProfileData({
     profile: data.profile,
     displayName: data.displayName,
@@ -33,11 +32,12 @@ export function PublicProfilePageContent({
     phoneVerified: data.phoneVerified,
     activeListings: data.activeListingsCount,
     rentalMode: "short_term",
+    t,
   });
 
   const bioText = data.profile.bio?.trim()
     ? data.profile.bio.trim()
-    : OWNER_PUBLIC_PROFILE_NEUTRAL_BIO;
+    : t("neutralBio");
 
   return (
     <div className="py-2">
@@ -45,9 +45,13 @@ export function PublicProfilePageContent({
         {...blockData}
         showCta={false}
         showTrustNote={false}
-        detailsTitle={`Πληροφορίες για τον/την ${data.displayName}`}
+        detailsTitle={t("detailsTitle", { name: data.displayName })}
         bioOverride={bioText}
-        activeListingsLabel={formatActiveListingsLabel(data.activeListingsCount)}
+        activeListingsLabel={
+          data.activeListingsCount > 0
+            ? t("activeListings", { count: data.activeListingsCount })
+            : null
+        }
       />
 
       <PublicProfileListingsSection
@@ -61,9 +65,7 @@ export function PublicProfilePageContent({
       />
 
       <div className="mt-10 max-w-2xl">
-        <p className="text-sm text-charcoal/75">
-          Επικοινώνησε μέσω αγγελίας — επίλεξε ακίνητο για αίτημα διαθεσιμότητας ή μίσθωσης.
-        </p>
+        <p className="text-sm text-charcoal/75">{t("contactViaListing")}</p>
         <ListingTrustNote showPaymentNote className="mt-4" />
       </div>
     </div>

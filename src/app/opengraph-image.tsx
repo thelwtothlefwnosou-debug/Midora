@@ -1,12 +1,33 @@
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
+import { cookies } from "next/headers";
 import { ImageResponse } from "next/og";
+import { LOCALE_COOKIE, isLocale, defaultLocale } from "@/i18n/config";
+import { pickLocale } from "@/lib/locale-fallbacks";
 
-export const alt = "Midora — Αγγελίες ακινήτων στην Ελλάδα";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
+export const alt = "Midora — Αγγελίες ακινήτων στην Ελλάδα";
+
+async function resolveLocale() {
+  const cookieStore = await cookies();
+  const raw = cookieStore.get(LOCALE_COOKIE)?.value;
+  return raw && isLocale(raw) ? raw : defaultLocale;
+}
 
 export default async function OpenGraphImage() {
+  const locale = await resolveLocale();
+  const headline = pickLocale(
+    locale,
+    "Αγγελίες ακινήτων στην Ελλάδα",
+    "Property listings in Greece"
+  );
+  const tagline = pickLocale(
+    locale,
+    "Βραχυχρόνια & μηνιαία μίσθωση — αναζήτηση με χάρτη και φίλτρα",
+    "Short-term & monthly rental — search with map and filters"
+  );
+
   const logoBuffer = await readFile(
     join(process.cwd(), "public/brand/midora-logo.png")
   );
@@ -40,10 +61,10 @@ export default async function OpenGraphImage() {
             fontFamily: "Georgia, serif",
           }}
         >
-          Αγγελίες ακινήτων στην Ελλάδα
+          {headline}
         </div>
         <div style={{ fontSize: 30, marginTop: 24, color: "#5c5c5c", maxWidth: 820 }}>
-          Βραχυχρόνια & μηνιαία μίσθωση — αναζήτηση με χάρτη και φίλτρα
+          {tagline}
         </div>
       </div>
     ),

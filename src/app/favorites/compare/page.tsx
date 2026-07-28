@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect, notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
+import { getTranslations } from "next-intl/server";
 import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
 import { FavoritesCompareTable } from "@/components/favorites/FavoritesCompareTable";
@@ -13,6 +14,7 @@ export default async function FavoritesComparePage({
 }: {
   searchParams: Promise<{ ids?: string }>;
 }) {
+  const t = await getTranslations("Favorites.compare");
   const supabase = await createClient();
   if (!supabase) redirect("/login");
 
@@ -51,13 +53,11 @@ export default async function FavoritesComparePage({
             className="mb-6 inline-flex items-center gap-2 text-sm text-muted hover:text-gold"
           >
             <ArrowLeft className="h-4 w-4" />
-            Αγαπημένα
+            {t("backToFavorites")}
           </Link>
 
-          <h1 className="font-display text-3xl font-bold text-charcoal">Σύγκριση ακινήτων</h1>
-          <p className="mt-2 text-muted">
-            Σύγκριση έως 4 αγαπημένων αγγελιών.
-          </p>
+          <h1 className="font-display text-3xl font-bold text-charcoal">{t("title")}</h1>
+          <p className="mt-2 text-muted">{t("subtitle", { count: 4 })}</p>
 
           <FavoritesCompareTable listings={listings} />
 

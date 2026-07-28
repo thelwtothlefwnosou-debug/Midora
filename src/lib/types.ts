@@ -247,6 +247,13 @@ export type Listing = {
   early_bird_discount_percent?: number | null;
   monthly_includes_bills?: boolean | null;
   monthly_terms?: string | null;
+  monthly_pricing_mode?: import("@/lib/listing-monthly-price").MonthlyPricingMode | null;
+  monthly_base_price?: number | null;
+  monthly_included_people?: number | null;
+  monthly_max_people?: number | null;
+  monthly_extra_person_price?: number | null;
+  monthly_max_price?: number | null;
+  monthly_price_tiers?: import("@/lib/listing-monthly-price").MonthlyPriceTier[] | null;
   advertiser_verification_status?: VerificationStatus | null;
   identity_provider?: string | null;
   identity_verified_at?: string | null;
@@ -257,7 +264,11 @@ export type Listing = {
   admin_verification_notes?: string | null;
   owner_responsibility_accepted?: boolean | null;
   platform_role_accepted?: boolean | null;
+  tax_obligation_accepted?: boolean | null;
+  authority_disclosure_accepted?: boolean | null;
   terms_privacy_accepted?: boolean | null;
+  /** Last visited create-wizard step id (e.g. amenities). Used by «Συνέχισε τη συμπλήρωση». */
+  wizard_resume_step?: string | null;
   declarations_submitted_at?: string | null;
   published_at?: string | null;
   approval_status?: ApprovalStatus | null;

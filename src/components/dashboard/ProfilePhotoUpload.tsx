@@ -2,6 +2,7 @@
 
 import { useRef, useState, useTransition } from "react";
 import { Camera, Trash2 } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { ProfileAvatar } from "@/components/profile/ProfileAvatar";
 import {
   removeProfileAvatar,
@@ -65,6 +66,8 @@ function cropImageToSquare(file: File): Promise<Blob> {
 }
 
 export function ProfilePhotoUpload({ profile, avatarUrl, showPublicPhoto = true }: Props) {
+  const t = useTranslations("Profile.photoUpload");
+  const tAvatar = useTranslations("Owner.profileIdentityCard");
   const inputRef = useRef<HTMLInputElement>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -80,7 +83,7 @@ export function ProfilePhotoUpload({ profile, avatarUrl, showPublicPhoto = true 
 
     const validationError = validateAvatarFile(file);
     if (validationError) {
-      setError(validationError);
+      setError(tAvatar(validationError));
       return;
     }
 
@@ -88,7 +91,7 @@ export function ProfilePhotoUpload({ profile, avatarUrl, showPublicPhoto = true 
       try {
         const cropped = await cropImageToSquare(file);
         if (cropped.size > MAX_AVATAR_SIZE_BYTES) {
-          setError("Το αποτέλεσμα μετά το crop υπερβαίνει τα 5 MB. Δοκίμασε μικρότερη εικόνα.");
+          setError(t("errorTooLarge"));
           return;
         }
 
@@ -103,13 +106,13 @@ export function ProfilePhotoUpload({ profile, avatarUrl, showPublicPhoto = true 
         const formData = new FormData();
         formData.set("avatar", croppedFile);
         const result = await uploadProfileAvatar(formData);
-        if (result.error) {
+        if ("error" in result && result.error) {
           setError(result.error);
           return;
         }
-        setSuccess("Η φωτογραφία προφίλ ενημερώθηκε.");
+        setSuccess(t("successUpdated"));
       } catch {
-        setError("Δεν ήταν δυνατή η επεξεργασία της εικόνας.");
+        setError(t("errorProcessing"));
       }
     });
   }
@@ -119,12 +122,12 @@ export function ProfilePhotoUpload({ profile, avatarUrl, showPublicPhoto = true 
     setSuccess(null);
     startTransition(async () => {
       const result = await removeProfileAvatar();
-      if (result.error) {
+      if ("error" in result && result.error) {
         setError(result.error);
         return;
       }
       setPreviewUrl(null);
-      setSuccess("Η φωτογραφία προφίλ αφαιρέθηκε.");
+      setSuccess(t("successRemoved"));
     });
   }
 
@@ -132,7 +135,7 @@ export function ProfilePhotoUpload({ profile, avatarUrl, showPublicPhoto = true 
     setPublicPhoto(checked);
     startTransition(async () => {
       const result = await updateShowProfilePhotoPublic(checked);
-      if (result.error) {
+      if ("error" in result && result.error) {
         setError(result.error);
         setPublicPhoto(!checked);
       }
@@ -149,7 +152,7 @@ export function ProfilePhotoUpload({ profile, avatarUrl, showPublicPhoto = true 
             disabled={pending}
             onClick={() => inputRef.current?.click()}
             className="absolute -bottom-1 -right-1 flex h-9 w-9 items-center justify-center rounded-full border border-border bg-white text-charcoal shadow-sm hover:bg-sand disabled:opacity-50"
-            aria-label="Ανέβασμα φωτογραφίας"
+            aria-label={t("uploadAria")}
           >
             <Camera className="h-4 w-4" />
           </button>
@@ -157,8 +160,7 @@ export function ProfilePhotoUpload({ profile, avatarUrl, showPublicPhoto = true 
 
         <div className="space-y-2 text-sm">
           <p className="text-muted">
-            Ανέβασε μια τετράγωνη φωτογραφία (JPG, PNG ή WEBP, έως 5 MB). Θα κεντραριστεί
-            αυτόματα.
+            {t("hint")}
           </p>
           <div className="flex flex-wrap gap-2">
             <button
@@ -167,7 +169,7 @@ export function ProfilePhotoUpload({ profile, avatarUrl, showPublicPhoto = true 
               onClick={() => inputRef.current?.click()}
               className="rounded-lg border border-border px-3 py-1.5 text-sm font-medium text-charcoal hover:bg-sand disabled:opacity-50"
             >
-              {displayUrl ? "Αλλαγή φωτογραφίας" : "Επιλογή φωτογραφίας"}
+              {displayUrl ? t("change") : t("choose")}
             </button>
             {displayUrl && (
               <button
@@ -177,7 +179,7 @@ export function ProfilePhotoUpload({ profile, avatarUrl, showPublicPhoto = true 
                 className="inline-flex items-center gap-1.5 rounded-lg border border-red-200 px-3 py-1.5 text-sm text-red-600 hover:bg-red-50 disabled:opacity-50"
               >
                 <Trash2 className="h-3.5 w-3.5" />
-                Αφαίρεση
+                {t("remove")}
               </button>
             )}
           </div>
@@ -209,7 +211,7 @@ export function ProfilePhotoUpload({ profile, avatarUrl, showPublicPhoto = true 
           onChange={(e) => handlePublicToggle(e.target.checked)}
           className="accent-gold"
         />
-        <span className="text-charcoal">Εμφάνιση φωτογραφίας δημόσια στις αγγελίες μου</span>
+        <span className="text-charcoal">{t("showPublic")}</span>
       </label>
 
       {error && <p className="text-sm text-red-500">{error}</p>}

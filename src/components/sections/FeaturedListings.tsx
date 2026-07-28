@@ -1,5 +1,6 @@
-import Link from "next/link";
+﻿import Link from "next/link";
 import { ArrowRight } from "lucide-react";
+import { getTranslations } from "next-intl/server";
 import { ListingCard } from "@/components/listings/ListingCard";
 import { getApprovedListings, getApprovedListingsCount } from "@/lib/listings";
 import { getUnavailablePeriodsByListingIds } from "@/lib/unavailable-periods-db";
@@ -13,6 +14,7 @@ function periodsForListings(
 }
 
 export async function FeaturedListings() {
+  const t = await getTranslations("Home");
   const [listings, total, favoriteIds] = await Promise.all([
     getApprovedListings({}, 6),
     getApprovedListingsCount(),
@@ -29,17 +31,17 @@ export async function FeaturedListings() {
         <div className="mb-12 flex flex-wrap items-end justify-between gap-4">
           <div>
             <h2 className="font-display text-3xl font-semibold text-charcoal sm:text-4xl">
-              Επιλεγμένα ακίνητα
+              {t("featuredTitle")}
             </h2>
             <p className="mt-2 text-muted">
-              {total}+ αγγελίες σε όλη την Ελλάδα — βραχυχρόνια και μηνιαία/μεσοπρόθεσμη
+              {t("featuredSubtitle", { total })}
             </p>
           </div>
           <Link
-            href="/listings"
+            href="/listings?rentalType=short_term"
             className="inline-flex items-center gap-2 text-sm font-medium text-gold-dark transition-colors hover:text-gold"
           >
-            Δες όλα τα ακίνητα
+            {t("featuredCta")}
             <ArrowRight className="h-4 w-4" />
           </Link>
         </div>

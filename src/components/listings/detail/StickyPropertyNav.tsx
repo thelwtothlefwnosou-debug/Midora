@@ -1,11 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 
 type NavItem = { id: string; label: string };
 
 export function StickyPropertyNav({ items }: { items: NavItem[] }) {
+  const t = useTranslations("Listing.stickyNav");
   const [active, setActive] = useState(items[0]?.id ?? "about");
 
   useEffect(() => {
@@ -32,7 +34,7 @@ export function StickyPropertyNav({ items }: { items: NavItem[] }) {
   return (
     <nav
       className="sticky top-[4.25rem] z-30 -mx-4 border-b border-charcoal/8 bg-white/95 backdrop-blur-md sm:-mx-6"
-      aria-label="Ενότητες αγγελίας"
+      aria-label={t("ariaLabel")}
     >
       <ul className="flex gap-1 overflow-x-auto px-4 sm:gap-2 sm:px-6">
         {items.map((item) => (

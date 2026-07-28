@@ -2,6 +2,7 @@
 
 import type { ReactNode } from "react";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { ChevronLeft, ChevronRight, HelpCircle } from "lucide-react";
 import { MidoraLogo } from "@/components/brand/MidoraLogo";
 import { cn } from "@/lib/utils";
@@ -20,14 +21,23 @@ type Props = {
   aside?: ReactNode;
   onBack?: () => void;
   onNext?: () => void;
+  /** Optional secondary footer action (e.g. continue normally during return-to-review). */
+  onSecondaryNext?: () => void;
+  secondaryNextLabel?: string;
   onSaveAndExit?: () => void;
+  /** Intercept Midora logo navigation (wizard only). */
+  onLogoClick?: () => void;
   nextLabel?: string;
   nextDisabled?: boolean;
+  /** Calm helper under the primary CTA when disabled (e.g. review incomplete). */
+  nextHelper?: string | null;
   showBack?: boolean;
   isLastStep?: boolean;
   busy?: boolean;
   /** When true, hide step chrome title/hint (phase intro supplies its own). */
   phaseIntroMode?: boolean;
+  /** Banner above step content (return-to-review mode). */
+  fixModeBanner?: string | null;
 };
 
 export function CreateListingWizardShell({
@@ -42,25 +52,32 @@ export function CreateListingWizardShell({
   aside,
   onBack,
   onNext,
+  onSecondaryNext,
+  secondaryNextLabel,
   onSaveAndExit,
-  nextLabel = "Επόμενο",
+  onLogoClick,
+  nextLabel,
   nextDisabled = false,
+  nextHelper = null,
   showBack = true,
   isLastStep = false,
   busy = false,
   phaseIntroMode = false,
+  fixModeBanner = null,
 }: Props) {
+  const t = useTranslations("Wizard.shell");
   const progress = Math.max(4, Math.round(((stepIndex + 1) / stepCount) * 100));
   const layoutMax = aside && !phaseIntroMode ? "max-w-[1100px]" : "max-w-[720px]";
   const chromeMax = aside && !phaseIntroMode ? "max-w-[1100px]" : "max-w-5xl";
+  const resolvedNextLabel = nextLabel ?? t("next");
 
   const saveLabel =
     saveStatus === "saving"
-      ? "Αποθήκευση…"
+      ? t("saving")
       : saveStatus === "saved"
-        ? "Αποθηκεύτηκε"
+        ? t("saved")
         : saveStatus === "error"
-          ? "Δεν αποθηκεύτηκε"
+          ? t("saveFailed")
           : null;
 
   return (
@@ -72,9 +89,21 @@ export function CreateListingWizardShell({
             chromeMax
           )}
         >
-          <MidoraLogo size="sm" href="/dashboard" />
+          {onLogoClick ? (
+            <button
+              type="button"
+              onClick={onLogoClick}
+              className="rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-gold/50"
+              aria-label={t("homeAria")}
+            >
+              <MidoraLogo size="sm" href={null} />
+            </button>
+          ) : (
+            <MidoraLogo size="sm" href="/dashboard" />
+          )}
           <div className="flex items-center gap-2 sm:gap-3">
-            {saveLabel && (
+            {/* When busy, Save&Exit already shows saving — hide status to avoid dual labels. */}
+            {saveLabel && !busy && (
               <span
                 className={cn(
                   "hidden text-xs sm:inline",
@@ -89,7 +118,7 @@ export function CreateListingWizardShell({
               className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1.5 text-xs font-medium text-muted hover:bg-sand/60 hover:text-charcoal"
             >
               <HelpCircle className="h-3.5 w-3.5" />
-              <span className="hidden sm:inline">Βοήθεια</span>
+              <span className="hidden sm:inline">{t("help")}</span>
             </Link>
             {onSaveAndExit && (
               <button
@@ -98,7 +127,7 @@ export function CreateListingWizardShell({
                 disabled={busy}
                 className="rounded-full border border-border px-3 py-1.5 text-xs font-medium text-charcoal transition hover:bg-sand/50 disabled:opacity-50 sm:px-4 sm:text-sm"
               >
-                {busy ? "Αποθήκευση…" : "Αποθήκευση και έξοδος"}
+                {busy ? t("saving") : t("saveAndExit")}
               </button>
             )}
           </div>
@@ -130,7 +159,7 @@ export function CreateListingWizardShell({
                         <span className="text-muted"> · </span>
                       </>
                     ) : null}
-                    Βήμα {stepIndex + 1} από {stepCount}
+                    {t("stepOf", { current: stepIndex + 1, total: stepCount })}
                   </p>
                   <h1 className="mt-3 font-display text-2xl font-semibold tracking-tight text-charcoal sm:text-3xl">
                     {stepLabel}
@@ -152,6 +181,18 @@ export function CreateListingWizardShell({
                   )}
                 >
                   {error}
+                </div>
+              )}
+
+              {fixModeBanner && !phaseIntroMode && (
+                <div
+                  role="status"
+                  className={cn(
+                    "rounded-2xl border border-amber-200/80 bg-amber-50/90 px-4 py-3 text-sm text-amber-950",
+                    error ? "mt-3" : "mt-6"
+                  )}
+                >
+                  {fixModeBanner}
                 </div>
               )}
 
@@ -185,24 +226,43 @@ export function CreateListingWizardShell({
               className="inline-flex min-h-11 items-center gap-1.5 rounded-full px-3 py-2.5 text-sm font-medium text-charcoal hover:bg-sand/60 disabled:opacity-40"
             >
               <ChevronLeft className="h-4 w-4" />
-              Πίσω
+              {t("back")}
             </button>
           ) : (
             <span />
           )}
           {onNext && (
-            <button
-              type="button"
-              onClick={onNext}
-              disabled={busy || nextDisabled}
-              className={cn(
-                "inline-flex min-h-11 items-center gap-2 rounded-full bg-gold px-5 py-2.5 text-sm font-semibold text-white shadow-soft transition hover:bg-gold-dark disabled:cursor-not-allowed disabled:opacity-50 sm:px-7",
-                isLastStep && !phaseIntroMode && "bg-charcoal hover:bg-charcoal/90"
-              )}
-            >
-              {nextLabel}
-              {!(isLastStep && !phaseIntroMode) && <ChevronRight className="h-4 w-4" />}
-            </button>
+            <div className="flex max-w-full flex-col items-stretch gap-1.5 sm:items-end">
+              <div className="flex flex-col items-stretch gap-2 sm:flex-row sm:items-center sm:gap-3">
+                {onSecondaryNext && secondaryNextLabel ? (
+                  <button
+                    type="button"
+                    onClick={onSecondaryNext}
+                    disabled={busy}
+                    className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full border border-border bg-white px-4 py-2.5 text-sm font-medium text-charcoal hover:bg-sand/50 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {secondaryNextLabel}
+                  </button>
+                ) : null}
+                <button
+                  type="button"
+                  onClick={onNext}
+                  disabled={busy || nextDisabled}
+                  className={cn(
+                    "inline-flex min-h-11 items-center justify-center gap-2 rounded-full bg-gold px-5 py-2.5 text-sm font-semibold text-white shadow-soft transition hover:bg-gold-dark disabled:cursor-not-allowed disabled:opacity-50 sm:px-7",
+                    isLastStep && !phaseIntroMode && "bg-charcoal hover:bg-charcoal/90"
+                  )}
+                >
+                  {resolvedNextLabel}
+                  {!(isLastStep && !phaseIntroMode) && <ChevronRight className="h-4 w-4" />}
+                </button>
+              </div>
+              {nextHelper && nextDisabled && !busy ? (
+                <p className="text-right text-xs text-muted sm:max-w-[280px]">
+                  {nextHelper}
+                </p>
+              ) : null}
+            </div>
           )}
         </div>
       </footer>
@@ -268,13 +328,14 @@ export function WizardCounter({
   max?: number;
   onChange: (n: number) => void;
 }) {
+  const t = useTranslations("Wizard.counter");
   return (
     <div className="flex items-center justify-between gap-4 rounded-2xl border border-border px-4 py-4 sm:px-5">
       <span className="text-sm font-medium text-charcoal sm:text-base">{label}</span>
       <div className="flex items-center gap-3">
         <button
           type="button"
-          aria-label={`Μείωση ${label}`}
+          aria-label={t("decreaseAria", { label })}
           disabled={value <= min}
           onClick={() => onChange(Math.max(min, value - 1))}
           className="flex h-11 w-11 items-center justify-center rounded-full border border-border text-lg text-charcoal hover:bg-sand/50 disabled:opacity-40"
@@ -284,7 +345,7 @@ export function WizardCounter({
         <span className="w-8 text-center text-base font-semibold tabular-nums">{value}</span>
         <button
           type="button"
-          aria-label={`Αύξηση ${label}`}
+          aria-label={t("increaseAria", { label })}
           disabled={value >= max}
           onClick={() => onChange(Math.min(max, value + 1))}
           className="flex h-11 w-11 items-center justify-center rounded-full border border-border text-lg text-charcoal hover:bg-sand/50 disabled:opacity-40"

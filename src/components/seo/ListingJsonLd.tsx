@@ -4,10 +4,11 @@ import type { ListingWithImages } from "@/lib/types";
 type Props = {
   listing: ListingWithImages;
   canonicalPath: string;
+  locale?: string;
 };
 
-export function ListingJsonLd({ listing, canonicalPath }: Props) {
-  const data = buildListingJsonLd(listing, canonicalPath);
+export function ListingJsonLd({ listing, canonicalPath, locale }: Props) {
+  const data = buildListingJsonLd(listing, canonicalPath, locale);
 
   return (
     <script

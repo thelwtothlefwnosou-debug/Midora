@@ -9,13 +9,74 @@ import {
 import type { LegalRegistryType } from "@/lib/types";
 
 import { MIN_LISTING_PHOTOS_FOR_REVIEW } from "@/lib/constants";
+import { countGraphemes } from "@/lib/text-graphemes";
 
-export const MIN_LISTING_TITLE_LENGTH = 10;
+export const MIN_LISTING_TITLE_LENGTH = 5;
 export const MIN_LISTING_DESCRIPTION_LENGTH = 10;
+/** Max grapheme length for listing description (wizard + API). */
+export const MAX_LISTING_DESCRIPTION_LENGTH = 1000;
 export { MIN_LISTING_PHOTOS_FOR_REVIEW as MIN_PHOTOS_FOR_REVIEW };
 
-export const LISTING_SAVE_ERROR_MSG =
-  "Δεν ήταν δυνατή η αποθήκευση της αγγελίας. Δοκίμασε ξανά ή επικοινώνησε με την υποστήριξη.";
+/** Wizard.errors message keys — translate in UI via useTranslations("Wizard.errors"). */
+export const LISTING_TITLE_MIN_ERROR = "titleMinLength";
+export const LISTING_DESCRIPTION_MAX_ERROR = "descriptionMaxLength";
+export const LISTING_SAVE_ERROR_MSG = "listingSaveFailed";
+
+/** Trimmed title grapheme length — whitespace-only is 0. */
+export function listingTitleGraphemeLength(title: string): number {
+  return countGraphemes(title.trim());
+}
+
+export function isListingTitleLongEnough(title: string): boolean {
+  return listingTitleGraphemeLength(title) >= MIN_LISTING_TITLE_LENGTH;
+}
+
+export function listingTitleValidationError(
+  title: string,
+  options?: { requireNonEmpty?: boolean }
+): string | null {
+  const trimmed = title.trim();
+  if (!trimmed) {
+    return options?.requireNonEmpty === false ? null : "titleRequired";
+  }
+  if (listingTitleGraphemeLength(trimmed) < MIN_LISTING_TITLE_LENGTH) {
+    return LISTING_TITLE_MIN_ERROR;
+  }
+  return null;
+}
+
+/** Description grapheme length (includes whitespace / newlines as typed). */
+export function listingDescriptionGraphemeLength(description: string): number {
+  return countGraphemes(description);
+}
+
+export function isListingDescriptionWithinMax(description: string): boolean {
+  return (
+    listingDescriptionGraphemeLength(description) <= MAX_LISTING_DESCRIPTION_LENGTH
+  );
+}
+
+/**
+ * Description validation.
+ * - Empty is allowed unless `forSubmission` (min length applies only then).
+ * - Over max always errors; never truncates.
+ */
+export function listingDescriptionValidationError(
+  description: string,
+  options?: { forSubmission?: boolean }
+): string | null {
+  if (!isListingDescriptionWithinMax(description)) {
+    return LISTING_DESCRIPTION_MAX_ERROR;
+  }
+  if (options?.forSubmission) {
+    const trimmed = description.trim();
+    if (!trimmed) return "descriptionRequired";
+    if (countGraphemes(trimmed) < MIN_LISTING_DESCRIPTION_LENGTH) {
+      return "descriptionMinLength";
+    }
+  }
+  return null;
+}
 
 const REGISTRY_PATTERNS: Record<Exclude<LegalRegistryType, "none">, RegExp> = {
   ama: /^\d{11}$/,
@@ -117,56 +178,56 @@ export function validateBasicDetails(input: {
   forSubmission: boolean;
 }): string | null {
   const title = input.title.trim();
-  if (!title) return "Συμπλήρωσε τον τίτλο της αγγελίας.";
-  if (input.forSubmission && title.length < MIN_LISTING_TITLE_LENGTH) {
-    return `Ο τίτλος πρέπει να έχει τουλάχιστον ${MIN_LISTING_TITLE_LENGTH} χαρακτήρες.`;
+  if (!title) return "titleRequired";
+  if (input.forSubmission) {
+    const titleError = listingTitleValidationError(title);
+    if (titleError) return titleError;
   }
 
-  if (!input.city.trim()) return "Συμπλήρωσε την πόλη.";
+  if (!input.city.trim()) return "cityRequired";
 
   const effectiveArea = input.area.trim() || input.city.trim();
   const { city: canonicalCity } = resolveWizardCity(input.city);
   if (input.area.trim()) {
     const { mismatch } = resolveWizardArea(canonicalCity, input.area);
     if (mismatch) {
-      return "Η περιοχή δεν ταιριάζει με την επιλεγμένη πόλη.";
+      return "areaCityMismatch";
     }
   } else if (!effectiveArea) {
-    return "Συμπλήρωσε την πόλη.";
+    return "cityRequired";
   }
 
   if (input.forSubmission) {
-    if (!input.addressStreet.trim()) return "Συμπλήρωσε την οδό.";
-    if (!input.addressNumber.trim()) return "Συμπλήρωσε τον αριθμό.";
-    if (!input.addressPostalCode.trim()) return "Συμπλήρωσε τον ταχυδρομικό κώδικα.";
-    if (!input.propertyType) return "Επίλεξε τύπο ακινήτου.";
+    if (!input.addressStreet.trim()) return "streetRequired";
+    if (!input.addressNumber.trim()) return "addressNumberRequired";
+    if (!input.addressPostalCode.trim()) return "postalCodeRequired";
+    if (!input.propertyType) return "propertyTypeRequired";
 
     const sqm = parseInt(input.sqm, 10);
     if (!Number.isFinite(sqm) || sqm <= 0) {
-      return "Τα τετραγωνικά μέτρα πρέπει να είναι θετικός ακέραιος αριθμός.";
+      return "sqmInvalid";
     }
 
     const bedrooms = parseInt(input.bedrooms, 10);
     if (!Number.isFinite(bedrooms) || bedrooms < 0) {
-      return "Τα υπνοδωμάτια πρέπει να είναι ακέραιος ≥ 0 (0 = στούντιο).";
+      return "bedroomsInvalid";
     }
 
     const bathrooms = parseInt(input.bathrooms, 10);
     if (!Number.isFinite(bathrooms) || bathrooms < 0) {
-      return "Συμπλήρωσε τον αριθμό μπάνιων (0 αν δεν υπάρχει ξεχωριστό).";
+      return "bathroomsRequired";
     }
 
     const floor = parseInt(input.floor, 10);
     if (!Number.isFinite(floor) || floor < 0) {
-      return "Συμπλήρωσε τον όροφο (0 = ισόγειο).";
-    }
-
-    const description = input.description.trim();
-    if (!description) return "Συμπλήρωσε την περιγραφή.";
-    if (description.length < MIN_LISTING_DESCRIPTION_LENGTH) {
-      return `Η περιγραφή πρέπει να έχει τουλάχιστον ${MIN_LISTING_DESCRIPTION_LENGTH} χαρακτήρες.`;
+      return "floorRequired";
     }
   }
+
+  const descriptionError = listingDescriptionValidationError(input.description, {
+    forSubmission: input.forSubmission,
+  });
+  if (descriptionError) return descriptionError;
 
   return null;
 }

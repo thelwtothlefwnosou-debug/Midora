@@ -2,6 +2,7 @@
 
 import type { RefObject } from "react";
 import { LocateFixed, Minus, Plus } from "lucide-react";
+import { useTranslations } from "next-intl";
 import type { MapRef } from "@/components/map/MidoraMapCore";
 import { cn } from "@/lib/utils";
 
@@ -18,6 +19,8 @@ export function MidoraMapControls({
   showRecenter = false,
   className,
 }: Props) {
+  const t = useTranslations("Map");
+
   const zoomIn = () => {
     mapRef.current?.zoomIn({ duration: 220 });
   };
@@ -41,7 +44,7 @@ export function MidoraMapControls({
         type="button"
         className="midora-map-control-btn"
         onClick={zoomIn}
-        aria-label="Μεγέθυνση χάρτη"
+        aria-label={t("zoomIn")}
       >
         <Plus className="h-4 w-4" strokeWidth={2.25} aria-hidden />
       </button>
@@ -49,7 +52,7 @@ export function MidoraMapControls({
         type="button"
         className="midora-map-control-btn"
         onClick={zoomOut}
-        aria-label="Σμίκρυνση χάρτη"
+        aria-label={t("zoomOut")}
       >
         <Minus className="h-4 w-4" strokeWidth={2.25} aria-hidden />
       </button>
@@ -58,7 +61,7 @@ export function MidoraMapControls({
           type="button"
           className="midora-map-control-btn"
           onClick={recenter}
-          aria-label="Επαναφορά χάρτη"
+          aria-label={t("reset")}
         >
           <LocateFixed className="h-4 w-4" strokeWidth={2} aria-hidden />
         </button>

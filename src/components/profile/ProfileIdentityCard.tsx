@@ -4,6 +4,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useTransition } from "react";
 import { BadgeCheck, Mail, Trash2 } from "lucide-react";
+import { useLocale, useTranslations } from "next-intl";
+import type { Locale } from "@/i18n/config";
 import { ProfileAvatar } from "@/components/profile/ProfileAvatar";
 import { AvatarCropModal } from "@/components/profile/AvatarCropModal";
 import {
@@ -41,6 +43,8 @@ export function ProfileIdentityCard({
   showPublicPhoto: showPublicPhotoProp,
   onShowPublicPhotoChange,
 }: Props) {
+  const t = useTranslations("Owner.profileIdentityCard");
+  const locale = useLocale() as Locale;
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -55,9 +59,9 @@ export function ProfileIdentityCard({
   const [pending, startTransition] = useTransition();
 
   const displayUrl = previewUrl ?? avatarUrl ?? null;
-  const displayName = profileDisplayName(profile);
+  const displayName = profileDisplayName(profile, locale);
   const phoneVerified = Boolean(profile.primary_phone_verified_at);
-  const memberSince = memberSinceLabel(profile.created_at);
+  const memberSince = memberSinceLabel(profile.created_at, locale);
   const needsVerification = !emailVerified || !phoneVerified;
 
   useEffect(() => {
@@ -71,7 +75,7 @@ export function ProfileIdentityCard({
     setStatus("idle");
     const validationError = validateAvatarFile(file);
     if (validationError) {
-      setError(validationError);
+      setError(t(validationError));
       setStatus("error");
       return;
     }
@@ -84,7 +88,7 @@ export function ProfileIdentityCard({
     startTransition(async () => {
       try {
         if (blob.size > MAX_AVATAR_SIZE_BYTES) {
-          setError("Το αποτέλεσμα υπερβαίνει τα 5 MB. Δοκίμασε μικρότερη εικόνα.");
+          setError(t("errorTooLarge"));
           setStatus("error");
           return;
         }
@@ -100,7 +104,7 @@ export function ProfileIdentityCard({
         const formData = new FormData();
         formData.set("avatar", croppedFile);
         const result = await uploadProfileAvatar(formData);
-        if (result.error) {
+        if ("error" in result && result.error) {
           setError(result.error);
           setStatus("error");
           return;
@@ -108,7 +112,7 @@ export function ProfileIdentityCard({
         setStatus("success");
         router.refresh();
       } catch {
-        setError("Δεν ήταν δυνατή η επεξεργασία της εικόνας.");
+        setError(t("errorProcessing"));
         setStatus("error");
       }
     });
@@ -119,7 +123,7 @@ export function ProfileIdentityCard({
     setStatus("loading");
     startTransition(async () => {
       const result = await removeProfileAvatar();
-      if (result.error) {
+      if ("error" in result && result.error) {
         setError(result.error);
         setStatus("error");
         return;
@@ -154,22 +158,22 @@ export function ProfileIdentityCard({
         )}
 
         <h2 className="mt-5 font-display text-xl font-semibold text-charcoal">{displayName}</h2>
-        <p className="mt-1 text-sm text-muted">{advertiserTypeLabel(profile.advertiser_type)}</p>
+        <p className="mt-1 text-sm text-muted">{advertiserTypeLabel(profile.advertiser_type, locale)}</p>
         {memberSince && (
-          <p className="mt-1 text-xs text-muted">Μέλος από {memberSince}</p>
+          <p className="mt-1 text-xs text-muted">{t("memberSince", { date: memberSince })}</p>
         )}
 
         <div className="mt-4 flex flex-wrap justify-center gap-2">
           {emailVerified && (
             <span className="inline-flex items-center gap-1 rounded-full bg-teal/10 px-2.5 py-1 text-xs font-medium text-teal">
               <Mail className="h-3 w-3" />
-              Επιβεβαιωμένο email
+              {t("verifiedEmail")}
             </span>
           )}
           {phoneVerified && (
             <span className="inline-flex items-center gap-1 rounded-full bg-teal/10 px-2.5 py-1 text-xs font-medium text-teal">
               <BadgeCheck className="h-3 w-3" />
-              Επιβεβαιωμένο τηλέφωνο
+              {t("verifiedPhone")}
             </span>
           )}
         </div>
@@ -179,7 +183,7 @@ export function ProfileIdentityCard({
             href="/dashboard/verification"
             className="mt-3 text-xs font-medium text-gold hover:underline"
           >
-            Ολοκλήρωσε επαλήθευση
+            {t("completeVerification")}
           </Link>
         )}
 
@@ -190,7 +194,7 @@ export function ProfileIdentityCard({
             onClick={() => inputRef.current?.click()}
             className="w-full rounded-xl border border-border py-2.5 text-sm font-medium text-charcoal hover:bg-sand disabled:opacity-50"
           >
-            {displayUrl ? "Αλλαγή φωτογραφίας" : "Ανέβασμα φωτογραφίας"}
+            {displayUrl ? t("changePhoto") : t("uploadPhoto")}
           </button>
           {displayUrl && (
             <button
@@ -200,16 +204,16 @@ export function ProfileIdentityCard({
               className="inline-flex w-full items-center justify-center gap-1.5 rounded-xl border border-red-200 py-2.5 text-sm text-red-600 hover:bg-red-50 disabled:opacity-50"
             >
               <Trash2 className="h-3.5 w-3.5" />
-              Αφαίρεση φωτογραφίας
+              {t("removePhoto")}
             </button>
           )}
         </div>
 
         {status === "loading" && (
-          <p className="mt-3 text-xs text-muted">Αποθήκευση…</p>
+          <p className="mt-3 text-xs text-muted">{t("saving")}</p>
         )}
         {status === "success" && !error && (
-          <p className="mt-3 text-xs text-teal">Η φωτογραφία ενημερώθηκε.</p>
+          <p className="mt-3 text-xs text-teal">{t("photoUpdated")}</p>
         )}
         {error && <p className="mt-3 text-xs text-red-500">{error}</p>}
 
@@ -228,7 +232,7 @@ export function ProfileIdentityCard({
                 }
                 startTransition(async () => {
                   const result = await updateShowProfilePhotoPublic(checked);
-                  if (result.error) {
+                  if ("error" in result && result.error) {
                     const revert = !checked;
                     if (onShowPublicPhotoChange) {
                       onShowPublicPhotoChange(revert);
@@ -241,7 +245,7 @@ export function ProfileIdentityCard({
               }}
               className="accent-gold"
             />
-            Εμφάνιση δημόσια στις αγγελίες
+            {t("showPublicly")}
           </label>
         )}
       </div>

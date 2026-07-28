@@ -2,13 +2,13 @@
 
 import { useState } from "react";
 import { Grid2X2, Share2 } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { ListingImageCarousel } from "@/components/listings/ListingImageCarousel";
 import { GalleryImage } from "@/components/listings/GalleryImage";
 import { ListingGalleryLightbox } from "@/components/listings/detail/ListingGalleryLightbox";
 import type { ListingImage } from "@/lib/types";
 import { resolveListingImageUrl } from "@/lib/listing-media";
 import { sortListingPhotosForDisplay } from "@/lib/listing-photo-display";
-import { COPY } from "@/lib/copy";
 import { cn } from "@/lib/utils";
 
 function GalleryPhoto({
@@ -20,6 +20,7 @@ function GalleryPhoto({
   priority,
   sizes,
   overlay,
+  openPhotoLabel,
 }: {
   photo: ListingImage;
   title: string;
@@ -29,6 +30,7 @@ function GalleryPhoto({
   priority?: boolean;
   sizes: string;
   overlay?: React.ReactNode;
+  openPhotoLabel: string;
 }) {
   const src = resolveListingImageUrl(photo.url) ?? "";
 
@@ -37,7 +39,7 @@ function GalleryPhoto({
       type="button"
       onClick={onClick}
       className={cn("group relative block w-full overflow-hidden", className)}
-      aria-label={alt ?? "Άνοιγμα φωτογραφίας"}
+      aria-label={alt ?? openPhotoLabel}
     >
       <GalleryImage
         src={src}
@@ -55,10 +57,12 @@ function ViewAllButton({
   count,
   onClick,
   className,
+  label,
 }: {
   count: number;
   onClick: () => void;
   className?: string;
+  label: string;
 }) {
   return (
     <button
@@ -70,7 +74,7 @@ function ViewAllButton({
       )}
     >
       <Grid2X2 className="h-4 w-4 text-gold" />
-      {COPY.viewAllPhotos}
+      {label}
       {count > 1 ? ` (${count})` : ""}
     </button>
   );
@@ -80,10 +84,18 @@ function DesktopGallery({
   photos,
   title,
   onOpen,
+  photoAlt,
+  viewAllLabel,
+  morePhotosLabel,
+  openPhotoLabel,
 }: {
   photos: ListingImage[];
   title: string;
   onOpen: () => void;
+  photoAlt: (n: number) => string;
+  viewAllLabel: string;
+  morePhotosLabel: (count: number) => string;
+  openPhotoLabel: string;
 }) {
   const count = photos.length;
 
@@ -97,18 +109,17 @@ function DesktopGallery({
 
   if (count === 1) {
     return (
-      <>
-        <div className="relative h-[460px] overflow-hidden rounded-[20px]">
-          <GalleryPhoto
-            photo={photos[0]}
-            title={title}
-            onClick={onOpen}
-            className="absolute inset-0"
-            priority
-            sizes="(max-width: 1024px) 100vw, 70vw"
-          />
-        </div>
-      </>
+      <div className="relative h-[460px] overflow-hidden rounded-[20px]">
+        <GalleryPhoto
+          photo={photos[0]}
+          title={title}
+          onClick={onOpen}
+          className="absolute inset-0"
+          priority
+          sizes="(max-width: 1024px) 100vw, 70vw"
+          openPhotoLabel={openPhotoLabel}
+        />
+      </div>
     );
   }
 
@@ -120,16 +131,18 @@ function DesktopGallery({
             key={photo.id}
             photo={photo}
             title={title}
-            alt={`${title} — φωτογραφία ${i + 1}`}
+            alt={photoAlt(i + 1)}
             onClick={onOpen}
             className="h-full min-h-0"
             priority={i === 0}
             sizes="35vw"
+            openPhotoLabel={openPhotoLabel}
           />
         ))}
         <ViewAllButton
           count={count}
           onClick={onOpen}
+          label={viewAllLabel}
           className="absolute bottom-4 right-4 z-10 border-white/80 bg-white/95 shadow-md"
         />
       </div>
@@ -146,6 +159,7 @@ function DesktopGallery({
           className="h-full min-h-0"
           priority
           sizes="45vw"
+          openPhotoLabel={openPhotoLabel}
         />
         <div className="grid min-h-0 grid-rows-2 gap-2">
           {photos.slice(1, 3).map((photo, i) => (
@@ -153,16 +167,18 @@ function DesktopGallery({
               key={photo.id}
               photo={photo}
               title={title}
-              alt={`${title} — φωτογραφία ${i + 2}`}
+              alt={photoAlt(i + 2)}
               onClick={onOpen}
               className="h-full min-h-0"
               sizes="25vw"
+              openPhotoLabel={openPhotoLabel}
             />
           ))}
         </div>
         <ViewAllButton
           count={count}
           onClick={onOpen}
+          label={viewAllLabel}
           className="absolute bottom-4 right-4 z-10 border-white/80 bg-white/95 shadow-md"
         />
       </div>
@@ -179,6 +195,7 @@ function DesktopGallery({
           className="h-full min-h-0"
           priority
           sizes="45vw"
+          openPhotoLabel={openPhotoLabel}
         />
         <div className="grid min-h-0 grid-cols-2 grid-rows-2 gap-2">
           {photos.slice(1, 3).map((photo, i) => (
@@ -186,24 +203,27 @@ function DesktopGallery({
               key={photo.id}
               photo={photo}
               title={title}
-              alt={`${title} — φωτογραφία ${i + 2}`}
+              alt={photoAlt(i + 2)}
               onClick={onOpen}
               className="h-full min-h-0"
               sizes="20vw"
+              openPhotoLabel={openPhotoLabel}
             />
           ))}
           <GalleryPhoto
             photo={photos[3]}
             title={title}
-            alt={`${title} — φωτογραφία 4`}
+            alt={photoAlt(4)}
             onClick={onOpen}
             className="col-span-2 h-full min-h-0"
             sizes="40vw"
+            openPhotoLabel={openPhotoLabel}
           />
         </div>
         <ViewAllButton
           count={count}
           onClick={onOpen}
+          label={viewAllLabel}
           className="absolute bottom-4 right-4 z-10 border-white/80 bg-white/95 shadow-md"
         />
       </div>
@@ -214,49 +234,50 @@ function DesktopGallery({
   const extraCount = Math.max(0, count - 5);
 
   return (
-    <>
-      <div className="relative grid h-[460px] grid-cols-[1.2fr_1fr] gap-2 overflow-hidden rounded-[20px]">
-        <GalleryPhoto
-          photo={photos[0]}
-          title={title}
-          onClick={onOpen}
-          className="h-full min-h-0"
-          priority
-          sizes="45vw"
-        />
-        <div className="grid min-h-0 grid-cols-2 grid-rows-2 gap-2">
-          {sidePhotos.map((photo, i) => {
-            const photoIndex = i + 1;
-            const isLast = i === sidePhotos.length - 1 && extraCount > 0;
-            return (
-              <GalleryPhoto
-                key={photo.id}
-                photo={photo}
-                title={title}
-                alt={`${title} — φωτογραφία ${photoIndex + 1}`}
-                onClick={onOpen}
-                className="h-full min-h-0"
-                sizes="20vw"
-                overlay={
-                  isLast ? (
-                    <span className="absolute inset-0 flex items-center justify-center bg-charcoal/55 text-sm font-semibold text-white">
-                      +{extraCount} {extraCount === 1 ? "φωτογραφία" : "φωτογραφίες"}
-                    </span>
-                  ) : undefined
-                }
-              />
-            );
-          })}
-        </div>
-        {count > 1 && (
-          <ViewAllButton
-            count={count}
-            onClick={onOpen}
-            className="absolute bottom-4 right-4 z-10 border-white/80 bg-white/95 shadow-md"
-          />
-        )}
+    <div className="relative grid h-[460px] grid-cols-[1.2fr_1fr] gap-2 overflow-hidden rounded-[20px]">
+      <GalleryPhoto
+        photo={photos[0]}
+        title={title}
+        onClick={onOpen}
+        className="h-full min-h-0"
+        priority
+        sizes="45vw"
+        openPhotoLabel={openPhotoLabel}
+      />
+      <div className="grid min-h-0 grid-cols-2 grid-rows-2 gap-2">
+        {sidePhotos.map((photo, i) => {
+          const photoIndex = i + 1;
+          const isLast = i === sidePhotos.length - 1 && extraCount > 0;
+          return (
+            <GalleryPhoto
+              key={photo.id}
+              photo={photo}
+              title={title}
+              alt={photoAlt(photoIndex + 1)}
+              onClick={onOpen}
+              className="h-full min-h-0"
+              sizes="20vw"
+              openPhotoLabel={openPhotoLabel}
+              overlay={
+                isLast ? (
+                  <span className="absolute inset-0 flex items-center justify-center bg-charcoal/55 text-sm font-semibold text-white">
+                    +{morePhotosLabel(extraCount)}
+                  </span>
+                ) : undefined
+              }
+            />
+          );
+        })}
       </div>
-    </>
+      {count > 1 && (
+        <ViewAllButton
+          count={count}
+          onClick={onOpen}
+          label={viewAllLabel}
+          className="absolute bottom-4 right-4 z-10 border-white/80 bg-white/95 shadow-md"
+        />
+      )}
+    </div>
   );
 }
 
@@ -274,6 +295,8 @@ export function ListingMediaGallery({
   /** Share / save / more circles on mobile carousel */
   mobileActions?: React.ReactNode;
 }) {
+  const t = useTranslations("Listing");
+  const tCommon = useTranslations("Common");
   const sorted = sortListingPhotosForDisplay(images);
   const photos = sorted;
   const videos = [...images]
@@ -281,6 +304,11 @@ export function ListingMediaGallery({
     .filter((item) => item.media_type === "video");
   const [activeIndex, setActiveIndex] = useState(0);
   const [lightboxOpen, setLightboxOpen] = useState(false);
+
+  const viewAllLabel = tCommon("viewAllPhotos");
+  const openPhotoLabel = t("openPhoto");
+  const photoAlt = (n: number) => t("photoN", { title, n });
+  const morePhotosLabel = (count: number) => t("morePhotos", { count });
 
   function openLightbox() {
     setLightboxOpen(true);
@@ -299,7 +327,7 @@ export function ListingMediaGallery({
             type="button"
             onClick={onShare}
             className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-charcoal/15 bg-white text-charcoal shadow-sm"
-            aria-label="Κοινοποίηση"
+            aria-label={t("share")}
           >
             <Share2 className="h-[18px] w-[18px]" strokeWidth={1.75} />
           </button>
@@ -334,6 +362,7 @@ export function ListingMediaGallery({
           <ViewAllButton
             count={galleryPhotos.length}
             onClick={openLightbox}
+            label={viewAllLabel}
             className="mt-3 flex min-h-11 w-full justify-center"
           />
         )}
@@ -345,6 +374,10 @@ export function ListingMediaGallery({
           photos={galleryPhotos}
           title={title}
           onOpen={openLightbox}
+          photoAlt={photoAlt}
+          viewAllLabel={viewAllLabel}
+          morePhotosLabel={morePhotosLabel}
+          openPhotoLabel={openPhotoLabel}
         />
       </div>
 
@@ -359,7 +392,7 @@ export function ListingMediaGallery({
                 className="h-full w-full object-cover"
               />
               <span className="absolute left-3 top-3 rounded-full bg-black/60 px-2 py-1 text-[10px] text-white">
-                Βίντεο {item.duration_seconds ? `${item.duration_seconds}s` : ""}
+                {t("video")} {item.duration_seconds ? `${item.duration_seconds}s` : ""}
               </span>
             </div>
           ))}

@@ -1,5 +1,6 @@
 "use server";
 
+import { actionError, authActionError, mustSignInError } from "@/lib/action-error-i18n";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
@@ -31,11 +32,11 @@ type ActionResult = { success: true } | { error: string };
 
 async function requireUser() {
   const supabase = await createClient();
-  if (!supabase) return { error: "Supabase δεν είναι ρυθμισμένο" as const };
+  if (!supabase) return { error: await authActionError("supabaseNotConfigured") } as const;
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) return { error: "Πρέπει να συνδεθείς" as const };
+  if (!user) return await mustSignInError();
   return { supabase, user };
 }
 
@@ -52,13 +53,13 @@ export async function requireListingPermission(
     }
 > {
   const auth = await requireUser();
-  if ("error" in auth) return { error: auth.error ?? "Σφάλμα πρόσβασης" };
+  if ("error" in auth) return { error: auth.error ?? (await actionError("accessError")) };
 
   const access = await resolveListingAccess(auth.supabase, listingId, auth.user.id);
-  if (!access) return { error: "Δεν έχεις πρόσβαση σε αυτή την αγγελία." };
+  if (!access) return { error: await actionError("noAccess") };
 
   if (!accessAllows(access, permission)) {
-    return { error: "Δεν έχεις το απαιτούμενο δικαίωμα για αυτή την ενέργεια." };
+    return { error: await actionError("noPermission") };
   }
 
   const { data: listing } = await auth.supabase
@@ -67,7 +68,7 @@ export async function requireListingPermission(
     .eq("id", listingId)
     .single();
 
-  if (!listing) return { error: "Η αγγελία δεν βρέθηκε." };
+  if (!listing) return { error: await actionError("listingNotFound") };
 
   return {
     supabase: auth.supabase,
@@ -102,7 +103,7 @@ export async function inviteListingCohost(
   formData: FormData
 ): Promise<ActionResult> {
   const auth = await requireListingOwnerOnly(listingId);
-  if ("error" in auth) return { error: auth.error ?? "Σφάλμα πρόσβασης" };
+  if ("error" in auth) return { error: auth.error ?? (await actionError("accessError")) };
 
   const email = normalizeEmail(String(formData.get("email") ?? ""));
   const invitedName = String(formData.get("name") ?? "").trim() || null;
@@ -113,17 +114,17 @@ export async function inviteListingCohost(
     String(formData.get("message") ?? "").trim() || DEFAULT_COHOST_INVITE_MESSAGE;
 
   if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-    return { error: "Δώσε έγκυρο email συνοικοδεσπότη." };
+    return { error: await actionError("cohostValidEmail") };
   }
 
   if (auth.user.email && normalizeEmail(auth.user.email) === email) {
-    return { error: "Δεν μπορείς να προσκαλέσεις τον εαυτό σου." };
+    return { error: await actionError("cohostSelfInvite") };
   }
 
   const activeCount = await countActiveCohosts(listingId, auth.listing.user_id);
   if (!canInviteMoreCohosts(activeCount)) {
     return {
-      error: `Μπορείς να προσθέσεις έως ${MAX_COHOSTS_PER_LISTING} συνοικοδεσπότες σε αυτή την αγγελία.`,
+      error: await actionError("cohostMax", { count: MAX_COHOSTS_PER_LISTING }),
     };
   }
 
@@ -138,7 +139,7 @@ export async function inviteListingCohost(
     .maybeSingle();
 
   if (existing) {
-    return { error: "Υπάρχει ήδη πρόσκληση ή συνοικοδεσπότης με αυτό το email." };
+    return { error: await actionError("cohostDuplicateEmail") };
   }
 
   const { data: listing } = await auth.supabase
@@ -169,7 +170,7 @@ export async function inviteListingCohost(
     .single();
 
   if (error || !invite) {
-    return { error: error?.message ?? "Δεν ήταν δυνατή η αποστολή της πρόσκλησης." };
+    return { error: error?.message ?? (await actionError("inviteSendFailed")) };
   }
 
   await logListingAudit(auth.supabase, {
@@ -183,12 +184,12 @@ export async function inviteListingCohost(
 
   const ownerName = ownerProfile
     ? profileDisplayName(ownerProfile)
-    : "Ο ιδιοκτήτης";
+    : await actionError("ownerFallback");
 
   await sendCohostInviteEmail({
     to: email,
     ownerName,
-    listingTitle: listing?.title ?? "Αγγελία",
+    listingTitle: listing?.title ?? (await actionError("listingFallback")),
     inviteToken: invite.invite_token,
     message: inviteMessage,
   });
@@ -203,7 +204,7 @@ export async function updateListingCohostPermission(
   permissionLevel: CohostPermissionLevel
 ): Promise<ActionResult> {
   const auth = await requireListingOwnerOnly(listingId);
-  if ("error" in auth) return { error: auth.error ?? "Σφάλμα πρόσβασης" };
+  if ("error" in auth) return { error: auth.error ?? (await actionError("accessError")) };
 
   const flags = permissionFlagsForLevel(permissionLevel);
 
@@ -239,7 +240,7 @@ export async function removeListingCohost(
   listingId: string
 ): Promise<ActionResult> {
   const auth = await requireListingOwnerOnly(listingId);
-  if ("error" in auth) return { error: auth.error ?? "Σφάλμα πρόσβασης" };
+  if ("error" in auth) return { error: auth.error ?? (await actionError("accessError")) };
 
   const { data: row } = await auth.supabase
     .from("listing_cohosts")
@@ -277,7 +278,7 @@ export async function removeListingCohost(
       .single();
     await sendCohostRemovedEmail({
       to: row.invited_email,
-      listingTitle: listing?.title ?? "Αγγελία",
+      listingTitle: listing?.title ?? (await actionError("listingFallback")),
     });
   }
 
@@ -290,7 +291,7 @@ export async function resendListingCohostInvite(
   listingId: string
 ): Promise<ActionResult> {
   const auth = await requireListingOwnerOnly(listingId);
-  if ("error" in auth) return { error: auth.error ?? "Σφάλμα πρόσβασης" };
+  if ("error" in auth) return { error: auth.error ?? (await actionError("accessError")) };
 
   const { data: row } = await auth.supabase
     .from("listing_cohosts")
@@ -301,7 +302,7 @@ export async function resendListingCohostInvite(
     .single();
 
   if (!row || row.status !== "pending") {
-    return { error: "Η πρόσκληση δεν είναι εκκρεμής." };
+    return { error: await actionError("inviteNotPending") };
   }
 
   const { data: listing } = await auth.supabase
@@ -318,12 +319,12 @@ export async function resendListingCohostInvite(
 
   const ownerName = ownerProfile
     ? profileDisplayName(ownerProfile)
-    : "Ο ιδιοκτήτης";
+    : await actionError("ownerFallback");
 
   await sendCohostInviteEmail({
     to: row.invited_email,
     ownerName,
-    listingTitle: listing?.title ?? "Αγγελία",
+    listingTitle: listing?.title ?? (await actionError("listingFallback")),
     inviteToken: row.invite_token,
     message: row.invite_message ?? DEFAULT_COHOST_INVITE_MESSAGE,
   });
@@ -333,10 +334,10 @@ export async function resendListingCohostInvite(
 
 export async function acceptCohostInvite(token: string): Promise<ActionResult> {
   const auth = await requireUser();
-  if ("error" in auth) return { error: auth.error ?? "Σφάλμα πρόσβασης" };
+  if ("error" in auth) return { error: auth.error ?? (await actionError("accessError")) };
 
   const userEmail = auth.user.email?.trim().toLowerCase();
-  if (!userEmail) return { error: "Ο λογαριασμός σου δεν έχει email." };
+  if (!userEmail) return { error: await actionError("accountNoEmail") };
 
   const { data: invite } = await auth.supabase
     .from("listing_cohosts")
@@ -345,10 +346,10 @@ export async function acceptCohostInvite(token: string): Promise<ActionResult> {
     .eq("status", "pending")
     .maybeSingle();
 
-  if (!invite) return { error: "Η πρόσκληση δεν βρέθηκε ή έχει λήξει." };
+  if (!invite) return { error: await actionError("inviteNotFoundOrExpired") };
 
   if (invite.invited_email !== userEmail) {
-    return { error: "Η πρόσκληση αφορά διαφορετικό email." };
+    return { error: await actionError("inviteWrongEmail") };
   }
 
   const { error } = await auth.supabase
@@ -374,7 +375,7 @@ export async function acceptCohostInvite(token: string): Promise<ActionResult> {
   });
 
   const listingTitle =
-    (invite.listings as { title?: string } | null)?.title ?? "Αγγελία";
+    (invite.listings as { title?: string } | null)?.title ?? (await actionError("listingFallback"));
 
   const cohostName = profileDisplayName({
     full_name: auth.user.user_metadata?.full_name ?? "",
@@ -408,10 +409,10 @@ export async function acceptCohostInvite(token: string): Promise<ActionResult> {
 
 export async function declineCohostInvite(token: string): Promise<ActionResult> {
   const auth = await requireUser();
-  if ("error" in auth) return { error: auth.error ?? "Σφάλμα πρόσβασης" };
+  if ("error" in auth) return { error: auth.error ?? (await actionError("accessError")) };
 
   const userEmail = auth.user.email?.trim().toLowerCase();
-  if (!userEmail) return { error: "Ο λογαριασμός σου δεν έχει email." };
+  if (!userEmail) return { error: await actionError("accountNoEmail") };
 
   const { data: invite } = await auth.supabase
     .from("listing_cohosts")
@@ -421,7 +422,7 @@ export async function declineCohostInvite(token: string): Promise<ActionResult> 
     .maybeSingle();
 
   if (!invite || invite.invited_email !== userEmail) {
-    return { error: "Η πρόσκληση δεν βρέθηκε." };
+    return { error: await actionError("inviteNotFound") };
   }
 
   const { error } = await auth.supabase
@@ -448,7 +449,7 @@ export async function declineCohostInvite(token: string): Promise<ActionResult> 
 
 export async function leaveListingAsCohost(listingId: string): Promise<ActionResult> {
   const auth = await requireUser();
-  if ("error" in auth) return { error: auth.error ?? "Σφάλμα πρόσβασης" };
+  if ("error" in auth) return { error: auth.error ?? (await actionError("accessError")) };
 
   const { error } = await auth.supabase
     .from("listing_cohosts")
@@ -478,10 +479,10 @@ export async function replyToPropertyLead(
   body: string
 ): Promise<ActionResult> {
   const trimmed = body.trim();
-  if (!trimmed) return { error: "Γράψε ένα μήνυμα απάντησης." };
+  if (!trimmed) return { error: await actionError("replyMessageRequired") };
 
   const auth = await requireUser();
-  if ("error" in auth) return { error: auth.error ?? "Σφάλμα πρόσβασης" };
+  if ("error" in auth) return { error: auth.error ?? (await actionError("accessError")) };
 
   const { data: lead } = await auth.supabase
     .from("property_leads")
@@ -489,7 +490,7 @@ export async function replyToPropertyLead(
     .eq("id", leadId)
     .single();
 
-  if (!lead) return { error: "Το αίτημα δεν βρέθηκε." };
+  if (!lead) return { error: await actionError("leadNotFound") };
 
   const access = await resolveListingAccess(
     auth.supabase,
@@ -497,7 +498,7 @@ export async function replyToPropertyLead(
     auth.user.id
   );
   if (!access || !accessAllows(access, "manage_messages")) {
-    return { error: "Δεν έχεις δικαίωμα απάντησης." };
+    return { error: await actionError("noPermissionReply") };
   }
 
   const { data: profile } = await auth.supabase
@@ -506,7 +507,7 @@ export async function replyToPropertyLead(
     .eq("id", auth.user.id)
     .single();
 
-  const displayName = profile ? profileDisplayName(profile) : "Χρήστης";
+  const displayName = profile ? profileDisplayName(profile) : await actionError("userFallback");
   const senderRole = access.role === "owner" ? "owner" : "cohost";
 
   const { error: replyError } = await auth.supabase.from("property_lead_replies").insert({
@@ -551,7 +552,7 @@ export async function upsertListingContactNumber(
   formData: FormData
 ): Promise<ActionResult> {
   const auth = await requireListingPermission(listingId, "manage_listing");
-  if ("error" in auth) return { error: auth.error ?? "Σφάλμα πρόσβασης" };
+  if ("error" in auth) return { error: auth.error ?? (await actionError("accessError")) };
 
   const phone = String(formData.get("phone_number") ?? "").trim();
   const label = String(formData.get("label") ?? "").trim() || null;
@@ -561,7 +562,7 @@ export async function upsertListingContactNumber(
     | "public";
   const contactId = String(formData.get("id") ?? "").trim() || null;
 
-  if (!phone) return { error: "Δώσε αριθμό τηλεφώνου." };
+  if (!phone) return { error: await actionError("phoneRequired") };
 
   const role = auth.access.role === "owner" ? "owner" : "cohost";
 
@@ -609,7 +610,7 @@ export async function deleteListingContactNumber(
   listingId: string
 ): Promise<ActionResult> {
   const auth = await requireListingPermission(listingId, "manage_listing");
-  if ("error" in auth) return { error: auth.error ?? "Σφάλμα πρόσβασης" };
+  if ("error" in auth) return { error: auth.error ?? (await actionError("accessError")) };
 
   const { error } = await auth.supabase
     .from("listing_contact_numbers")

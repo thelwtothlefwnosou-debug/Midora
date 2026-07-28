@@ -2,6 +2,7 @@
 
 import { useMemo } from "react";
 import { useSearchParams } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { ListingRentalModeSwitcher } from "@/components/listings/ListingRentalModeSwitcher";
 import { ListingMediaGallery } from "@/components/listings/ListingMediaGallery";
 import { MonthlyListingLayout } from "@/components/listings/MonthlyListingLayout";
@@ -49,6 +50,7 @@ function ListingPageContentInner({
   publicCohosts = [],
   publicContactPhones = [],
 }: Props) {
+  const t = useTranslations("Listing");
   const { mode, showBoth } = useListingRentalMode();
   const searchParams = useSearchParams();
   const profileLinkContext = useMemo(
@@ -62,14 +64,14 @@ function ListingPageContentInner({
 
   const stickyNavItems = useMemo(() => {
     const items = [
-      { id: "about", label: "Περιγραφή" },
-      { id: "amenities", label: "Παροχές" },
+      { id: "about", label: t("description") },
+      { id: "amenities", label: t("amenities") },
     ];
-    if (hasArrivalInfo(listing)) items.push({ id: "arrival", label: "Άφιξη" });
-    items.push({ id: "availability", label: "Διαθεσιμότητα" });
-    items.push({ id: "area", label: "Περιοχή" });
+    if (hasArrivalInfo(listing)) items.push({ id: "arrival", label: t("arrival") });
+    items.push({ id: "availability", label: t("availability") });
+    items.push({ id: "area", label: t("area") });
     return items;
-  }, [listing]);
+  }, [listing, t]);
 
   async function handleShare() {
     const url = window.location.href;
@@ -116,7 +118,7 @@ function ListingPageContentInner({
         {gallery}
         <PublicListingSummary
           listing={listing}
-          rentalLabel="Μηνιαία / Μεσοπρόθεσμη"
+          rentalLabel={t("monthlyMidterm")}
           modeSwitcher={showBoth ? <ListingRentalModeSwitcher /> : undefined}
         />
         <MonthlyListingLayout
@@ -144,41 +146,51 @@ function ListingPageContentInner({
       {gallery}
       <PublicListingSummary
         listing={listing}
-        rentalLabel="Βραχυχρόνια"
+        rentalLabel={t("shortTerm")}
         modeSwitcher={showBoth ? <ListingRentalModeSwitcher /> : undefined}
       />
 
-      <PublicListingMainLayout
-        content={
-          <>
-            <StickyPropertyNav items={stickyNavItems} />
-            <ListingCoreContent listing={listing} rentalMode="short_term" />
-            <ListingArrivalSection listing={listing} />
-            <AvailabilityCalendarSection listing={listing} periods={unavailablePeriods} />
-            <ListingAreaSection listing={listing} />
-            <ListingSleepingSection
-              arrangements={listing.sleeping_arrangements}
-              images={listing.listing_images ?? []}
-            />
-            <ListingAdvertiserSection
+      {/* Sticky inquiry only within this section — ends before full-width map/host/legal */}
+      <section className="listing-main-section">
+        <PublicListingMainLayout
+          content={
+            <>
+              <StickyPropertyNav items={stickyNavItems} />
+              <ListingCoreContent listing={listing} rentalMode="short_term" />
+              <ListingArrivalSection listing={listing} />
+              <ListingSleepingSection
+                arrangements={listing.sleeping_arrangements}
+                images={listing.listing_images ?? []}
+              />
+              <AvailabilityCalendarSection
+                listing={listing}
+                periods={unavailablePeriods}
+              />
+            </>
+          }
+          sidebar={
+            <ShortTermInquiryCard
               listing={listing}
-              rentalMode="short_term"
-              cohosts={publicCohosts}
-              publicContactPhones={publicContactPhones}
-              profileLinkContext={profileLinkContext}
+              periods={unavailablePeriods}
+              contact={contact}
             />
-            <ListingExternalLinksSection links={listing.external_links ?? []} />
-            <ListingLegalSection listing={listing} />
-          </>
-        }
-        sidebar={
-          <ShortTermInquiryCard
-            listing={listing}
-            periods={unavailablePeriods}
-            contact={contact}
-          />
-        }
+          }
+        />
+      </section>
+
+      <ListingAreaSection listing={listing} rentalMode="short_term" />
+
+      <ListingAdvertiserSection
+        listing={listing}
+        rentalMode="short_term"
+        cohosts={publicCohosts}
+        publicContactPhones={publicContactPhones}
+        profileLinkContext={profileLinkContext}
       />
+
+      <ListingExternalLinksSection links={listing.external_links ?? []} />
+
+      <ListingLegalSection listing={listing} />
 
       <div className="mt-2 border-t border-border pt-2">
         <NearbyListingsCarouselSlot

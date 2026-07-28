@@ -13,6 +13,7 @@ import {
   resolvePublicHighlights,
 } from "@/lib/listing-public-amenities";
 import { getPublicListingExternalLinks } from "@/lib/listing-external-links-db";
+import { getListingMonthlyPriceTiers } from "@/lib/listing-monthly-tiers-db";
 
 import { PROFILE_CONTACT_SELECT } from "@/lib/profile-contact-select";
 
@@ -71,11 +72,14 @@ export async function getAdvertiserActiveListingCount(userId: string): Promise<n
   return count ?? 0;
 }
 
-export async function getListingPublicDetail(id: string): Promise<ListingPublicDetail | null> {
+export async function getListingPublicDetail(
+  id: string,
+  locale?: string
+): Promise<ListingPublicDetail | null> {
   const listing = await getListingById(id);
   if (!listing) return null;
 
-  const [highlights, sleeping, amenities, price_rules, advertiser_active_listings, external_links] =
+  const [highlights, sleeping, amenities, price_rules, advertiser_active_listings, external_links, monthly_price_tiers] =
     await Promise.all([
       safeSelect<ListingHighlight>("listing_highlights", listing.id, "sort_order"),
       getPublicSleepingArrangements(listing.id),
@@ -83,16 +87,20 @@ export async function getListingPublicDetail(id: string): Promise<ListingPublicD
       getPublicPriceRules(listing.id),
       getAdvertiserActiveListingCount(listing.user_id),
       getPublicListingExternalLinks(listing.id),
+      listing.monthly_pricing_mode === "tiers"
+        ? getListingMonthlyPriceTiers(listing.id)
+        : Promise.resolve(listing.monthly_price_tiers ?? []),
     ]);
 
   const resolvedAmenities = resolvePublicAmenityRows(listing, amenities);
   const resolvedHighlights = resolvePublicHighlights({
     ...listing,
     highlights,
-  });
+  }, locale);
 
   return {
     ...listing,
+    monthly_price_tiers,
     highlights: resolvedHighlights,
     sleeping_arrangements: sleeping,
     amenities: resolvedAmenities,

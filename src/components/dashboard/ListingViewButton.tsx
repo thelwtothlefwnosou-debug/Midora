@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { Eye } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 
 type Props = {
@@ -17,6 +18,7 @@ export function ListingViewButton({
   size = "sm",
   variant = "secondary",
 }: Props) {
+  const t = useTranslations("Owner.cta");
   const href = `/dashboard/listings/${listingId}/view`;
 
   return (
@@ -32,7 +34,7 @@ export function ListingViewButton({
       )}
     >
       <Eye className="h-3.5 w-3.5 text-muted" />
-      Προβολή
+      {t("preview")}
     </Link>
   );
 }

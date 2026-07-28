@@ -1,85 +1,73 @@
-"use client";
-
 import Link from "next/link";
-import { useState } from "react";
+import Image from "next/image";
+import { getTranslations } from "next-intl/server";
 import { ArrowRight, Check, Home } from "lucide-react";
 import {
-  HOME_OWNER_RENTAL_CARDS,
-  type OwnerRentalCard,
+  HOME_OWNER_LISTING_HREF,
+  HOME_OWNER_SPLIT_IMAGE,
 } from "@/lib/homepage-content";
-import { OWNER_LISTING_NEW_PATH } from "@/lib/owner-flow";
-import type { RentalType } from "@/lib/rental-types";
-import { cn } from "@/lib/utils";
 
-export function HostCTA() {
-  const [selected, setSelected] = useState<RentalType>("short_term");
+const OWNER_BULLET_KEYS = [
+  "hostBullet1",
+  "hostBullet2",
+  "hostBullet3",
+  "hostBullet4",
+] as const;
 
-  const listingHref = `${OWNER_LISTING_NEW_PATH}?rentalType=${selected}`;
+export async function HostCTA() {
+  const t = await getTranslations("Home");
 
   return (
-    <section className="home-section home-bg-sand border-t border-border">
+    <section id="owners" className="home-section home-section--editorial home-bg-white">
       <div className="mx-auto max-w-7xl px-4 sm:px-6">
-        <div className="home-card relative overflow-hidden border-gold/15 p-6 sm:p-8">
-          <div
-            className="pointer-events-none absolute inset-0 bg-gradient-to-br from-gold/[0.06] via-white to-sand/60"
-            aria-hidden
-          />
-          <div className="relative w-full">
-            <p className="text-[11px] font-semibold tracking-[0.14em] text-gold uppercase">
-              Για αγγελιοδότες
+        <div className="grid items-center gap-10 lg:grid-cols-2 lg:gap-14 xl:gap-16">
+          <div className="order-2 lg:order-1">
+            <p className="text-[11px] font-semibold tracking-[0.16em] text-gold uppercase">
+              {t("hostCtaEyebrow")}
             </p>
-            <h2 className="mt-2 font-display text-xl font-semibold text-charcoal sm:text-2xl">
-              Ανέβασε την αγγελία σου στο Midora
+            <h2 className="mt-3 font-display text-[1.75rem] font-semibold leading-[1.12] tracking-tight text-charcoal sm:text-[2.15rem]">
+              {t("hostCtaTitle")}
             </h2>
-            <p className="mt-2 max-w-2xl text-sm leading-relaxed text-muted/95">
-              Δημοσίευσε ακίνητο για βραχυχρόνια ή μηνιαία/μεσοπρόθεσμη διαμονή και δέξου
-              ενδιαφέροντα από επισκέπτες.
+            <p className="mt-4 max-w-xl text-[0.9375rem] leading-relaxed text-muted sm:text-base">
+              {t("hostCtaBody")}
             </p>
 
-            <div className="mt-6 grid gap-3 sm:grid-cols-2" role="radiogroup" aria-label="Τύπος αγγελίας">
-              {HOME_OWNER_RENTAL_CARDS.map((card: OwnerRentalCard) => {
-                const active = selected === card.rentalType;
-                return (
-                  <button
-                    key={card.rentalType}
-                    type="button"
-                    role="radio"
-                    aria-checked={active}
-                    onClick={() => setSelected(card.rentalType)}
-                    className={cn(
-                      "flex h-full flex-col rounded-xl border bg-white p-4 text-left transition-all sm:p-5",
-                      active
-                        ? "border-gold bg-gold/[0.04] shadow-soft ring-1 ring-gold/25"
-                        : "border-border hover:border-gold/30 hover:shadow-soft"
-                    )}
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <h3 className="font-display text-sm font-semibold text-charcoal sm:text-base">
-                        {card.title}
-                      </h3>
-                      {active && (
-                        <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-gold text-white">
-                          <Check className="h-3.5 w-3.5" strokeWidth={2.5} />
-                        </span>
-                      )}
-                    </div>
-                    <p className="mt-1.5 flex-1 text-xs leading-relaxed text-muted sm:text-sm">
-                      {card.text}
-                    </p>
-                  </button>
-                );
-              })}
-            </div>
+            <ul className="mt-7 space-y-3.5">
+              {OWNER_BULLET_KEYS.map((key) => (
+                <li key={key} className="flex items-start gap-3 text-sm text-charcoal/90 sm:text-[0.9375rem]">
+                  <span className="mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-gold/15 text-gold-dark">
+                    <Check className="h-3 w-3" strokeWidth={2.5} />
+                  </span>
+                  {t(key)}
+                </li>
+              ))}
+            </ul>
 
-            <div className="mt-6 flex flex-wrap items-center gap-3">
-              <Link href={listingHref} className="home-btn-primary">
+            <div className="mt-8 flex flex-wrap items-center gap-3">
+              <Link href={HOME_OWNER_LISTING_HREF} className="home-btn-primary">
                 <Home className="h-4 w-4" />
-                Ανέβασε αγγελία
+                {t("hostCtaPrimary")}
               </Link>
-              <Link href="/how-it-works" className="home-btn-secondary">
-                Μάθε πώς λειτουργεί
+              <Link href="/owners" className="home-btn-secondary">
+                {t("hostCtaSecondary")}
                 <ArrowRight className="h-4 w-4" />
               </Link>
+            </div>
+          </div>
+
+          <div className="order-1 lg:order-2">
+            <div className="relative aspect-[4/3] overflow-hidden rounded-[1.75rem] sm:aspect-[5/4] lg:min-h-[26rem]">
+              <Image
+                src={HOME_OWNER_SPLIT_IMAGE}
+                alt=""
+                fill
+                sizes="(max-width: 1024px) 100vw, 48vw"
+                className="object-cover object-[50%_45%]"
+              />
+              <div
+                className="pointer-events-none absolute inset-0 bg-gradient-to-tr from-charcoal/20 via-transparent to-transparent"
+                aria-hidden
+              />
             </div>
           </div>
         </div>

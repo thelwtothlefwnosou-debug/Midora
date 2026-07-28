@@ -1,7 +1,17 @@
+"use client";
+
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/Button";
 import type { Profile } from "@/lib/types";
 import { profileCompletionItems, profileCompletionPercent } from "@/lib/owner-dashboard";
+
+const PROFILE_COMPLETION_IDS = ["name", "phone", "avatar", "bio", "languages"] as const;
+type ProfileCompletionId = (typeof PROFILE_COMPLETION_IDS)[number];
+
+function isProfileCompletionId(id: string): id is ProfileCompletionId {
+  return (PROFILE_COMPLETION_IDS as readonly string[]).includes(id);
+}
 
 type Props = {
   profile: Profile;
@@ -9,6 +19,8 @@ type Props = {
 };
 
 export function OwnerProfileCompletionCompact({ profile, email }: Props) {
+  const t = useTranslations("Owner.home.profile");
+  const tItems = useTranslations("Owner.profileCompletion");
   const percent = profileCompletionPercent(profile, email);
   const pending = profileCompletionItems(profile, email).filter((i) => !i.done).slice(0, 3);
 
@@ -21,9 +33,9 @@ export function OwnerProfileCompletionCompact({ profile, email }: Props) {
       <div className="flex items-start justify-between gap-3">
         <div>
           <h3 className="font-display text-base font-semibold text-charcoal">
-            Ολοκλήρωσε το προφίλ σου
+            {t("title")}
           </h3>
-          <p className="mt-0.5 text-xs text-muted">{percent}% ολοκληρωμένο</p>
+          <p className="mt-0.5 text-xs text-muted">{t("percentDone", { percent })}</p>
         </div>
         <span className="rounded-full bg-gold/15 px-2 py-0.5 text-xs font-semibold text-gold-dark">
           {percent}%
@@ -38,14 +50,14 @@ export function OwnerProfileCompletionCompact({ profile, email }: Props) {
         {pending.map((item) => (
           <li key={item.id}>
             <Link href={item.href} className="text-sm text-charcoal/80 hover:text-gold-dark">
-              · {item.label}
+              · {isProfileCompletionId(item.id) ? tItems(item.id) : item.id}
             </Link>
           </li>
         ))}
       </ul>
 
       <Button href={firstHref} size="sm" variant="outline" className="mt-4 w-full">
-        Ολοκλήρωσε το προφίλ
+        {t("cta")}
       </Button>
     </section>
   );

@@ -5,10 +5,15 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { ChevronDown, ImageIcon, Plus } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { DashboardListingStatusBadge } from "@/components/dashboard/DashboardListingStatusBadge";
 import type { ListingSwitcherItem } from "@/lib/listing-workspace-types";
+import {
+  mapOwnerStatusKeyToUi,
+  ownerStatusKeyToLabelKey,
+} from "@/lib/owner-listing-ui-status";
 import { OWNER_LISTING_NEW_PATH } from "@/lib/owner-flow";
-import { rentalTypeBadgeLabel } from "@/lib/rental-types";
+import { getRentalTypeBadgeLabel } from "@/lib/rental-types";
 import { cn } from "@/lib/utils";
 
 type Props = {
@@ -22,6 +27,9 @@ export function ListingWorkspaceSwitcher({ currentListingId, items, className }:
   const ref = useRef<HTMLDivElement>(null);
   const router = useRouter();
   const pathname = usePathname() ?? "";
+  const tUi = useTranslations("Owner.uiStatus");
+  const tListing = useTranslations("Listing");
+  const tDash = useTranslations("Dashboard");
 
   const current = items.find((item) => item.id === currentListingId) ?? items[0];
 
@@ -91,11 +99,12 @@ export function ListingWorkspaceSwitcher({ currentListingId, items, className }:
                     <span className="block truncate text-xs text-muted">{item.location}</span>
                     <span className="mt-1.5 flex flex-wrap items-center gap-2">
                       <span className="rounded bg-charcoal/90 px-1.5 py-0.5 text-[9px] font-semibold tracking-wide text-white uppercase">
-                        {rentalTypeBadgeLabel(item.rentalType)}
+                        {getRentalTypeBadgeLabel(item.rentalType, tListing)}
                       </span>
                       <DashboardListingStatusBadge
-                        statusKey={item.statusKey}
-                        label={item.statusLabel}
+                        statusKey={mapOwnerStatusKeyToUi(item.statusKey)}
+                        label={tUi(ownerStatusKeyToLabelKey(item.statusKey))}
+                        compact
                         className="!space-y-0"
                       />
                     </span>
@@ -111,7 +120,7 @@ export function ListingWorkspaceSwitcher({ currentListingId, items, className }:
               className="flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-medium text-charcoal hover:bg-sand/60"
             >
               <Plus className="h-4 w-4 text-gold" />
-              Νέα αγγελία
+              {tDash("newListing")}
             </Link>
           </div>
         </div>

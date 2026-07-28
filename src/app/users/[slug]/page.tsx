@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { getTranslations, getLocale } from "next-intl/server";
 import { PublicPageLayout } from "@/components/layout/PublicPageLayout";
 import { PublicProfilePageContent } from "@/components/profile/PublicProfilePageContent";
 import {
@@ -48,18 +49,20 @@ export async function generateMetadata({
 }: {
   params: Promise<{ slug: string }>;
 }): Promise<Metadata> {
+  const t = await getTranslations("Meta");
+  const locale = await getLocale();
   const { slug } = await params;
   const profile = await getPublicProfileBySlugOrId(slug);
-  if (!profile) return { title: "Προφίλ μη διαθέσιμο" };
+  if (!profile) return { title: t("profileUnavailable") };
 
-  const data = await getPublicProfilePageData(profile);
-  if (!data) return { title: "Προφίλ μη διαθέσιμο" };
+  const data = await getPublicProfilePageData(profile, locale);
+  if (!data) return { title: t("profileUnavailable") };
 
-  const title = `${data.displayName} — Προφίλ`;
+  const title = t("profileTitle", { name: data.displayName });
   const description = data.profile.bio?.trim()
     ? data.profile.bio.trim().slice(0, 155) +
       (data.profile.bio.trim().length > 155 ? "…" : "")
-    : `Δείτε τις δημόσιες αγγελίες του/της ${data.displayName} στο Midora.`;
+    : t("profileDescription", { name: data.displayName });
   const canonicalPath = profile.public_slug
     ? `/users/${profile.public_slug}`
     : `/users/${profile.id}`;
@@ -87,10 +90,11 @@ export default async function PublicUserProfilePage({
 }) {
   const { slug } = await params;
   const sp = await searchParams;
+  const locale = await getLocale();
   const profile = await getPublicProfileBySlugOrId(slug);
   if (!profile) notFound();
 
-  const data = await getPublicProfilePageData(profile);
+  const data = await getPublicProfilePageData(profile, locale);
   if (!data) notFound();
 
   const dateContext = parseDateContext(sp);

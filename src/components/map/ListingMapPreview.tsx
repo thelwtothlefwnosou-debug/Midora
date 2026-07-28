@@ -1,4 +1,7 @@
+"use client";
+
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import type { MapMarker } from "@/components/map/types";
 import { cn } from "@/lib/utils";
 
@@ -9,6 +12,7 @@ type Props = {
 };
 
 export function ListingMapPreview({ marker, className, compact = true }: Props) {
+  const t = useTranslations("Common");
   const areaLine = [marker.area, marker.city].filter(Boolean).join(", ");
   const href = marker.href ?? `/listings/${marker.id}`;
 
@@ -34,7 +38,7 @@ export function ListingMapPreview({ marker, className, compact = true }: Props) 
         {marker.priceUnit ? <span>{marker.priceUnit}</span> : null}
       </p>
       <Link href={href} className="midora-map-popup__cta">
-        Δες αγγελία
+        {t("viewListing")}
       </Link>
     </div>
   );

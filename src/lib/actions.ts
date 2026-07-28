@@ -1,5 +1,6 @@
 "use server";
 
+import { actionError, authActionError, mustSignInError } from "@/lib/action-error-i18n";
 import { revalidatePath } from "next/cache";
 import { revalidateListingsCatalog } from "@/lib/listings-cache";
 import { redirect } from "next/navigation";
@@ -33,12 +34,13 @@ import {
   LISTING_PHOTOS_BUCKET,
   normalizeListingPhotoExtension,
   isAcceptedListingPhotoType,
-  LISTING_PHOTO_UNSUPPORTED_MSG,
+  validateListingPhotoFile,
 } from "@/lib/listing-photo-upload";
+import { appendHouseRulesToDescription } from "@/lib/listing-description";
 import {
   LISTING_SAVE_ERROR_MSG,
-  MIN_LISTING_DESCRIPTION_LENGTH,
-  MIN_LISTING_TITLE_LENGTH,
+  listingDescriptionValidationError,
+  listingTitleValidationError,
   validateBasicDetails,
 } from "@/lib/listing-wizard-validation";
 import {
@@ -48,6 +50,7 @@ import {
   validatePortalListingFields,
 } from "@/lib/listing-portal-payload";
 import { insertListingRow, updateListingRow } from "@/lib/listing-db-write";
+import { replaceListingMonthlyPriceTiers, getListingMonthlyPriceTiers } from "@/lib/listing-monthly-tiers-db";
 import { rewardReferrerForListingApproval, resolveReferrerId } from "@/lib/referrals";
 import { storagePathFromPublicUrl } from "@/lib/storage";
 import type { ListingImage, PropertyLeadStatus } from "@/lib/types";
@@ -68,7 +71,7 @@ import {
 
 export async function signUp(formData: FormData) {
   const supabase = await createClient();
-  if (!supabase) return { error: "Supabase δεν είναι ρυθμισμένο" };
+  if (!supabase) return { error: "supabaseNotConfigured" };
 
   const email = formData.get("email") as string;
   const password = formData.get("password") as string;
@@ -123,12 +126,12 @@ export async function signUp(formData: FormData) {
 
 export async function completeProfile(formData: FormData) {
   const supabase = await createClient();
-  if (!supabase) return { error: "Supabase δεν είναι ρυθμισμένο" };
+  if (!supabase) return { error: "supabaseNotConfigured" };
 
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) return { error: "Πρέπει να συνδεθείς" };
+  if (!user) return { error: "mustSignIn" };
 
   const fullName = (formData.get("full_name") as string)?.trim();
   const phone = (formData.get("phone") as string)?.trim();
@@ -137,7 +140,7 @@ export async function completeProfile(formData: FormData) {
   );
 
   if (!fullName || !phone) {
-    return { error: "Συμπλήρωσε όνομα και τηλέφωνο" };
+    return { error: "nameAndPhoneRequired" };
   }
 
   const { updateProfileRow } = await import("@/lib/profile-db-write");
@@ -177,23 +180,27 @@ function generateReferralCodeFromId(userId: string) {
   return userId.replace(/-/g, "").slice(0, 8).toUpperCase();
 }
 
+/** Stable Auth.errors.* codes for client i18n; unknown messages pass through. */
 function translateAuthError(message: string): string {
   if (message.includes("already registered")) {
-    return "Αυτό το email είναι ήδη εγγεγραμμένο. Δοκίμασε σύνδεση.";
+    return "emailAlreadyRegistered";
   }
   if (message.includes("Invalid login credentials")) {
-    return "Λάθος email ή κωδικός.";
+    return "invalidCredentials";
+  }
+  if (message.includes("Email not confirmed")) {
+    return "emailNotConfirmed";
   }
   return message;
 }
 
 async function requireUser() {
   const supabase = await createClient();
-  if (!supabase) return { error: "Supabase δεν είναι ρυθμισμένο" as const };
+  if (!supabase) return { error: await authActionError("supabaseNotConfigured") } as const;
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) return { error: "Πρέπει να συνδεθείς" as const };
+  if (!user) return await mustSignInError();
   return { supabase, user };
 }
 
@@ -205,7 +212,7 @@ async function requireAdmin() {
     .select("role")
     .eq("id", auth.user.id)
     .single();
-  if (profile?.role !== "admin") return { error: "Δεν έχεις δικαίωμα" as const };
+  if (profile?.role !== "admin") return { error: await actionError("noPermission") } as const;
   return auth;
 }
 
@@ -217,7 +224,7 @@ async function requireListingOwner(
   if ("error" in auth) return auth;
   const access = await resolveListingAccess(auth.supabase, listingId, auth.user.id);
   if (!access || !accessAllows(access, permission)) {
-    return { error: "Δεν έχεις πρόσβαση" as const };
+    return { error: await actionError("noAccess") } as const;
   }
   const { data: listing } = await auth.supabase
     .from("listings")
@@ -225,14 +232,14 @@ async function requireListingOwner(
     .eq("id", listingId)
     .single();
   if (!listing) {
-    return { error: "Δεν έχεις πρόσβαση" as const };
+    return { error: await actionError("noAccess") } as const;
   }
   return { ...auth, listing, access };
 }
 
 export async function signIn(formData: FormData) {
   const supabase = await createClient();
-  if (!supabase) return { error: "Supabase δεν είναι ρυθμισμένο" };
+  if (!supabase) return { error: "supabaseNotConfigured" };
 
   const email = formData.get("email") as string;
   const password = formData.get("password") as string;
@@ -261,31 +268,31 @@ export async function signOut() {
 
 export async function requestPasswordReset(formData: FormData) {
   const supabase = await createClient();
-  if (!supabase) return { error: "Supabase δεν είναι ρυθμισμένο" };
+  if (!supabase) return { error: "supabaseNotConfigured" };
 
   const email = (formData.get("email") as string)?.trim();
-  if (!email) return { error: "Βάλε το email σου" };
+  if (!email) return { error: "emailRequired" };
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
   const { error } = await supabase.auth.resetPasswordForEmail(email, {
     redirectTo: `${appUrl}/auth/callback?next=/auth/update-password&type=recovery`,
   });
 
-  if (error) return { error: error.message };
+  if (error) return { error: translateAuthError(error.message) };
   return { success: true };
 }
 
 export async function updatePassword(formData: FormData) {
   const supabase = await createClient();
-  if (!supabase) return { error: "Supabase δεν είναι ρυθμισμένο" };
+  if (!supabase) return { error: "supabaseNotConfigured" };
 
   const password = formData.get("password") as string;
   if (!password || password.length < 6) {
-    return { error: "Ο κωδικός πρέπει να έχει τουλάχιστον 6 χαρακτήρες" };
+    return { error: "passwordTooShort" };
   }
 
   const { error } = await supabase.auth.updateUser({ password });
-  if (error) return { error: error.message };
+  if (error) return { error: translateAuthError(error.message) };
 
   redirect("/dashboard");
 }
@@ -296,7 +303,7 @@ export async function updateProfile(formData: FormData) {
 
   const fullName = (formData.get("full_name") as string)?.trim();
   const phone = (formData.get("phone") as string)?.trim();
-  if (!fullName || !phone) return { error: "Συμπλήρωσε όνομα και τηλέφωνο" };
+  if (!fullName || !phone) return { error: await authActionError("nameAndPhoneRequired") };
 
   const { error } = await auth.supabase.from("profiles").upsert(
     { id: auth.user.id, full_name: fullName, phone },
@@ -310,8 +317,8 @@ export async function updateProfile(formData: FormData) {
   return { success: true };
 }
 
-function toListingSaveError(error: { message?: string } | null): string {
-  if (!error?.message) return LISTING_SAVE_ERROR_MSG;
+async function toListingSaveError(error: { message?: string } | null): Promise<string> {
+  if (!error?.message) return await actionError("listingSaveFailed");
   const msg = error.message.toLowerCase();
 
   if (process.env.NODE_ENV === "development") {
@@ -319,19 +326,19 @@ function toListingSaveError(error: { message?: string } | null): string {
   }
 
   if (msg.includes("profiles") && msg.includes("foreign key")) {
-    return "Δεν ήταν δυνατή η αποθήκευση. Συμπλήρωσε το προφίλ σου από τις Ρυθμίσεις και δοκίμασε ξανά.";
+    return await actionError("profileFkSaveFailed");
   }
   if (msg.includes("price_monthly") || msg.includes("price_per_night")) {
-    return "Συμπλήρωσε την τιμή ενοικίου στο βήμα «Τιμή & μίσθωση» (μεγαλύτερη από 0).";
+    return await actionError("rentPriceRequired");
   }
   if (msg.includes("max_guests")) {
-    return "Ο μέγιστος αριθμός ατόμων πρέπει να είναι μεγαλύτερος από 0.";
+    return await actionError("maxGuestsRequired");
   }
   if (msg.includes("sqm")) {
-    return "Τα τετραγωνικά μέτρα πρέπει να είναι μεγαλύτερα από 0.";
+    return await actionError("sqmRequired");
   }
 
-  return LISTING_SAVE_ERROR_MSG;
+  return await actionError("listingSaveFailed");
 }
 
 async function ensureOwnerProfile(
@@ -436,11 +443,22 @@ export async function getWizardListingDraft(listingId: string) {
     .eq("id", listingId)
     .maybeSingle();
 
-  if (error) return { error: toListingSaveError(error) };
-  if (!data) return { error: "Η αγγελία δεν βρέθηκε." };
+  if (error) return { error: await toListingSaveError(error) };
+  if (!data) return { error: await actionError("listingNotFound") };
 
   const photoCount = await countSavedListingPhotos(auth.supabase, listingId);
-  return { listing: data, photoCount };
+  const [{ images, error: imagesError }, monthlyTiers] = await Promise.all([
+    fetchOwnerListingImages(auth.supabase, listingId),
+    getListingMonthlyPriceTiers(listingId),
+  ]);
+  const listing = {
+    ...data,
+    monthly_price_tiers: monthlyTiers,
+  };
+  if (imagesError) {
+    return { listing, photoCount, images: [] as ListingImage[] };
+  }
+  return { listing, photoCount, images: images ?? [] };
 }
 
 /** Latest incomplete draft for the signed-in owner (create-wizard resume). */
@@ -457,7 +475,7 @@ export async function getOwnerLatestDraftListingId() {
     .limit(1)
     .maybeSingle();
 
-  if (error) return { error: toListingSaveError(error) };
+  if (error) return { error: await toListingSaveError(error) };
   return { listingId: data?.id ?? null };
 }
 
@@ -471,7 +489,7 @@ export async function getOwnerListingImages(listingId: string) {
   if ("error" in auth) return { error: auth.error };
 
   const { images, error } = await fetchOwnerListingImages(auth.supabase, listingId);
-  if (error) return { error: toListingSaveError(error) };
+  if (error) return { error: await toListingSaveError(error) };
   return { images: images ?? [] };
 }
 
@@ -483,9 +501,7 @@ function parseListingFields(formData: FormData) {
   const energyClass = (formData.get("energy_class") as string) || null;
   let description = formData.get("description") as string;
   const houseRules = (formData.get("house_rules") as string)?.trim();
-  if (houseRules) {
-    description = `${description}\n\nΚανόνες σπιτιού:\n${houseRules}`;
-  }
+  description = appendHouseRulesToDescription(description, houseRules);
   const priceMonthlyRaw = formData.get("price_monthly") as string;
   const pricePerNightRaw = formData.get("price_per_night") as string;
   const price_monthly = priceMonthlyRaw
@@ -505,10 +521,31 @@ function parseListingFields(formData: FormData) {
     price_monthly,
     price_per_night,
     bedrooms: parseInt(formData.get("bedrooms") as string, 10),
-    bathrooms: parseInt(formData.get("bathrooms") as string, 10) || null,
-    sqm: parseInt(formData.get("sqm") as string, 10) || null,
-    floor: parseInt(formData.get("floor") as string, 10) || null,
-    total_floors: parseInt(formData.get("total_floors") as string, 10) || null,
+    bathrooms: (() => {
+      const raw = (formData.get("bathrooms") as string)?.trim() ?? "";
+      if (raw === "") return null;
+      const n = parseInt(raw, 10);
+      return Number.isFinite(n) ? n : null;
+    })(),
+    sqm: (() => {
+      const raw = (formData.get("sqm") as string)?.trim() ?? "";
+      if (raw === "") return null;
+      const n = parseInt(raw, 10);
+      return Number.isFinite(n) && n > 0 ? n : null;
+    })(),
+    // 0 = ισόγειο — never use `|| null` (falsy would wipe ground floor)
+    floor: (() => {
+      const raw = (formData.get("floor") as string)?.trim() ?? "";
+      if (raw === "") return null;
+      const n = parseInt(raw, 10);
+      return Number.isFinite(n) ? n : null;
+    })(),
+    total_floors: (() => {
+      const raw = (formData.get("total_floors") as string)?.trim() ?? "";
+      if (raw === "") return null;
+      const n = parseInt(raw, 10);
+      return Number.isFinite(n) && n > 0 ? n : null;
+    })(),
     year_built: parseInt(formData.get("year_built") as string, 10) || null,
     year_renovated: parseInt(formData.get("year_renovated") as string, 10) || null,
     furnished: formData.get("furnished") === "on",
@@ -526,6 +563,19 @@ function parseListingFields(formData: FormData) {
   };
 }
 
+async function syncMonthlyOccupancyTiers(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  supabase: any,
+  listingId: string,
+  ownerId: string,
+  fields: ReturnType<typeof parsePortalListingFields>
+) {
+  if (!fields.supports_monthly) return;
+  const tiers =
+    fields.monthly_pricing_mode === "tiers" ? fields.monthly_price_tiers ?? [] : [];
+  await replaceListingMonthlyPriceTiers(supabase, listingId, ownerId, tiers);
+}
+
 export async function savePortalListingDraft(
   formData: FormData,
   listingId?: string | null
@@ -534,6 +584,11 @@ export async function savePortalListingDraft(
   if ("error" in auth) return { error: auth.error };
 
   const fields = parsePortalListingFields(formData);
+
+  const descriptionError = listingDescriptionValidationError(fields.description, {
+    forSubmission: false,
+  });
+  if (descriptionError) return { error: descriptionError };
 
   await ensureOwnerProfile(auth.supabase, auth.user);
 
@@ -565,9 +620,11 @@ export async function savePortalListingDraft(
       withDraftSafePrices(baseRow, "update")
     );
 
-    if (error) return { error: toListingSaveError(error) };
+    if (error) return { error: await toListingSaveError(error) };
     if (!data?.id) return { error: LISTING_SAVE_ERROR_MSG };
-    revalidatePath("/dashboard");
+    await syncMonthlyOccupancyTiers(owner.supabase, data.id, auth.user.id, fields);
+    // Do not revalidatePath here — invalidating /dashboard remounts the create
+    // wizard (layout refresh) and was rolling the live step back to SSR resume.
     return { listingId: data.id };
   }
 
@@ -590,9 +647,9 @@ export async function savePortalListingDraft(
         auth.user.id,
         withDraftSafePrices(baseRow, "update")
       );
-      if (error) return { error: toListingSaveError(error) };
+      if (error) return { error: await toListingSaveError(error) };
       if (!data?.id) return { error: LISTING_SAVE_ERROR_MSG };
-      revalidatePath("/dashboard");
+      await syncMonthlyOccupancyTiers(auth.supabase, data.id, auth.user.id, fields);
       return { listingId: data.id };
     }
   }
@@ -603,8 +660,10 @@ export async function savePortalListingDraft(
     auth.user.id
   );
 
-  if (error) return { error: toListingSaveError(error) };
+  if (error) return { error: await toListingSaveError(error) };
   if (!data?.id) return { error: LISTING_SAVE_ERROR_MSG };
+
+  await syncMonthlyOccupancyTiers(auth.supabase, data.id, auth.user.id, fields);
 
   await logAppEvent("listing_draft_saved", {
     userId: auth.user.id,
@@ -612,7 +671,6 @@ export async function savePortalListingDraft(
     entityId: data.id,
   });
 
-  revalidatePath("/dashboard");
   return { listingId: data.id };
 }
 
@@ -642,15 +700,15 @@ export async function submitPortalListingForReview(
   });
   if (basicError) return { error: basicError };
 
-  if (fields.title.length < MIN_LISTING_TITLE_LENGTH) {
-    return {
-      error: `Ο τίτλος πρέπει να έχει τουλάχιστον ${MIN_LISTING_TITLE_LENGTH} χαρακτήρες.`,
-    };
+  {
+    const titleError = listingTitleValidationError(fields.title);
+    if (titleError) return { error: titleError };
   }
-  if (fields.description.trim().length < MIN_LISTING_DESCRIPTION_LENGTH) {
-    return {
-      error: `Η περιγραφή πρέπει να έχει τουλάχιστον ${MIN_LISTING_DESCRIPTION_LENGTH} χαρακτήρες.`,
-    };
+  {
+    const descriptionError = listingDescriptionValidationError(fields.description, {
+      forSubmission: true,
+    });
+    if (descriptionError) return { error: descriptionError };
   }
 
   const portalError = validatePortalListingFields(fields, { forSubmission: true });
@@ -659,7 +717,7 @@ export async function submitPortalListingForReview(
   const photoCount = await countListingPhotos(auth.supabase, listingId);
   if (photoCount < MIN_LISTING_PHOTOS_FOR_REVIEW) {
     return {
-      error: `Πρόσθεσε τουλάχιστον ${MIN_LISTING_PHOTOS_FOR_REVIEW} φωτογραφίες πριν την υποβολή.`,
+      error: await actionError("minPhotosForReview", { count: MIN_LISTING_PHOTOS_FOR_REVIEW }),
     };
   }
 
@@ -672,7 +730,7 @@ export async function submitPortalListingForReview(
   if (fields.contact_phone) {
     const contactE164 = normalizePhoneToE164(fields.contact_phone);
     if (!contactE164 || !isValidGreekMobileE164(contactE164)) {
-      return { error: "Συμπλήρωσε έγκυρο κινητό τηλέφωνο (Ελλάδα)." };
+      return { error: await actionError("validMobileRequired") };
     }
     if (
       REQUIRE_LISTING_PHONE_SMS_VERIFICATION &&
@@ -680,12 +738,11 @@ export async function submitPortalListingForReview(
       !listingPhoneReadyForCalls(fields.contact_phone, true, ownerProfile)
     ) {
       return {
-        error:
-          "Επιβεβαίωσε τον αριθμό τηλεφώνου με SMS πριν την υποβολή (απαιτείται για κλήσεις).",
+        error: await actionError("phoneSmsVerifyRequired"),
       };
     }
   } else if (!fields.contact_email?.trim() && !ownerProfile?.phone?.trim()) {
-    return { error: "Συμπλήρωσε τηλέφωνο ή email επικοινωνίας." };
+    return { error: await actionError("contactPhoneOrEmailRequired") };
   }
 
   const verificationCode =
@@ -710,7 +767,9 @@ export async function submitPortalListingForReview(
     }
   );
 
-  if (error) return { error: toListingSaveError(error) };
+  if (error) return { error: await toListingSaveError(error) };
+
+  await syncMonthlyOccupancyTiers(auth.supabase, listingId, auth.user.id, fields);
 
   await logAppEvent("listing_submitted_for_review", {
     userId: auth.user.id,
@@ -739,19 +798,18 @@ export async function uploadWizardListingPhoto(
 
   const file = formData.get("photo") as File | null;
   if (!file || file.size <= 0) {
-    return { error: LISTING_PHOTO_UNSUPPORTED_MSG };
+    return { error: await actionError("photoUnsupportedType") };
   }
 
   const mime = (file.type || "").toLowerCase();
   const ext = normalizeListingPhotoExtension(file.name, mime);
   if (!ext || !isAcceptedListingPhotoType(file.name, mime)) {
-    return { error: LISTING_PHOTO_UNSUPPORTED_MSG };
+    return { error: await actionError("photoUnsupportedType") };
   }
 
-  if (file.size > MAX_PHOTO_SIZE_BYTES) {
-    return {
-      error: "Η φωτογραφία είναι πολύ μεγάλη. Επίλεξε αρχείο έως 10 MB.",
-    };
+  const sizeCheck = validateListingPhotoFile(file);
+  if (!sizeCheck.ok && sizeCheck.code === "too_large") {
+    return { error: await actionError("photoTooLarge") };
   }
 
   const { data: existingMedia, error: existingError } =
@@ -766,7 +824,7 @@ export async function uploadWizardListingPhoto(
       mimeType: mime,
     });
     return {
-      error: "Δεν ήταν δυνατή η αποθήκευση της φωτογραφίας στην αγγελία. Δοκίμασε ξανά.",
+      error: await actionError("photoSaveFailed"),
     };
   }
 
@@ -777,7 +835,7 @@ export async function uploadWizardListingPhoto(
 
   if (existingPhotos >= MAX_LISTING_PHOTOS) {
     return {
-      error: `Μπορείς να ανεβάσεις έως ${MAX_LISTING_PHOTOS} φωτογραφίες ανά αγγελία.`,
+      error: await actionError("maxPhotos", { count: MAX_LISTING_PHOTOS }),
     };
   }
 
@@ -808,7 +866,7 @@ export async function uploadWizardListingPhoto(
       storage_path: storagePath,
     });
     return {
-      error: "Δεν ήταν δυνατή η μεταφόρτωση της φωτογραφίας. Δοκίμασε ξανά.",
+      error: await actionError("photoUploadFailed"),
     };
   }
 
@@ -844,8 +902,7 @@ export async function uploadWizardListingPhoto(
       mimeType: resolvedMime,
     });
     return {
-      error:
-        "Δεν ήταν δυνατή η αποθήκευση της φωτογραφίας στην αγγελία. Δοκίμασε ξανά.",
+      error: await actionError("photoSaveFailed"),
     };
   }
 
@@ -857,7 +914,7 @@ export async function uploadWizardListingPhoto(
   revalidatePath("/dashboard");
   return {
     image: inserted as ListingImage,
-    successMessage: "Η φωτογραφία προστέθηκε στην αγγελία.",
+    successMessage: await actionError("photoAdded"),
   };
 }
 
@@ -869,7 +926,7 @@ export async function uploadWizardListingPhotos(
   const photoFiles = formData.getAll("photos") as File[];
   const file = photoFiles.find((f) => f.size > 0);
   if (!file) {
-    return { error: "Πρόσθεσε τουλάχιστον μία φωτογραφία." };
+    return { error: await actionError("minOnePhoto") };
   }
 
   const single = new FormData();
@@ -898,10 +955,36 @@ export async function reorderListingPhotos(
       .eq("id", orderedImageIds[i])
       .eq("listing_id", listingId);
 
-    if (error) return { error: "Δεν ήταν δυνατή η αποθήκευση της σειράς. Δοκίμασε ξανά." };
+    if (error) return { error: await actionError("orderSaveFailed") };
+  }
+
+  // First photo in the owner’s order is always the cover (dashboard + public cards).
+  if (orderedImageIds.length > 0) {
+    const { data: orderedRows } = await auth.supabase
+      .from("listing_images")
+      .select("id, media_type")
+      .eq("listing_id", listingId)
+      .in("id", orderedImageIds);
+
+    const byId = new Map((orderedRows ?? []).map((row) => [row.id, row]));
+    const coverId = orderedImageIds.find((id) => {
+      const row = byId.get(id);
+      return row && row.media_type !== "video";
+    });
+
+    if (coverId) {
+      const hasCoverColumn = await listingImagesHasCoverColumn(
+        auth.supabase,
+        listingId
+      );
+      if (hasCoverColumn) {
+        await ensureSingleListingCover(auth.supabase, listingId, coverId);
+      }
+    }
   }
 
   revalidatePath("/dashboard");
+  revalidatePath(`/dashboard/listings/${listingId}`);
   return { success: true };
 }
 
@@ -917,7 +1000,7 @@ export async function setListingCoverPhoto(listingId: string, imageId: string) {
     .single();
 
   if (!image || image.media_type === "video") {
-    return { error: "Η φωτογραφία δεν βρέθηκε." };
+    return { error: await actionError("photoNotFound") };
   }
 
   const hasCoverColumn = await listingImagesHasCoverColumn(auth.supabase, listingId);
@@ -1027,11 +1110,11 @@ export async function updateListingAvailability(listingId: string, formData: For
       : null;
 
   if (availabilityStatus === "from_month" && !availabilityNote) {
-    return { error: "Συμπλήρωσε από ποιον μήνα είναι διαθέσιμο." };
+    return { error: await actionError("availabilityMonthRequired") };
   }
 
   if (rawStatus && !isListingAvailabilityStatus(rawStatus)) {
-    return { error: "Μη έγκυρη επιλογή διαθεσιμότητας." };
+    return { error: await actionError("invalidAvailabilityStatus") };
   }
 
   const { error } = await auth.supabase
@@ -1079,9 +1162,10 @@ export async function deleteListing(listingId: string) {
   if (error) return { error: error.message };
 
   revalidatePath("/dashboard");
+  revalidatePath("/dashboard/listings");
   revalidatePath("/listings");
   revalidateListingsCatalog();
-  redirect("/dashboard");
+  return { success: true };
 }
 
 export async function deleteListingPhoto(listingId: string, imageId: string) {
@@ -1095,7 +1179,7 @@ export async function deleteListingPhoto(listingId: string, imageId: string) {
     .eq("listing_id", listingId)
     .single();
 
-  if (!image) return { error: "Η φωτογραφία δεν βρέθηκε." };
+  if (!image) return { error: await actionError("photoNotFound") };
 
   const path = await resolveListingPhotoStoragePath(image);
   if (path) {
@@ -1112,7 +1196,7 @@ export async function deleteListingPhoto(listingId: string, imageId: string) {
     if (process.env.NODE_ENV === "development") {
       console.error("[listing-photo-delete]", error.message, { listingId, imageId });
     }
-    return { error: "Δεν ήταν δυνατή η διαγραφή της φωτογραφίας. Δοκίμασε ξανά." };
+    return { error: await actionError("photosDeleteFailed") };
   }
 
   const { data: nextCover } = await auth.supabase
@@ -1149,7 +1233,7 @@ export async function deleteListingPhotosBulk(
     .eq("listing_id", listingId)
     .in("id", uniqueIds);
 
-  if (!images?.length) return { error: "Δεν βρέθηκαν φωτογραφίες για διαγραφή." };
+  if (!images?.length) return { error: await actionError("photosNotFoundForDelete") };
 
   const paths: string[] = [];
   for (const image of images) {
@@ -1174,7 +1258,7 @@ export async function deleteListingPhotosBulk(
         imageIds: uniqueIds,
       });
     }
-    return { error: "Δεν ήταν δυνατή η διαγραφή των φωτογραφιών. Δοκίμασε ξανά." };
+    return { error: await actionError("photosDeleteFailed") };
   }
 
   const { data: nextCover } = await auth.supabase
@@ -1236,17 +1320,17 @@ export async function uploadListingPhotos(listingId: string, formData: FormData)
 
   if (validPhotos.length === 0 && !hasVideo) {
     if (existingCount === 0) {
-      return { error: "Πρόσθεσε τουλάχιστον 1 φωτογραφία ή βίντεο" };
+      return { error: await actionError("minOnePhotoOrVideo") };
     }
     redirect(`/dashboard/listings/${listingId}/pay`);
   }
 
   if (hasVideo) {
     if (!videoFile.type.startsWith("video/")) {
-      return { error: "Το αρχείο βίντεο δεν είναι έγκυρο" };
+      return { error: await actionError("invalidVideoFile") };
     }
     if (videoFile.size > MAX_VIDEO_SIZE_BYTES) {
-      return { error: "Το βίντεο είναι πολύ μεγάλο (max 50MB)" };
+      return { error: await actionError("videoTooLarge") };
     }
     if (
       !Number.isFinite(videoDuration) ||
@@ -1254,11 +1338,11 @@ export async function uploadListingPhotos(listingId: string, formData: FormData)
       videoDuration > MAX_VIDEO_DURATION_SECONDS
     ) {
       return {
-        error: `Το βίντεο πρέπει να είναι έως ${MAX_VIDEO_DURATION_SECONDS} δευτερόλεπτα`,
+        error: await actionError("videoMaxDuration", { seconds: MAX_VIDEO_DURATION_SECONDS }),
       };
     }
     if (existingVideos >= MAX_LISTING_VIDEOS) {
-      return { error: "Μπορείς μόνο 1 βίντεο ανά αγγελία" };
+      return { error: await actionError("oneVideoOnly") };
     }
   }
 
@@ -1266,11 +1350,11 @@ export async function uploadListingPhotos(listingId: string, formData: FormData)
   const slotsAfterPhotos = MAX_LISTING_PHOTOS - existingCount - photosToUpload.length;
 
   if (hasVideo && slotsAfterPhotos < 1) {
-    return { error: "Δεν υπάρχει χώρος για βίντεο — μέγιστο 25 media" };
+    return { error: await actionError("noVideoSlot") };
   }
 
   if (existingCount + photosToUpload.length + (hasVideo ? 1 : 0) > MAX_LISTING_PHOTOS) {
-    return { error: `Μέγιστο ${MAX_LISTING_PHOTOS} αρχεία (φωτό + βίντεο)` };
+    return { error: await actionError("maxMediaFiles", { count: MAX_LISTING_PHOTOS }) };
   }
 
   let sortOrder = existingCount;
@@ -1345,7 +1429,7 @@ export async function approveListing(listingId: string): Promise<{ error?: strin
     .maybeSingle();
 
   if (fetchError || !listing) {
-    return { error: "Η αγγελία δεν βρέθηκε." };
+    return { error: await actionError("listingNotFound") };
   }
 
   const {
@@ -1399,7 +1483,7 @@ export async function rejectListing(
 
   const reason = adminReason?.trim();
   if (!reason) {
-    return { error: "Απαιτείται λόγος απόρριψης." };
+    return { error: await actionError("rejectionReasonRequired") };
   }
 
   const db = createServiceClient() ?? auth.supabase;
@@ -1430,7 +1514,7 @@ export async function requestListingChanges(
 
   const note = options?.note?.trim();
   if (!note) {
-    return { error: "Συμπλήρωσε σημείωση προς τον αγγελιοδότη." };
+    return { error: await actionError("ownerNoteRequired") };
   }
 
   const db = createServiceClient() ?? auth.supabase;
@@ -1456,7 +1540,7 @@ export async function requestListingChanges(
 export async function submitListingReport(formData: FormData) {
   const supabase = await createClient();
   if (!supabase) {
-    return { error: "Η αναφορά δεν είναι διαθέσιμη αυτή τη στιγμή." };
+    return { error: await actionError("reportUnavailable") };
   }
 
   const listingId = (formData.get("listing_id") as string)?.trim();
@@ -1465,7 +1549,7 @@ export async function submitListingReport(formData: FormData) {
   const reporterEmail = (formData.get("reporter_email") as string)?.trim() || null;
 
   if (!listingId || !reason) {
-    return { error: "Συμπλήρωσε τον λόγο αναφοράς." };
+    return { error: await actionError("reportReasonRequired") };
   }
 
   const { error } = await supabase.from("listing_reports").insert({
@@ -1481,7 +1565,7 @@ export async function submitListingReport(formData: FormData) {
     if (error.code === "42P01" || error.code === "PGRST205") {
       return { success: true };
     }
-    return { error: "Δεν ήταν δυνατή η υποβολή. Δοκίμασε ξανά." };
+    return { error: await actionError("submitFailed") };
   }
 
   const {
@@ -1504,14 +1588,14 @@ function isMissingUnavailableTable(error: { code?: string } | null): boolean {
   return error?.code === "42P01" || error?.code === "PGRST205";
 }
 
-function unavailablePeriodDbError(error: { code?: string; message?: string }): string {
+async function unavailablePeriodDbError(error: { code?: string; message?: string }): Promise<string> {
   if (process.env.NODE_ENV === "development") {
     console.error("[saveUnavailablePeriod]", error);
   }
   if (isMissingUnavailableTable(error)) {
-    return "Δεν ήταν δυνατή η αποθήκευση της περιόδου. Δοκίμασε ξανά.";
+    return await actionError("periodSaveFailed");
   }
-  return error.message ?? "Δεν ήταν δυνατή η αποθήκευση της περιόδου. Δοκίμασε ξανά.";
+  return error.message ?? (await actionError("periodSaveFailed"));
 }
 
 async function saveUnavailablePeriodViaStorage(
@@ -1534,7 +1618,7 @@ async function saveUnavailablePeriodViaStorage(
     mergeIds,
   });
   if (!periods) {
-    return { error: "Δεν ήταν δυνατή η αποθήκευση της περιόδου. Δοκίμασε ξανά." };
+    return { error: await actionError("periodSaveFailed") };
   }
   return { success: true as const, periods };
 }
@@ -1550,17 +1634,14 @@ export async function saveUnavailablePeriod(formData: FormData) {
   const forceOverlap = formData.get("force_overlap") === "true";
 
   if (!listingId || !startDate || !endDate) {
-    return { error: "Συμπλήρωσε ημερομηνίες από και έως." };
+    return { error: await actionError("datesRequired") };
   }
   if (endDate < startDate) {
-    return {
-      error:
-        "Η ημερομηνία λήξης πρέπει να είναι ίδια ή μεταγενέστερη από την ημερομηνία έναρξης.",
-    };
+    return { error: await actionError("endDateBeforeStart") };
   }
   const { todayDateKey } = await import("@/lib/availability-calendar");
   if (endDate < todayDateKey()) {
-    return { error: "Δεν μπορείς να δηλώσεις μη διαθεσιμότητα στο παρελθόν." };
+    return { error: await actionError("unavailablePastNotAllowed") };
   }
 
   const auth = await requireListingOwner(listingId, "manage_availability");
@@ -1577,7 +1658,7 @@ export async function saveUnavailablePeriod(formData: FormData) {
   if (overlap && !forceOverlap) {
     return {
       overlapRequiresConfirm: true,
-      overlapWarning: "Η περίοδος επικαλύπτεται με ήδη μη διαθέσιμες ημερομηνίες.",
+      overlapWarning: await actionError("periodOverlapWarning"),
     };
   }
 
@@ -1628,7 +1709,7 @@ export async function saveUnavailablePeriod(formData: FormData) {
       revalidatePath(`/listings/${listingId}`);
       return { success: true, periods: stored.periods, merged: mergeIds.length > 0 };
     }
-    if (deleteError) return { error: unavailablePeriodDbError(deleteError) };
+    if (deleteError) return { error: await unavailablePeriodDbError(deleteError) };
   }
 
   let savedId = periodId;
@@ -1657,7 +1738,7 @@ export async function saveUnavailablePeriod(formData: FormData) {
       revalidatePath(`/listings/${listingId}`);
       return { success: true, periods: stored.periods };
     }
-    if (error) return { error: unavailablePeriodDbError(error) };
+    if (error) return { error: await unavailablePeriodDbError(error) };
   } else {
     const { data, error } = await auth.supabase
       .from("listing_unavailable_periods")
@@ -1688,7 +1769,7 @@ export async function saveUnavailablePeriod(formData: FormData) {
       revalidatePath(`/listings/${listingId}`);
       return { success: true, periods: stored.periods, merged: mergeIds.length > 0 };
     }
-    if (error) return { error: unavailablePeriodDbError(error) };
+    if (error) return { error: await unavailablePeriodDbError(error) };
 
     savedId = data?.id ?? null;
 
@@ -1737,7 +1818,7 @@ export async function deleteUnavailablePeriod(periodId: string, listingId: strin
     );
     const periods = await deleteUnavailablePeriodFromStorage(listingId, periodId);
     if (!periods) {
-      return { error: "Δεν ήταν δυνατή η αλλαγή. Δοκίμασε ξανά." };
+      return { error: await actionError("changeFailed") };
     }
     revalidatePath("/dashboard/listings");
     revalidatePath(`/dashboard/listings/${listingId}/edit`);
@@ -1749,7 +1830,7 @@ export async function deleteUnavailablePeriod(periodId: string, listingId: strin
     if (process.env.NODE_ENV === "development") {
       console.error("[deleteUnavailablePeriod]", error);
     }
-    return { error: unavailablePeriodDbError(error) };
+    return { error: await unavailablePeriodDbError(error) };
   }
 
   await logAppEvent("unavailable_period_deleted", {
@@ -1774,10 +1855,10 @@ export async function updateListingLocation(
   if ("error" in auth) return { error: auth.error };
 
   if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
-    return { error: "Μη έγκυρες συντεταγμένες." };
+    return { error: await actionError("invalidCoordinates") };
   }
   if (latitude < 34 || latitude > 42 || longitude < 19 || longitude > 30) {
-    return { error: "Οι συντεταγμένες πρέπει να είναι εντός Ελλάδας." };
+    return { error: await actionError("coordinatesOutsideGreece") };
   }
 
   const patch: Record<string, unknown> = {
@@ -1813,7 +1894,7 @@ export async function activateListingFree(listingId: string) {
   const auth = await requireListingOwner(listingId, "owner_only");
   if ("error" in auth) {
     redirect(
-      `/dashboard/listings/${listingId}/pay?error=${encodeURIComponent(auth.error ?? "Σφάλμα πρόσβασης")}`
+      `/dashboard/listings/${listingId}/pay?error=${encodeURIComponent(auth.error ?? (await actionError("accessError")))}`
     );
   }
 
@@ -1835,7 +1916,7 @@ export async function activateListingFree(listingId: string) {
   }
   if (!data?.id) {
     redirect(
-      `/dashboard/listings/${listingId}/pay?error=${encodeURIComponent("Η αγγελία δεν βρέθηκε ή δεν έχεις δικαίωμα επεξεργασίας.")}`
+      `/dashboard/listings/${listingId}/pay?error=${encodeURIComponent(await actionError("listingNotFoundOrNoEdit"))}`
     );
   }
 
@@ -1849,21 +1930,46 @@ export async function activateListingFree(listingId: string) {
 
 export async function saveSearch(formData: FormData) {
   const auth = await requireUser();
-  if ("error" in auth) return { error: auth.error };
+  if ("error" in auth) {
+    return {
+      error: auth.error,
+      errorCode: "errorCode" in auth ? auth.errorCode : undefined,
+    };
+  }
 
   const name = (formData.get("name") as string)?.trim();
   const filtersJson = formData.get("filters") as string;
-  if (!filtersJson) return { error: "Άκυρα φίλτρα" };
+  if (!filtersJson) return { error: await actionError("invalidFilters") };
 
   let filters: Record<string, string>;
   try {
     filters = JSON.parse(filtersJson);
   } catch {
-    return { error: "Άκυρα φίλτρα" };
+    return { error: await actionError("invalidFilters") };
   }
 
   const { buildSavedSearchName } = await import("@/lib/saved-searches");
-  const finalName = name || buildSavedSearchName(filters);
+  const { getTranslations } = await import("next-intl/server");
+  const tSave = await getTranslations("Listings.saveSearch");
+  const tDuration = await getTranslations("Owner.leads");
+  const durationLabelFn = (duration: string) => {
+    const keyMap: Record<string, string> = {
+      "1plus": "duration1plus",
+      "2-3": "duration2_3",
+      "4-6": "duration4_6",
+      "6-12": "duration6_12",
+      "12plus": "duration12plus",
+    };
+    const key = keyMap[duration];
+    return key ? tDuration(key as Parameters<typeof tDuration>[0]) : duration;
+  };
+  const finalName =
+    name ||
+    buildSavedSearchName(
+      filters,
+      (key, values) => tSave(key as Parameters<typeof tSave>[0], values),
+      durationLabelFn
+    );
   const emailAlerts = formData.get("email_alerts") !== "false";
 
   const insert: Record<string, unknown> = {
@@ -1877,7 +1983,7 @@ export async function saveSearch(formData: FormData) {
 
   if (error) {
     if (error.message.includes("saved_searches") || error.code === "42P01") {
-      return { error: "Η λειτουργία αποθηκευμένων αναζητήσεων δεν είναι ενεργή ακόμα. Τρέξε το SQL migration στο Supabase." };
+      return { error: await actionError("savedSearchesNotActive") };
     }
     return { error: error.message };
   }
@@ -1913,7 +2019,7 @@ export async function updateSavedSearch(formData: FormData) {
     try {
       updates.filters = JSON.parse(filtersJson);
     } catch {
-      return { error: "Άκυρα φίλτρα" };
+      return { error: await actionError("invalidFilters") };
     }
   }
 
@@ -1946,10 +2052,16 @@ export async function deleteSavedSearch(searchId: string) {
 
 export async function toggleFavorite(listingId: string) {
   const auth = await requireUser();
-  if ("error" in auth) return { error: auth.error, favorited: false };
+  if ("error" in auth) {
+    return {
+      error: auth.error,
+      errorCode: "errorCode" in auth ? auth.errorCode : undefined,
+      favorited: false,
+    };
+  }
 
   if (!listingId?.trim()) {
-    return { error: "Άκυρη αγγελία", favorited: false };
+    return { error: await actionError("invalidListing"), favorited: false };
   }
 
   const result = await toggleFavoriteForUser(auth.supabase, auth.user.id, listingId);
@@ -1974,7 +2086,7 @@ export async function removeFavorite(listingId: string) {
 export async function submitPropertyLead(formData: FormData) {
   const supabase = await createClient();
   if (!supabase) {
-    return { error: "Η αποστολή δεν είναι διαθέσιμη αυτή τη στιγμή." };
+    return { error: await actionError("sendUnavailable") };
   }
 
   const listingId = (formData.get("listing_id") as string)?.trim();
@@ -1997,18 +2109,18 @@ export async function submitPropertyLead(formData: FormData) {
   const guestsRaw = (formData.get("guests") as string)?.trim();
   const guestsParsed = guestsRaw ? parseInt(guestsRaw, 10) : null;
 
-  if (!listingId) return { error: "Άκυρη αγγελία." };
-  if (!name) return { error: "Συμπλήρωσε το όνομά σου." };
+  if (!listingId) return { error: await actionError("invalidListing") };
+  if (!name) return { error: await actionError("nameRequired") };
   if (!email && !phone) {
-    return { error: "Συμπλήρωσε email ή τηλέφωνο επικοινωνίας." };
+    return { error: await actionError("contactRequired") };
   }
   if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-    return { error: "Το email δεν είναι έγκυρο." };
+    return { error: await actionError("invalidEmail") };
   }
 
   const listing = await getListingById(listingId);
   if (!listing || !isListingActive(listing)) {
-    return { error: "Η αγγελία δεν είναι διαθέσιμη." };
+    return { error: await actionError("listingUnavailable") };
   }
 
   const {
@@ -2052,6 +2164,7 @@ export async function submitPropertyLead(formData: FormData) {
   });
 
   revalidatePath("/dashboard/requests");
+  revalidatePath("/dashboard/messages");
   return { success: true };
 }
 
@@ -2063,7 +2176,7 @@ export async function updatePropertyLeadStatus(
   if ("error" in auth) return { error: auth.error };
 
   const allowed: PropertyLeadStatus[] = ["new", "read", "replied", "archived"];
-  if (!allowed.includes(status)) return { error: "Άκυρη κατάσταση." };
+  if (!allowed.includes(status)) return { error: await actionError("invalidStatus") };
 
   const { data: lead } = await auth.supabase
     .from("property_leads")
@@ -2071,7 +2184,7 @@ export async function updatePropertyLeadStatus(
     .eq("id", leadId)
     .single();
 
-  if (!lead) return { error: "Το αίτημα δεν βρέθηκε." };
+  if (!lead) return { error: await actionError("leadNotFound") };
 
   const access = await resolveListingAccess(
     auth.supabase,
@@ -2079,7 +2192,7 @@ export async function updatePropertyLeadStatus(
     auth.user.id
   );
   if (!access || !accessAllows(access, "manage_messages")) {
-    return { error: "Δεν έχεις δικαίωμα." };
+    return { error: await actionError("noPermission") };
   }
 
   const { error } = await auth.supabase
@@ -2109,7 +2222,7 @@ export async function saveListingExternalLink(
   const plat = platform as ExternalLinkPlatform;
   const validation = validateExternalLinkUrl(plat, url);
   if (!validation.valid || !validation.normalizedUrl) {
-    return { error: validation.error ?? "Μη έγκυρο URL." };
+    return { error: validation.error ?? (await actionError("invalidUrl")) };
   }
 
   const now = new Date().toISOString();
@@ -2132,7 +2245,7 @@ export async function saveListingExternalLink(
 
   if (error) {
     if (error.message.includes("does not exist") || error.message.includes("Could not find")) {
-      return { error: "Η βάση δεδομένων δεν έχει ακόμα external links. Τρέξε migrations." };
+      return { error: await actionError("externalLinksMigrationRequired") };
     }
     return { error: error.message };
   }

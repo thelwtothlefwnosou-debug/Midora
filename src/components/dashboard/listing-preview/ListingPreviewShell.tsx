@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { ArrowLeft, ExternalLink, Monitor, Smartphone } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import type { ListingPreviewStatusMessage } from "@/lib/listing-preview-status";
 
@@ -29,6 +30,7 @@ export function ListingPreviewShell({
   children,
   mobileEmbedSrc,
 }: Props) {
+  const t = useTranslations("Workspace.preview");
   const [iframeLoaded, setIframeLoaded] = useState(false);
   const [iframeKey, setIframeKey] = useState(0);
 
@@ -47,11 +49,11 @@ export function ListingPreviewShell({
             className="inline-flex min-h-9 items-center gap-2 text-sm font-medium text-muted hover:text-charcoal"
           >
             <ArrowLeft className="h-4 w-4" />
-            Πίσω στη διαχείριση
+            {t("backToManage")}
           </Link>
 
           <p className="mx-auto hidden font-display text-sm font-semibold text-charcoal sm:block">
-            Προβολή αγγελίας
+            {t("viewListing")}
           </p>
 
           <div className="ml-auto flex flex-wrap items-center gap-2">
@@ -60,13 +62,13 @@ export function ListingPreviewShell({
                 active={device === "desktop"}
                 onClick={() => onDeviceChange("desktop")}
                 icon={<Monitor className="h-4 w-4" />}
-                label="Υπολογιστής"
+                label={t("desktop")}
               />
               <DeviceTab
                 active={device === "mobile"}
                 onClick={() => onDeviceChange("mobile")}
                 icon={<Smartphone className="h-4 w-4" />}
-                label="Κινητό"
+                label={t("mobile")}
               />
             </div>
             {showPublicLink && publicHref && (
@@ -77,7 +79,7 @@ export function ListingPreviewShell({
                 className="inline-flex min-h-9 items-center gap-1.5 rounded-xl border border-border px-3 text-sm font-medium text-charcoal hover:border-gold/30"
               >
                 <ExternalLink className="h-3.5 w-3.5" />
-                <span className="hidden sm:inline">Άνοιγμα δημόσιου link</span>
+                <span className="hidden sm:inline">{t("openPublicLink")}</span>
                 <span className="sm:hidden">Link</span>
               </Link>
             )}
@@ -100,12 +102,12 @@ export function ListingPreviewShell({
                 <div className="relative h-[min(78vh,780px)] bg-white">
                   {!iframeLoaded && (
                     <div className="absolute inset-0 z-10 flex items-center justify-center bg-white text-sm text-muted">
-                      Φόρτωση…
+                      {t("loading")}
                     </div>
                   )}
                   <iframe
                     key={iframeKey}
-                    title="Προβολή αγγελίας — κινητό"
+                    title={t("mobilePreviewTitle")}
                     src={mobileEmbedSrc}
                     className="h-full w-full border-0 bg-white"
                     onLoad={() => setIframeLoaded(true)}

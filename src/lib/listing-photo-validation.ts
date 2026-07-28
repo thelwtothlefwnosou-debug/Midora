@@ -12,7 +12,8 @@ export function logListingImageValidationDebug(meta: {
   currentStep?: number;
 }) {
   if (process.env.NODE_ENV !== "development") return;
-  console.error(
+  // Use debug (not error) so Next.js/Turbopack does not show a full-screen overlay.
+  console.debug(
     "LISTING_IMAGE_VALIDATION_DEBUG",
     JSON.stringify(
       {
@@ -29,23 +30,32 @@ export function logListingImageValidationDebug(meta: {
   );
 }
 
-export function photoCountStatusMessage(savedCount: number): string {
+export type PhotoCountStatusInfo = {
+  key: "photoStatusNeedOne" | "photoStatusReady" | "photoStatusRemaining";
+  params?: { count: number; remaining?: number };
+};
+
+/** Returns Wizard.photos message key + params for the status line. */
+export function photoCountStatusInfo(savedCount: number): PhotoCountStatusInfo {
   if (savedCount < MIN_LISTING_PHOTOS_REQUIRED) {
-    return "Πρόσθεσε τουλάχιστον μία φωτογραφία του ακινήτου για να συνεχίσεις.";
+    return { key: "photoStatusNeedOne" };
   }
   if (savedCount >= MIN_LISTING_PHOTOS_FOR_REVIEW) {
-    return `${savedCount} αποθηκευμένες φωτογραφίες — έτοιμο για υποβολή.`;
+    return { key: "photoStatusReady", params: { count: savedCount } };
   }
   const remaining = MIN_LISTING_PHOTOS_FOR_REVIEW - savedCount;
-  return `${savedCount} αποθηκευμένες φωτογραφίες — απομένουν ${remaining} για υποβολή.`;
+  return {
+    key: "photoStatusRemaining",
+    params: { count: savedCount, remaining },
+  };
 }
 
 export function photoCountStepError(savedCount: number): string | null {
   if (savedCount >= MIN_LISTING_PHOTOS_REQUIRED) return null;
-  return "Πρόσθεσε τουλάχιστον μία φωτογραφία του ακινήτου για να συνεχίσεις.";
+  return "photoMinOne";
 }
 
 export function photoCountSubmitError(savedCount: number): string | null {
   if (savedCount >= MIN_LISTING_PHOTOS_FOR_REVIEW) return null;
-  return "Πρόσθεσε τουλάχιστον 5 φωτογραφίες για να υποβάλεις την αγγελία για έλεγχο.";
+  return "photoMinForReview";
 }

@@ -3,8 +3,10 @@
 import { useState } from "react";
 import Link from "next/link";
 import { Check, Copy, ExternalLink, Eye } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/Button";
 import type { OwnerListingStatusKey } from "@/lib/dashboard-listings";
+import { ownerStatusKeyToLabelKey } from "@/lib/owner-listing-ui-status";
 
 type Props = {
   listingId: string;
@@ -18,14 +20,14 @@ type Props = {
   publicExternalLinkCount?: number;
 };
 
-const STATUS_COPY: Partial<Record<OwnerListingStatusKey, string>> = {
-  published: "Η αγγελία εμφανίζεται δημόσια.",
-  paused: "Η αγγελία είναι σε παύση — δεν εμφανίζεται στους επισκέπτες.",
-  review: "Η αγγελία είναι σε έλεγχο.",
-  draft: "Η αγγελία δεν έχει δημοσιευτεί ακόμα.",
-  needs_fixes: "Χρειάζονται διορθώσεις πριν τη δημοσίευση.",
-  expired: "Η αγγελία έχει λήξει — ανανέωσε για να εμφανιστεί ξανά.",
-  rejected: "Η αγγελία δεν εγκρίθηκε.",
+const STATUS_KEYS: Partial<Record<OwnerListingStatusKey, string>> = {
+  published: "statusPublished",
+  paused: "statusPaused",
+  review: "statusReview",
+  draft: "statusDraft",
+  needs_fixes: "statusNeedsFixes",
+  expired: "statusExpired",
+  rejected: "statusRejected",
 };
 
 export function ListingPublishPanel({
@@ -39,12 +41,16 @@ export function ListingPublishPanel({
   externalLinkCount = 0,
   publicExternalLinkCount = 0,
 }: Props) {
+  const t = useTranslations("Workspace.publish");
+  const tUi = useTranslations("Owner.uiStatus");
   const [copied, setCopied] = useState(false);
   const publicUrl =
     typeof window !== "undefined"
       ? `${window.location.origin}/listings/${publicId}`
       : `/listings/${publicId}`;
-  const statusNote = STATUS_COPY[ownerStatusKey];
+  const statusKey = STATUS_KEYS[ownerStatusKey];
+  const statusNote = statusKey ? t(statusKey) : null;
+  const statusDisplay = tUi(ownerStatusKeyToLabelKey(ownerStatusKey));
   const showPublic =
     ownerStatusKey === "published" || ownerStatusKey === "paused";
 
@@ -69,50 +75,50 @@ export function ListingPublishPanel({
       )}
 
       <div className="rounded-xl border border-gold/25 bg-white p-4 shadow-soft">
-        <h3 className="text-sm font-semibold text-charcoal">Σύνδεσμοι αξιοπιστίας</h3>
-        <p className="mt-2 text-sm text-muted">
-          Πρόσθεσε προαιρετικά σύνδεσμο από Airbnb, Booking ή άλλη πλατφόρμα. Βοηθά στη
-          διασταύρωση της αγγελίας — χωρίς επαλήθευση από το Midora.
-        </p>
+        <h3 className="text-sm font-semibold text-charcoal">{t("trustTitle")}</h3>
+        <p className="mt-2 text-sm text-muted">{t("trustBody")}</p>
         {externalLinkCount > 0 ? (
           <p className="mt-2 text-xs text-muted">
-            {externalLinkCount} αποθηκευμένοι · {publicExternalLinkCount} δημόσιοι
+            {t("trustCounts", {
+              saved: externalLinkCount,
+              public: publicExternalLinkCount,
+            })}
           </p>
         ) : (
-          <p className="mt-2 text-xs text-gold-dark">Δεν έχεις προσθέσει ακόμα σύνδεσμο.</p>
+          <p className="mt-2 text-xs text-gold-dark">{t("trustEmpty")}</p>
         )}
         <Link
           href={`/dashboard/listings/${listingId}/trust-links`}
           className="mt-3 inline-flex min-h-9 items-center rounded-xl border border-border px-4 text-sm font-medium text-charcoal hover:border-gold/30 hover:bg-sand"
         >
-          {externalLinkCount > 0 ? "Διαχείριση συνδέσμων" : "Προσθήκη συνδέσμου"}
+          {externalLinkCount > 0 ? t("manageLinks") : t("addLink")}
         </Link>
       </div>
 
       <div className="rounded-xl border border-border bg-white p-4 shadow-soft">
         <dl className="space-y-3 text-sm">
           <div className="flex justify-between gap-4">
-            <dt className="text-muted">Κατάσταση</dt>
-            <dd className="font-medium text-charcoal">{ownerStatusLabel}</dd>
+            <dt className="text-muted">{t("status")}</dt>
+            <dd className="font-medium text-charcoal">{statusDisplay}</dd>
           </div>
           {expiresLabel &&
             (ownerStatusKey === "published" ||
               ownerStatusKey === "paused" ||
               ownerStatusKey === "expired") && (
               <div className="flex justify-between gap-4">
-                <dt className="text-muted">Ενεργή έως</dt>
+                <dt className="text-muted">{t("activeUntil")}</dt>
                 <dd className="font-medium text-charcoal">{expiresLabel}</dd>
               </div>
             )}
           {publishedLabel && (
             <div className="flex justify-between gap-4">
-              <dt className="text-muted">Δημοσιεύτηκε</dt>
+              <dt className="text-muted">{t("published")}</dt>
               <dd className="font-medium text-charcoal">{publishedLabel}</dd>
             </div>
           )}
           {showPublic && (
             <div className="flex justify-between gap-4 border-t border-border pt-3">
-              <dt className="text-muted">Δημόσιος σύνδεσμος</dt>
+              <dt className="text-muted">{t("publicLink")}</dt>
               <dd className="max-w-[60%] truncate font-mono text-xs text-charcoal">
                 /listings/{publicId}
               </dd>
@@ -124,7 +130,7 @@ export function ListingPublishPanel({
       <div className="flex flex-wrap gap-2">
         <Button href={`/dashboard/listings/${listingId}/view`} size="sm" variant="outline">
           <Eye className="h-3.5 w-3.5" />
-          Προβολή
+          {t("preview")}
         </Button>
         {showPublic && (
           <>
@@ -135,7 +141,7 @@ export function ListingPublishPanel({
               className="inline-flex min-h-9 items-center gap-1.5 rounded-xl border border-border px-3 text-sm font-medium text-charcoal hover:bg-sand"
             >
               <ExternalLink className="h-3.5 w-3.5" />
-              Δημόσια αγγελία
+              {t("publicListing")}
             </Link>
             <button
               type="button"
@@ -143,7 +149,7 @@ export function ListingPublishPanel({
               className="inline-flex min-h-9 items-center gap-1.5 rounded-xl border border-border px-3 text-sm font-medium text-charcoal hover:bg-sand"
             >
               {copied ? <Check className="h-3.5 w-3.5 text-teal" /> : <Copy className="h-3.5 w-3.5" />}
-              {copied ? "Αντιγράφηκε" : "Αντιγραφή link"}
+              {copied ? t("copied") : t("copyLink")}
             </button>
           </>
         )}
@@ -151,7 +157,7 @@ export function ListingPublishPanel({
           ownerStatusKey === "draft" ||
           ownerStatusKey === "needs_fixes") && (
           <Button href={`/dashboard/listings/${listingId}/pay`} size="sm">
-            {ownerStatusKey === "expired" ? "Ανανέωση" : "Υποβολή / ανανέωση"}
+            {ownerStatusKey === "expired" ? t("renew") : t("submitRenew")}
           </Button>
         )}
         {ownerStatusKey === "draft" && (
@@ -159,16 +165,12 @@ export function ListingPublishPanel({
             href={`/dashboard/listings/new?draft=${listingId}`}
             className="inline-flex min-h-9 items-center rounded-xl bg-charcoal px-4 text-sm font-semibold text-white hover:bg-charcoal/90"
           >
-            Συνέχισε τη συμπλήρωση
+            {t("continueDraft")}
           </Link>
         )}
       </div>
 
-      {isFree && (
-        <p className="text-xs text-muted">
-          Προσφορά launch — η προβολή αγγελίας είναι δωρεάν.
-        </p>
-      )}
+      {isFree && <p className="text-xs text-muted">{t("launchOffer")}</p>}
     </div>
   );
 }

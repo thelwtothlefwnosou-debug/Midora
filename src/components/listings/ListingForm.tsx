@@ -1,8 +1,14 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { GREEK_CITIES, PROPERTY_TYPES } from "@/lib/types";
 import type { ListingWithImages } from "@/lib/types";
-import { HEATING_TYPES, ENERGY_CLASSES } from "@/lib/listing-labels";
+import {
+  ENERGY_CLASSES,
+  getEnergyClassLabel,
+  getHeatingTypeLabel,
+  HEATING_TYPES,
+} from "@/lib/listing-labels";
 import { listingRentalType } from "@/lib/rental-types";
 
 type ListingFormProps = {
@@ -20,24 +26,27 @@ export function ListingForm({
   submitLabel,
   listing,
 }: ListingFormProps) {
+  const t = useTranslations("Owner.editForm");
+  const tLabels = useTranslations("Listing.labels");
+  const tPropertyTypes = useTranslations("PropertyTypes");
   const rentalType = listingRentalType(listing ?? { rental_type: "monthly" });
   const isShortTerm = rentalType === "short_term";
 
   return (
     <form action={action} className="space-y-5">
       <div>
-        <label className="text-xs text-muted uppercase">Τίτλος *</label>
+        <label className="text-xs text-muted uppercase">{t("title")}</label>
         <input
           name="title"
           required
           defaultValue={listing?.title}
-          placeholder="π.χ. Διαμέρισμα 2 υ/δ στο Κουκάκι"
+          placeholder={t("titlePlaceholder")}
           className="mt-1 w-full rounded-xl border border-border bg-sand/50 px-4 py-3 text-charcoal outline-none focus:border-gold/50"
         />
       </div>
 
       <div>
-        <label className="text-xs text-muted uppercase">Περιγραφή (Ελληνικά) *</label>
+        <label className="text-xs text-muted uppercase">{t("descriptionEl")}</label>
         <textarea
           name="description"
           required
@@ -48,9 +57,7 @@ export function ListingForm({
       </div>
 
       <div>
-        <label className="text-xs text-muted uppercase">
-          Περιγραφή (English) — προαιρετικό
-        </label>
+        <label className="text-xs text-muted uppercase">{t("descriptionEn")}</label>
         <textarea
           name="description_en"
           rows={5}
@@ -62,14 +69,14 @@ export function ListingForm({
 
       <div className="grid gap-4 sm:grid-cols-2">
         <div>
-          <label className="text-xs text-muted uppercase">Πόλη *</label>
+          <label className="text-xs text-muted uppercase">{t("city")}</label>
           <select
             name="city"
             required
             defaultValue={listing?.city}
             className="mt-1 w-full rounded-xl border border-border bg-sand/50 px-4 py-3 text-charcoal outline-none"
           >
-            <option value="">Επίλεξε...</option>
+            <option value="">{t("choose")}</option>
             {GREEK_CITIES.map((c) => (
               <option key={c} value={c} className="bg-white">
                 {c}
@@ -78,7 +85,7 @@ export function ListingForm({
           </select>
         </div>
         <div>
-          <label className="text-xs text-muted uppercase">Περιοχή *</label>
+          <label className="text-xs text-muted uppercase">{t("area")}</label>
           <input
             name="area"
             required
@@ -89,9 +96,7 @@ export function ListingForm({
       </div>
 
       <div>
-        <label className="text-xs text-muted uppercase">
-          Διεύθυνση (για χάρτη — δεν εμφανίζεται δημόσια)
-        </label>
+        <label className="text-xs text-muted uppercase">{t("address")}</label>
         <input
           name="address"
           defaultValue={listing?.address ?? ""}
@@ -102,7 +107,7 @@ export function ListingForm({
       <div className="grid gap-4 sm:grid-cols-3">
         <div>
           <label className="text-xs text-muted uppercase">
-            {isShortTerm ? "Τιμή / βράδυ *" : "Τιμή / μήνα *"}
+            {isShortTerm ? t("priceNight") : t("priceMonth")}
           </label>
           {isShortTerm ? (
             <input
@@ -125,7 +130,7 @@ export function ListingForm({
           )}
         </div>
         <div>
-          <label className="text-xs text-muted uppercase">Υ/Δ *</label>
+          <label className="text-xs text-muted uppercase">{t("bedrooms")}</label>
           <input
             name="bedrooms"
             type="number"
@@ -136,7 +141,7 @@ export function ListingForm({
           />
         </div>
         <div>
-          <label className="text-xs text-muted uppercase">Μπάνια</label>
+          <label className="text-xs text-muted uppercase">{t("bathrooms")}</label>
           <input
             name="bathrooms"
             type="number"
@@ -148,10 +153,10 @@ export function ListingForm({
       </div>
 
       <div>
-        <h3 className="font-display text-sm font-semibold text-gold">Στοιχεία ακινήτου</h3>
+        <h3 className="font-display text-sm font-semibold text-gold">{t("propertyDetails")}</h3>
         <div className="mt-3 grid gap-4 sm:grid-cols-3">
           <div>
-            <label className="text-xs text-muted uppercase">τ.μ.</label>
+            <label className="text-xs text-muted uppercase">{t("sqm")}</label>
             <input
               name="sqm"
               type="number"
@@ -161,17 +166,17 @@ export function ListingForm({
             />
           </div>
           <div>
-            <label className="text-xs text-muted uppercase">Όροφος</label>
+            <label className="text-xs text-muted uppercase">{t("floor")}</label>
             <input
               name="floor"
               type="number"
               defaultValue={listing?.floor ?? ""}
-              placeholder="π.χ. 3"
+              placeholder={t("floorPlaceholder")}
               className="mt-1 w-full rounded-xl border border-border bg-sand/50 px-4 py-3 text-charcoal outline-none focus:border-gold/50"
             />
           </div>
           <div>
-            <label className="text-xs text-muted uppercase">Συνολικοί όροφοι</label>
+            <label className="text-xs text-muted uppercase">{t("totalFloors")}</label>
             <input
               name="total_floors"
               type="number"
@@ -181,7 +186,7 @@ export function ListingForm({
             />
           </div>
           <div>
-            <label className="text-xs text-muted uppercase">Έτος κατασκευής</label>
+            <label className="text-xs text-muted uppercase">{t("yearBuilt")}</label>
             <input
               name="year_built"
               type="number"
@@ -192,7 +197,7 @@ export function ListingForm({
             />
           </div>
           <div>
-            <label className="text-xs text-muted uppercase">Έτος ανακαίνισης</label>
+            <label className="text-xs text-muted uppercase">{t("yearRenovated")}</label>
             <input
               name="year_renovated"
               type="number"
@@ -203,37 +208,41 @@ export function ListingForm({
             />
           </div>
           <div>
-            <label className="text-xs text-muted uppercase">Τύπος θέρμανσης</label>
+            <label className="text-xs text-muted uppercase">{t("heatingType")}</label>
             <select
               name="heating_type"
               defaultValue={listing?.heating_type ?? ""}
               className="mt-1 w-full rounded-xl border border-border bg-sand/50 px-4 py-3 text-charcoal outline-none"
             >
-              {HEATING_TYPES.map((t) => (
+              {HEATING_TYPES.map((item) => (
                 <option
-                  key={t.value === "" ? "heating-unset" : t.value}
-                  value={t.value}
+                  key={item.value === "" ? "heating-unset" : item.value}
+                  value={item.value}
                   className="bg-white"
                 >
-                  {t.label}
+                  {item.value
+                    ? getHeatingTypeLabel(item.value, tLabels)
+                    : item.label}
                 </option>
               ))}
             </select>
           </div>
           <div>
-            <label className="text-xs text-muted uppercase">Ενεργειακή κλάση</label>
+            <label className="text-xs text-muted uppercase">{t("energyClass")}</label>
             <select
               name="energy_class"
               defaultValue={listing?.energy_class ?? ""}
               className="mt-1 w-full rounded-xl border border-border bg-sand/50 px-4 py-3 text-charcoal outline-none"
             >
-              {ENERGY_CLASSES.map((t) => (
+              {ENERGY_CLASSES.map((item) => (
                 <option
-                  key={t.value === "" ? "energy-unset" : t.value}
-                  value={t.value}
+                  key={item.value === "" ? "energy-unset" : item.value}
+                  value={item.value}
                   className="bg-white"
                 >
-                  {t.label}
+                  {item.value
+                    ? getEnergyClassLabel(item.value, tLabels)
+                    : item.label}
                 </option>
               ))}
             </select>
@@ -243,21 +252,21 @@ export function ListingForm({
 
       <div className="grid gap-4 sm:grid-cols-2">
         <div>
-          <label className="text-xs text-muted uppercase">Τύπος</label>
+          <label className="text-xs text-muted uppercase">{t("propertyType")}</label>
           <select
             name="property_type"
             defaultValue={listing?.property_type ?? "apartment"}
             className="mt-1 w-full rounded-xl border border-border bg-sand/50 px-4 py-3 text-charcoal outline-none"
           >
-            {PROPERTY_TYPES.map((t) => (
-              <option key={t.value} value={t.value} className="bg-white">
-                {t.label}
+            {PROPERTY_TYPES.map((item) => (
+              <option key={item.value} value={item.value} className="bg-white">
+                {tPropertyTypes(item.value)}
               </option>
             ))}
           </select>
         </div>
         <div>
-          <label className="text-xs text-muted uppercase">Ελάχιστη διάρκεια</label>
+          <label className="text-xs text-muted uppercase">{t("minStay")}</label>
           {isShortTerm ? (
             <select
               name="min_months"
@@ -265,13 +274,13 @@ export function ListingForm({
               className="mt-1 w-full rounded-xl border border-border bg-sand/50 px-4 py-3 text-charcoal outline-none"
             >
               <option value={1} className="bg-white">
-                1 νύχτα
+                {t("oneNight")}
               </option>
               <option value={3} className="bg-white">
-                3 νύχτες
+                {t("threeNights")}
               </option>
               <option value={7} className="bg-white">
-                7 νύχτες
+                {t("sevenNights")}
               </option>
             </select>
           ) : (
@@ -281,13 +290,13 @@ export function ListingForm({
               className="mt-1 w-full rounded-xl border border-border bg-sand/50 px-4 py-3 text-charcoal outline-none"
             >
               <option value={1} className="bg-white">
-                1 μήνας
+                {t("oneMonth")}
               </option>
               <option value={3} className="bg-white">
-                3 μήνες
+                {t("threeMonths")}
               </option>
               <option value={6} className="bg-white">
-                6 μήνες
+                {t("sixMonths")}
               </option>
             </select>
           )}
@@ -302,28 +311,28 @@ export function ListingForm({
             defaultChecked={listing?.cleaning_included}
             className="accent-gold"
           />
-          Η καθαριότητα περιλαμβάνεται
+          {t("cleaningIncluded")}
         </label>
       </div>
 
       <div>
-        <label className="text-xs text-muted uppercase">Μέγ. άτομα</label>
+        <label className="text-xs text-muted uppercase">{t("maxGuests")}</label>
         <input
           name="max_guests"
           type="number"
           min={1}
           defaultValue={listing?.max_guests ?? ""}
-          placeholder="π.χ. 4"
+          placeholder={t("maxGuestsPlaceholder")}
           className="mt-1 w-full rounded-xl border border-border bg-sand/50 px-4 py-3 text-charcoal outline-none focus:border-gold/50"
         />
       </div>
 
       <div>
-        <label className="text-xs text-muted uppercase">Κανόνες σπιτιού (προαιρετικό)</label>
+        <label className="text-xs text-muted uppercase">{t("houseRules")}</label>
         <textarea
           name="house_rules"
           rows={3}
-          placeholder="π.χ. Χωρίς κάπνισμα, ήσυχες ώρες μετά τις 23:00"
+          placeholder={t("houseRulesPlaceholder")}
           className="mt-1 w-full rounded-xl border border-border bg-sand/50 px-4 py-3 text-charcoal outline-none focus:border-gold/50"
         />
       </div>
@@ -335,7 +344,7 @@ export function ListingForm({
         disabled={pending}
         className="w-full rounded-full bg-gradient-to-r from-gold to-gold-light py-4 font-semibold text-white disabled:opacity-50"
       >
-        {pending ? "Αποθήκευση..." : submitLabel}
+        {pending ? t("saving") : submitLabel}
       </button>
     </form>
   );

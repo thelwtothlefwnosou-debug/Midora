@@ -1,7 +1,8 @@
 "use client";
 
-import { useCallback, useMemo, useState, useTransition } from "react";
+import { useCallback, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import {
   deleteCalendarPriceRule,
   saveCalendarPriceRule,
@@ -45,6 +46,7 @@ export function usePriceRulesManager({
   periods,
   initialRules,
 }: Options) {
+  const t = useTranslations("Workspace.calendar");
   const router = useRouter();
   const [rules, setRules] = useState(initialRules);
   const [priceInput, setPriceInput] = useState("");
@@ -82,15 +84,13 @@ export function usePriceRulesManager({
 
     const dayCount = countDaysInRange(start, end);
     if (dayCount > 1) {
-      const ok = confirm(
-        `Θέλεις να εφαρμόσεις αυτές τις αλλαγές σε ${dayCount} ημερομηνίες;`
-      );
+      const ok = confirm(t("confirmApplyMultiDay", { count: dayCount }));
       if (!ok) return;
     }
 
     const price = parseInt(priceInput, 10);
     if (!Number.isFinite(price) || price <= 0) {
-      setError("Συμπλήρωσε έγκυρη τιμή ανά βράδυ.");
+      setError(t("invalidPrice"));
       return;
     }
 
@@ -99,13 +99,13 @@ export function usePriceRulesManager({
       const result = await saveCalendarPriceRule(listingId, start, end, price);
       if (result?.error) {
         setError(result.error);
-        showToast("Δεν ήταν δυνατή η αποθήκευση της τιμής.");
+        showToast(t("savePriceFailed"));
         return;
       }
       if ("rules" in result && result.rules) setRules(result.rules);
       onSuccess?.();
       router.refresh();
-      showToast("Η τιμή εφαρμόστηκε στις επιλεγμένες ημερομηνίες.");
+      showToast(t("priceApplied"));
     });
   }
 
@@ -124,12 +124,12 @@ export function usePriceRulesManager({
       (end !== start ? findPriceRuleForDate(rules, end) : null);
 
     if (!rule || !hasCustomPriceForDate(pricing, rules, start)) {
-      setError("Η επιλογή δεν έχει ειδική τιμή.");
+      setError(t("noCustomPrice"));
       return;
     }
 
     const label = formatUnavailablePeriodRange(rule.start_date, rule.end_date);
-    if (!confirm(`Να επαναφερθεί η βασική τιμή (€${basePrice}) για ${label};`)) {
+    if (!confirm(t("confirmResetBase", { price: basePrice, label }))) {
       return;
     }
 
@@ -143,7 +143,7 @@ export function usePriceRulesManager({
       if ("rules" in result && result.rules) setRules(result.rules);
       onSuccess?.();
       router.refresh();
-      showToast("Η ειδική τιμή αφαιρέθηκε.");
+      showToast(t("customPriceRemoved"));
     });
   }
 

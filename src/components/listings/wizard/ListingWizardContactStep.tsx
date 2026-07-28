@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { CheckCircle2 } from "lucide-react";
 import type { Profile } from "@/lib/types";
 import { REQUIRE_LISTING_PHONE_SMS_VERIFICATION } from "@/lib/constants";
@@ -74,6 +75,7 @@ export function ListingWizardContactStep({
   onContactWhatsappPhoneChange,
   onContactViberPhoneChange,
 }: Props) {
+  const t = useTranslations("Wizard.contact");
   const phoneValid = hasCallablePhone(contactPhone);
   const phoneVerified = isProfilePhoneVerified(profile, contactPhone);
   const callsReady = listingPhoneReadyForCalls(contactPhone, allowPhone, profile);
@@ -96,16 +98,16 @@ export function ListingWizardContactStep({
         />
         <span>
           <span className="font-semibold text-charcoal">
-            Χρήση στοιχείων επικοινωνίας του προφίλ μου
+            {t("useProfile")}
           </span>
           <span className="mt-1 block text-xs text-muted">
-            Συμπληρώνει αυτόματα το τηλέφωνο από τις ρυθμίσεις του προφίλ σου, αν υπάρχει.
+            {t("useProfileHint")}
           </span>
         </span>
       </label>
 
       <label className="block">
-        <span className="text-xs text-muted uppercase">Όνομα αγγελιοδότη *</span>
+        <span className="text-xs text-muted uppercase">{t("advertiserName")}</span>
         <input
           value={contactName}
           onChange={(e) => onContactNameChange(e.target.value)}
@@ -116,29 +118,29 @@ export function ListingWizardContactStep({
       <div className="grid gap-4 sm:grid-cols-2">
         <div>
           <label className="block">
-            <span className="text-xs text-muted uppercase">Τηλέφωνο / κινητό (+30)</span>
+            <span className="text-xs text-muted uppercase">{t("phone")}</span>
             <input
               type="tel"
               value={contactPhone}
               onChange={(e) => onContactPhoneChange(e.target.value)}
-              placeholder={profile.phone?.trim() || "69xxxxxxxx"}
+              placeholder={profile.phone?.trim() || t("phonePlaceholder")}
               className={inputClass}
             />
           </label>
           {contactPhone.trim() && !phoneValid && (
             <span className="mt-1 block text-[10px] text-red-600">
-              Συμπλήρωσε έγκυρο κινητό (π.χ. 694xxxxxxx).
+              {t("phoneInvalid")}
             </span>
           )}
           {phoneVerified && (
             <span className="mt-2 flex items-center gap-1.5 text-[11px] text-teal">
               <CheckCircle2 className="h-3.5 w-3.5" />
-              Επιβεβαιωμένος αριθμός
+              {t("phoneVerifiedLabel")}
             </span>
           )}
         </div>
         <label className="block">
-          <span className="text-xs text-muted uppercase">Email</span>
+          <span className="text-xs text-muted uppercase">{t("email")}</span>
           <input
             type="email"
             value={contactEmail}
@@ -159,26 +161,25 @@ export function ListingWizardContactStep({
 
       {!REQUIRE_LISTING_PHONE_SMS_VERIFICATION && allowPhone && phoneValid && (
         <p className="rounded-xl border border-border bg-sand/20 px-4 py-3 text-xs text-muted">
-          Η επιβεβαίωση SMS για κλήσεις θα ενεργοποιηθεί σύντομα. Μπορείς να συνεχίσεις και να
-          ολοκληρώσεις την αγγελία τώρα.
+          {t("smsComingSoon")}
         </p>
       )}
 
       <label className="block sm:max-w-xs">
-        <span className="text-xs text-muted uppercase">Προτιμώμενος τρόπος</span>
+        <span className="text-xs text-muted uppercase">{t("preferredMethod")}</span>
         <select
           value={preferredContact}
           onChange={(e) => onPreferredContactChange(e.target.value)}
           className={inputClass}
         >
-          <option value="phone">Κινητό</option>
-          <option value="email">Email</option>
-          <option value="message">Μήνυμα μέσω Midora</option>
+          <option value="phone">{t("mobile")}</option>
+          <option value="email">{t("email")}</option>
+          <option value="message">{t("midoraMessage")}</option>
         </select>
       </label>
 
       <div className="space-y-3 rounded-xl border border-border p-4">
-        <p className="text-sm font-semibold text-charcoal">Τρόποι επικοινωνίας στην αγγελία</p>
+        <p className="text-sm font-semibold text-charcoal">{t("contactMethods")}</p>
         <label className="flex items-center gap-2 text-sm">
           <input
             type="checkbox"
@@ -186,11 +187,11 @@ export function ListingWizardContactStep({
             onChange={(e) => onAllowPhoneChange(e.target.checked)}
             className="accent-gold"
           />
-          Εμφάνιση τηλεφώνου για κλήσεις
+          {t("showPhone")}
         </label>
         {!callsReady && allowPhone && REQUIRE_LISTING_PHONE_SMS_VERIFICATION && (
           <p className="text-xs text-amber-800">
-            Απαιτείται επιβεβαίωση SMS για να εμφανίζεται δημόσια το τηλέφωνο.
+            {t("smsRequiredForPublicPhone")}
           </p>
         )}
         <label className="flex items-center gap-2 text-sm">
@@ -200,7 +201,7 @@ export function ListingWizardContactStep({
             onChange={(e) => onAllowWhatsAppChange(e.target.checked)}
             className="accent-gold"
           />
-          WhatsApp
+          {t("whatsapp")}
         </label>
         <label className="flex items-center gap-2 text-sm">
           <input
@@ -209,11 +210,11 @@ export function ListingWizardContactStep({
             onChange={(e) => onWhatsappUsePrimaryChange(e.target.checked)}
             className="accent-gold"
           />
-          Χρήση βασικού τηλεφώνου για WhatsApp
+          {t("useMainPhoneWhatsapp")}
         </label>
         {!whatsappUsePrimary && (
           <label className="block">
-            <span className="text-xs text-muted uppercase">Διαφορετικό τηλέφωνο WhatsApp</span>
+            <span className="text-xs text-muted uppercase">{t("differentPhoneWhatsapp")}</span>
             <input
               type="tel"
               value={contactWhatsappPhone}
@@ -229,7 +230,7 @@ export function ListingWizardContactStep({
             onChange={(e) => onAllowViberChange(e.target.checked)}
             className="accent-gold"
           />
-          Viber
+          {t("viber")}
         </label>
         <label className="flex items-center gap-2 text-sm">
           <input
@@ -238,11 +239,11 @@ export function ListingWizardContactStep({
             onChange={(e) => onViberUsePrimaryChange(e.target.checked)}
             className="accent-gold"
           />
-          Χρήση βασικού τηλεφώνου για Viber
+          {t("useMainPhoneViber")}
         </label>
         {!viberUsePrimary && (
           <label className="block">
-            <span className="text-xs text-muted uppercase">Διαφορετικό τηλέφωνο Viber</span>
+            <span className="text-xs text-muted uppercase">{t("differentPhoneViber")}</span>
             <input
               type="tel"
               value={contactViberPhone}
@@ -259,20 +260,18 @@ export function ListingWizardContactStep({
             onChange={(e) => onAllowMessageChange(e.target.checked)}
             className="accent-gold"
           />
-          Μηνύματα μέσω Midora
+          {t("messagesViaMidora")}
         </label>
       </div>
 
       <p className="text-xs text-muted">
         {REQUIRE_LISTING_PHONE_SMS_VERIFICATION ? (
-          <>
-            Το τηλέφωνο εμφανίζεται δημόσια μόνο αφού επιβεβαιωθεί με SMS.{" "}
-          </>
+          <>{t("phonePublicAfterSms")} </>
         ) : (
-          <>Μπορείς να αποθηκεύσεις πρόχειρη αγγελία και να την ολοκληρώσεις αργότερα. </>
+          <>{t("saveDraftHint")} </>
         )}
         <Link href="/dashboard/settings/contact" className="text-gold-dark hover:underline">
-          Ρυθμίσεις επικοινωνίας
+          {t("contactSettings")}
         </Link>
       </p>
     </div>

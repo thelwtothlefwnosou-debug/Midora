@@ -1,5 +1,5 @@
 import type { DateRangeValue } from "@/components/availability/InterestDateRangePicker";
-import type { GuestCounts } from "@/components/search/GuestPicker";
+import type { GuestCounts, GuestTileLabels } from "@/components/search/GuestPicker";
 import {
   formatGuestTileLabel,
   guestCountsToSearchTotal,
@@ -14,15 +14,15 @@ export type ActiveSearchField =
   | "guests"
   | null;
 
-export const SEARCH_LOCATION_PLACEHOLDER = "Προσθήκη προορισμού";
-export const SEARCH_DATE_ANYTIME_LABEL = "Οποιαδήποτε στιγμή";
-export const SEARCH_DATE_PLACEHOLDER = "Πότε;";
-export const SEARCH_GUESTS_FIELD_LABEL = "Ποιος";
-export const SEARCH_GUESTS_EMPTY_LABEL = "Προσθήκη επισκεπτών";
+export const SEARCH_LOCATION_PLACEHOLDER = "Add destination";
+export const SEARCH_DATE_ANYTIME_LABEL = "Anytime";
+export const SEARCH_DATE_PLACEHOLDER = "When?";
+export const SEARCH_GUESTS_FIELD_LABEL = "Who";
+export const SEARCH_GUESTS_EMPTY_LABEL = "Add guests";
 /** @deprecated Use SEARCH_GUESTS_FIELD_LABEL / SEARCH_GUESTS_EMPTY_LABEL */
 export const SEARCH_GUESTS_LABEL = SEARCH_GUESTS_EMPTY_LABEL;
 export const PARTIAL_DATE_RANGE_HINT =
-  "Επίλεξε ημερομηνία αναχώρησης ή καθάρισε τις ημερομηνίες.";
+  "Select a check-out date or clear the dates.";
 
 export function isCompleteDateRange(range: DateRangeValue): boolean {
   if (!range?.start || !range.end) return false;
@@ -31,13 +31,14 @@ export function isCompleteDateRange(range: DateRangeValue): boolean {
 
 export function getPartialDateRangeMessage(
   from?: string | null,
-  to?: string | null
+  to?: string | null,
+  hint: string = PARTIAL_DATE_RANGE_HINT
 ): string | null {
   const start = from?.trim() ?? "";
   const end = to?.trim() ?? "";
   if (!start && !end) return null;
   if (start && end && start !== end) return null;
-  return PARTIAL_DATE_RANGE_HINT;
+  return hint;
 }
 
 export function formatCompactSearchDateRange(start: string, end: string): string {
@@ -68,25 +69,34 @@ export function formatSearchDateLabel(range: DateRangeValue): string {
   return formatCompactSearchDateRange(range!.start, range!.end);
 }
 
-export function formatSearchCheckInLabel(range: DateRangeValue): string {
+export function formatSearchCheckInLabel(
+  range: DateRangeValue,
+  placeholder: string = SEARCH_DATE_PLACEHOLDER
+): string {
   const start = range?.start?.trim();
-  if (!start) return SEARCH_DATE_PLACEHOLDER;
+  if (!start) return placeholder;
   return formatSingleSearchDate(start);
 }
 
-export function formatSearchCheckOutLabel(range: DateRangeValue): string {
-  if (!isCompleteDateRange(range)) return SEARCH_DATE_PLACEHOLDER;
+export function formatSearchCheckOutLabel(
+  range: DateRangeValue,
+  placeholder: string = SEARCH_DATE_PLACEHOLDER
+): string {
+  if (!isCompleteDateRange(range)) return placeholder;
   return formatSingleSearchDate(range!.end);
 }
 
+export type GuestSearchLabels = GuestTileLabels & { empty: string };
+
 export function formatGuestSearchLabel(
   counts: GuestCounts | null,
-  hasSelection: boolean
+  hasSelection: boolean,
+  labels?: GuestSearchLabels
 ): string {
   if (!hasSelection || !counts || !hasGuestOrPetSelection(counts)) {
-    return SEARCH_GUESTS_EMPTY_LABEL;
+    return labels?.empty ?? SEARCH_GUESTS_EMPTY_LABEL;
   }
-  return formatGuestTileLabel(counts);
+  return formatGuestTileLabel(counts, labels);
 }
 
 export function guestCountsToParam(

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import { sanitizePublicListingText } from "@/lib/listing-public-text";
 
@@ -13,6 +14,8 @@ export function ListingDescriptionTabs({
   descriptionEl,
   descriptionEn,
 }: Props) {
+  const t = useTranslations("Listing");
+  const tDesc = useTranslations("Listing.descriptionSection");
   const [lang, setLang] = useState<"el" | "en">("el");
   const cleanEl = sanitizePublicListingText(descriptionEl);
   const cleanEn = sanitizePublicListingText(descriptionEn);
@@ -24,7 +27,7 @@ export function ListingDescriptionTabs({
   return (
     <div className="listing-section">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 className="listing-section-title">Περιγραφή</h2>
+        <h2 className="listing-section-title">{t("description")}</h2>
         {hasEn && (
           <div className="flex rounded-lg border border-border bg-white p-0.5 text-xs shadow-sm">
             <button
@@ -37,7 +40,7 @@ export function ListingDescriptionTabs({
                   : "text-muted hover:text-charcoal"
               )}
             >
-              Ελληνικά
+              {tDesc("langGreek")}
             </button>
             <button
               type="button"
@@ -49,16 +52,14 @@ export function ListingDescriptionTabs({
                   : "text-muted hover:text-charcoal"
               )}
             >
-              Αγγλικά
+              {tDesc("langEnglish")}
             </button>
           </div>
         )}
       </div>
       <p className="listing-body mt-5 whitespace-pre-wrap">{body}</p>
       {lang === "en" && !hasEn && (
-        <p className="mt-2 text-sm text-muted">
-          Η αγγλική περιγραφή δεν είναι διαθέσιμη ακόμα.
-        </p>
+        <p className="mt-2 text-sm text-muted">{tDesc("englishNotAvailable")}</p>
       )}
     </div>
   );

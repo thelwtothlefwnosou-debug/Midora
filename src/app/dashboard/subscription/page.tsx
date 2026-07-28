@@ -6,9 +6,11 @@ import { Button } from "@/components/ui/Button";
 import { requireDashboardContext } from "@/lib/dashboard-context";
 import { getUserListings } from "@/lib/listings";
 import { getEffectiveListingStatus } from "@/lib/listing-status";
-import { PORTAL_LEGAL_BLOCKS } from "@/lib/rental-types";
+import { getTranslations } from "next-intl/server";
 
 export default async function SubscriptionDashboardPage() {
+  const tFooter = await getTranslations("Footer");
+  const t = await getTranslations("Owner.subscriptionPage");
   const { profile, email } = await requireDashboardContext("/dashboard/subscription");
   const listings = await getUserListings(profile.id);
   const activeListings = listings.filter(
@@ -22,49 +24,43 @@ export default async function SubscriptionDashboardPage() {
       profile={profile}
       email={email}
       active="subscription"
-      title="Συνδρομή προβολής"
-      subtitle="Χρέωση δημοσίευσης και ενεργής προβολής αγγελιών"
+      title={t("title")}
+      subtitle={t("subtitle")}
     >
       <div className="grid gap-6 lg:grid-cols-2">
         <GlassCard glow className="p-6">
           <div className="flex items-center gap-3">
             <CreditCard className="h-6 w-6 text-gold" />
             <h2 className="font-display text-lg font-semibold text-charcoal">
-              Τρέχον πακέτο
+              {t("currentPlan")}
             </h2>
           </div>
           <p className="mt-4 font-display text-3xl font-bold text-charcoal">
-            {isFree ? "Δωρεάν προβολή" : "Βασικό πακέτο"}
+            {isFree ? t("freePlan") : t("basicPlan")}
           </p>
           <p className="mt-2 text-sm text-muted">
-            {isFree
-              ? "Προσφορά launch — χωρίς χρέωση δημοσίευσης"
-              : "Χρέωση δημοσίευσης αγγελίας ανά μήνα προβολής"}
+            {isFree ? t("freeDesc") : t("basicDesc")}
           </p>
           <ul className="mt-5 space-y-2 text-sm text-charcoal/80">
-            <li>Ενεργές αγγελίες: {activeListings}</li>
-            <li>Σύνολο αγγελιών: {listings.length}</li>
+            <li>{t("activeListings", { count: activeListings })}</li>
+            <li>{t("totalListings", { count: listings.length })}</li>
           </ul>
           {!isFree && (
-            <p className="mt-4 text-xs text-muted">
-              Η χρέωση αφορά μόνο την προβολή της αγγελίας — όχι μισθώσεις ή συμφωνίες.
-            </p>
+            <p className="mt-4 text-xs text-muted">{t("billingNote")}</p>
           )}
         </GlassCard>
 
         <GlassCard className="p-6">
           <h2 className="font-display text-lg font-semibold text-charcoal">
-            Διαχείριση αγγελιών
+            {t("manageListingsTitle")}
           </h2>
-          <p className="mt-2 text-sm text-muted">
-            Για ανανέωση ή ενεργοποίηση προβολής, επίλεξε αγγελία από τη λίστα σου.
-          </p>
+          <p className="mt-2 text-sm text-muted">{t("manageListingsDesc")}</p>
           <div className="mt-5 flex flex-wrap gap-3">
             <Button href="/dashboard/listings" variant="outline">
               <Home className="h-4 w-4" />
-              Οι αγγελίες μου
+              {t("myListings")}
             </Button>
-            <Button href="/dashboard/listings/new">Νέα αγγελία</Button>
+            <Button href="/dashboard/listings/new">{t("newListing")}</Button>
           </div>
           {listings.length > 0 && (
             <ul className="mt-6 space-y-2 border-t border-border pt-4">
@@ -75,7 +71,7 @@ export default async function SubscriptionDashboardPage() {
                     href={`/dashboard/listings/${l.id}/pay`}
                     className="shrink-0 text-gold hover:underline"
                   >
-                    Πακέτο προβολής
+                    {t("visibilityPackage")}
                   </Link>
                 </li>
               ))}
@@ -85,7 +81,7 @@ export default async function SubscriptionDashboardPage() {
       </div>
 
       <GlassCard className="mt-6 p-5 text-sm leading-relaxed text-muted">
-        {PORTAL_LEGAL_BLOCKS[0]}
+        {tFooter("legalBlocks.platform")}
       </GlassCard>
     </AccountShell>
   );

@@ -1,3 +1,5 @@
+import { pickLocale, intlLocale } from "@/lib/locale-fallbacks";
+
 export type UnavailablePeriodReason =
   | "personal_use"
   | "maintenance"
@@ -19,25 +21,38 @@ export type ListingUnavailablePeriod = {
 export const UNAVAILABLE_PERIOD_REASONS: {
   value: UnavailablePeriodReason;
   label: string;
+  labelKey: string;
 }[] = [
-  { value: "personal_use", label: "Προσωπική χρήση" },
-  { value: "maintenance", label: "Συντήρηση" },
-  { value: "unavailable", label: "Ήδη μη διαθέσιμο" },
-  { value: "other", label: "Άλλο" },
+  { value: "personal_use", label: "Προσωπική χρήση", labelKey: "personal_use" },
+  { value: "maintenance", label: "Συντήρηση", labelKey: "maintenance" },
+  { value: "unavailable", label: "Ήδη μη διαθέσιμο", labelKey: "unavailable" },
+  { value: "other", label: "Άλλο", labelKey: "other" },
 ];
 
+const UNAVAILABLE_REASON_EN: Record<UnavailablePeriodReason, string> = {
+  personal_use: "Personal use",
+  maintenance: "Maintenance",
+  unavailable: "Already unavailable",
+  other: "Other",
+};
+
 export function unavailableReasonLabel(
-  reason: UnavailablePeriodReason | string | null | undefined
+  reason: UnavailablePeriodReason | string | null | undefined,
+  locale?: string
 ): string {
   const found = UNAVAILABLE_PERIOD_REASONS.find((r) => r.value === reason);
-  return found?.label ?? "Μη διαθέσιμο";
+  if (found && reason && reason in UNAVAILABLE_REASON_EN) {
+    return pickLocale(locale, found.label, UNAVAILABLE_REASON_EN[reason as UnavailablePeriodReason]);
+  }
+  return found?.label ?? pickLocale(locale, "Μη διαθέσιμο", "Unavailable");
 }
 
 export function formatUnavailablePeriodRange(
   startDate: string,
-  endDate: string
+  endDate: string,
+  locale?: string
 ): string {
-  const fmt = new Intl.DateTimeFormat("el-GR", {
+  const fmt = new Intl.DateTimeFormat(intlLocale(locale), {
     day: "2-digit",
     month: "2-digit",
     year: "numeric",

@@ -23,13 +23,13 @@ export function useListingPreviewMode(): boolean {
   return useContext(ListingPreviewModeContext);
 }
 
-export function previewModeBlockedMessage(): string {
-  return "Αυτό είναι δοκιμαστικό preview. Οι επισκέπτες θα μπορούν να στείλουν αίτημα από εδώ.";
-}
-
-export function guardPreviewAction(previewMode: boolean, action: () => void): void {
+export function guardPreviewAction(
+  previewMode: boolean,
+  blockedMessage: string,
+  action: () => void
+): void {
   if (previewMode) {
-    showToast(previewModeBlockedMessage());
+    showToast(blockedMessage);
     return;
   }
   action();

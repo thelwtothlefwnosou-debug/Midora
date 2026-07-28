@@ -2,6 +2,7 @@
 
 import { useMemo } from "react";
 import { useSearchParams } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { StickyPropertyNav } from "@/components/listings/detail/StickyPropertyNav";
 import { MonthlyInquiryCard } from "@/components/listings/detail/MonthlyInquiryCard";
 import { PublicListingMainLayout } from "@/components/listings/detail/PublicListingMainLayout";
@@ -36,6 +37,7 @@ export function MonthlyListingLayout({
   cohosts = [],
   publicContactPhones = [],
 }: Props) {
+  const t = useTranslations("Listing");
   const searchParams = useSearchParams();
   const profileLinkContext = useMemo(
     () => buildProfileLinkContextFromSearchParams(searchParams, "monthly"),
@@ -43,36 +45,45 @@ export function MonthlyListingLayout({
   );
 
   return (
-    <PublicListingMainLayout
-      content={
-        <>
-          <StickyPropertyNav
-            items={[
-              { id: "about", label: "Περιγραφή" },
-              { id: "amenities", label: "Παροχές" },
-              { id: "area", label: "Περιοχή" },
-            ]}
-          />
-          <ListingCoreContent listing={listing} rentalMode="monthly" />
-          <ListingAreaSection listing={listing} />
-          <section className="listing-section scroll-mt-32">
-            <ListingPropertyDetails listing={listing} />
-            <ListingTermsSection listing={listing} />
-          </section>
-          <ListingAdvertiserSection
-            listing={listing}
-            rentalMode="monthly"
-            profileLinkContext={profileLinkContext}
-            cohosts={cohosts}
-            publicContactPhones={publicContactPhones}
-          />
-          <ListingExternalLinksSection links={listing.external_links ?? []} />
-          <ListingLegalSection listing={listing} />
-        </>
-      }
-      sidebar={
-        <MonthlyInquiryCard listing={listing} contact={contact} hostName={hostName} />
-      }
-    />
+    <>
+      {/* Sticky inquiry only within this section — ends before full-width map/host/legal */}
+      <section className="listing-main-section">
+        <PublicListingMainLayout
+          content={
+            <>
+              <StickyPropertyNav
+                items={[
+                  { id: "about", label: t("description") },
+                  { id: "amenities", label: t("amenities") },
+                  { id: "area", label: t("area") },
+                ]}
+              />
+              <ListingCoreContent listing={listing} rentalMode="monthly" />
+              <section className="listing-section scroll-mt-32">
+                <ListingPropertyDetails listing={listing} />
+                <ListingTermsSection listing={listing} />
+              </section>
+            </>
+          }
+          sidebar={
+            <MonthlyInquiryCard listing={listing} contact={contact} hostName={hostName} />
+          }
+        />
+      </section>
+
+      <ListingAreaSection listing={listing} rentalMode="monthly" />
+
+      <ListingAdvertiserSection
+        listing={listing}
+        rentalMode="monthly"
+        profileLinkContext={profileLinkContext}
+        cohosts={cohosts}
+        publicContactPhones={publicContactPhones}
+      />
+
+      <ListingExternalLinksSection links={listing.external_links ?? []} />
+
+      <ListingLegalSection listing={listing} />
+    </>
   );
 }

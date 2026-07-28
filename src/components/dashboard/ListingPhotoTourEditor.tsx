@@ -5,6 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Camera, ImageIcon, MoveRight, Upload } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { DeletePhotoButton } from "@/components/dashboard/DeletePhotoButton";
 import {
@@ -12,8 +13,8 @@ import {
   uploadListingRoomPhotos,
 } from "@/lib/listing-photo-rooms";
 import {
+  getSuggestPhotoRooms,
   groupImagesByRoom,
-  suggestPhotoRooms,
   type PhotoRoomDef,
 } from "@/lib/photo-rooms-catalog";
 import { MAX_LISTING_PHOTOS } from "@/lib/constants";
@@ -27,9 +28,15 @@ type Props = {
 
 export function ListingPhotoTourEditor({ listing, existingImages }: Props) {
   const router = useRouter();
+  const t = useTranslations("Workspace.photoTourEditor");
+  const tPhotoRooms = useTranslations("Listing.photoRooms");
   const rooms = useMemo(
-    () => suggestPhotoRooms({ bedrooms: listing.bedrooms, bathrooms: listing.bathrooms }),
-    [listing.bedrooms, listing.bathrooms]
+    () =>
+      getSuggestPhotoRooms(
+        { bedrooms: listing.bedrooms, bathrooms: listing.bathrooms },
+        (key) => tPhotoRooms(key as Parameters<typeof tPhotoRooms>[0])
+      ),
+    [listing.bedrooms, listing.bathrooms, tPhotoRooms]
   );
 
   const photos = useMemo(
@@ -41,7 +48,10 @@ export function ListingPhotoTourEditor({ listing, existingImages }: Props) {
     [existingImages]
   );
 
-  const grouped = useMemo(() => groupImagesByRoom(existingImages, rooms), [existingImages, rooms]);
+  const grouped = useMemo(
+    () => groupImagesByRoom(existingImages, rooms, tPhotoRooms("generalPhotos")),
+    [existingImages, rooms, tPhotoRooms]
+  );
 
   const firstRoomWithPhotos = grouped[0]?.room.key ?? rooms[0]?.key ?? "living_room";
   const [activeRoom, setActiveRoom] = useState<string>(firstRoomWithPhotos);
@@ -75,7 +85,7 @@ export function ListingPhotoTourEditor({ listing, existingImages }: Props) {
         setError(result.error);
         return;
       }
-      setMessage(`Οι φωτογραφίες προστέθηκαν στον χώρο «${activeRoomDef.label}».`);
+      setMessage(t("photosAdded", { room: activeRoomDef.label }));
       e.target.value = "";
       router.refresh();
     });
@@ -102,16 +112,16 @@ export function ListingPhotoTourEditor({ listing, existingImages }: Props) {
     <div>
       <div className="mb-4">
         <h2 className="font-display text-lg font-semibold text-charcoal">
-          Περιήγηση σπιτιού
+          {t("title")}
         </h2>
         <p className="mt-1 text-sm text-muted">
-          Οργάνωσε τις φωτογραφίες ανά χώρο — όπως στο Airbnb. Επιλέγεις χώρο, ανεβάζεις ή
-          μετακινείς φωτογραφίες.
+          {t("subtitle")}
         </p>
         <p className="mt-1 text-xs text-muted">
-          {photos.length} φωτογραφίες
-          {videos.length > 0 ? ` · ${videos.length} βίντεο` : ""} · έως {MAX_LISTING_PHOTOS}{" "}
-          αρχεία
+          {t("countPhotos", { count: photos.length })}
+          {videos.length > 0 ? ` · ${t("countVideos", { count: videos.length })}` : ""}
+          {" · "}
+          {t("maxFiles", { max: MAX_LISTING_PHOTOS })}
         </p>
       </div>
 
@@ -120,14 +130,14 @@ export function ListingPhotoTourEditor({ listing, existingImages }: Props) {
         className="mb-6 inline-flex items-center gap-2 text-sm text-muted hover:text-gold"
       >
         <ArrowLeft className="h-4 w-4" />
-        Πίσω στη διαχείριση
+        {t("backToManage")}
       </Link>
 
       <GlassCard className="overflow-hidden p-0">
         <div className="grid lg:grid-cols-[minmax(220px,260px)_minmax(0,1fr)]">
           <aside className="border-b border-border bg-sand/20 p-4 lg:border-r lg:border-b-0">
             <p className="mb-3 text-[10px] font-semibold tracking-wide text-muted uppercase">
-              Χώροι
+              {t("rooms")}
             </p>
             <ul className="space-y-1">
               {rooms.map((room) => {
@@ -170,7 +180,7 @@ export function ListingPhotoTourEditor({ listing, existingImages }: Props) {
                         : "text-amber-800 hover:bg-amber-50"
                     )}
                   >
-                    <span className="font-medium">Χωρίς κατηγορία</span>
+                    <span className="font-medium">{t("uncategorized")}</span>
                     <span
                       className={cn(
                         "rounded-full px-2 py-0.5 text-[10px] font-bold tabular-nums",
@@ -203,14 +213,14 @@ export function ListingPhotoTourEditor({ listing, existingImages }: Props) {
                     </h3>
                     <p className="mt-1 text-sm text-muted">
                       {activePhotos.length === 0
-                        ? "Δεν έχεις ακόμα φωτογραφίες για αυτόν τον χώρο."
-                        : `${activePhotos.length} φωτογραφί${activePhotos.length === 1 ? "α" : "ες"}`}
+                        ? t("noPhotosForRoom")
+                        : t("countPhotos", { count: activePhotos.length })}
                     </p>
                   </div>
                   {canUploadMore && (
                     <label className="inline-flex cursor-pointer items-center gap-2 rounded-xl bg-gold px-4 py-2.5 text-sm font-semibold text-white hover:bg-gold-dark">
                       <Upload className="h-4 w-4" />
-                      Προσθήκη φωτογραφιών
+                      {t("addPhotos")}
                       <input
                         type="file"
                         accept="image/*"
@@ -227,9 +237,9 @@ export function ListingPhotoTourEditor({ listing, existingImages }: Props) {
                   <label className="mt-6 flex cursor-pointer flex-col items-center gap-3 rounded-2xl border-2 border-dashed border-border bg-sand/20 px-6 py-14 transition-colors hover:border-gold/40">
                     <Camera className="h-10 w-10 text-gold/60" />
                     <span className="text-sm font-medium text-charcoal">
-                      Ανέβασε φωτογραφίες για {activeRoomDef.label}
+                      {t("uploadForRoom", { room: activeRoomDef.label })}
                     </span>
-                    <span className="text-xs text-muted">JPG, PNG · πολλαπλές επιλογές</span>
+                    <span className="text-xs text-muted">{t("fileTypesHint")}</span>
                     <input
                       type="file"
                       accept="image/*"
@@ -259,7 +269,7 @@ export function ListingPhotoTourEditor({ listing, existingImages }: Props) {
 
             {error && <p className="mt-4 text-sm text-red-500">{error}</p>}
             {message && <p className="mt-4 text-sm text-teal">{message}</p>}
-            {pending && <p className="mt-2 text-xs text-muted">Αποθήκευση…</p>}
+            {pending && <p className="mt-2 text-xs text-muted">{t("saving")}</p>}
           </div>
         </div>
       </GlassCard>
@@ -282,6 +292,7 @@ function PhotoTile({
   onMove: (imageId: string, roomKey: string) => void;
   pending: boolean;
 }) {
+  const t = useTranslations("Workspace.photoTourEditor");
   const [moveOpen, setMoveOpen] = useState(false);
 
   return (
@@ -295,12 +306,12 @@ function PhotoTile({
           className="flex w-full items-center justify-center gap-1 rounded-lg bg-white/95 py-1.5 text-[11px] font-medium text-charcoal"
         >
           <MoveRight className="h-3 w-3" />
-          Μετακίνηση
+          {t("move")}
         </button>
       </div>
       {moveOpen && (
         <div className="absolute inset-0 z-10 flex flex-col bg-charcoal/90 p-2">
-          <p className="mb-2 text-center text-[10px] font-medium text-white">Μετακίνηση σε</p>
+          <p className="mb-2 text-center text-[10px] font-medium text-white">{t("moveTo")}</p>
           <div className="flex-1 space-y-1 overflow-y-auto">
             {rooms
               .filter((r) => r.key !== currentRoom)
@@ -324,7 +335,7 @@ function PhotoTile({
             onClick={() => setMoveOpen(false)}
             className="mt-2 text-center text-[10px] text-white/70"
           >
-            Κλείσιμο
+            {t("close")}
           </button>
         </div>
       )}
@@ -345,13 +356,14 @@ function UnassignedPanel({
   onMove: (imageId: string, roomKey: string) => void;
   pending: boolean;
 }) {
+  const t = useTranslations("Workspace.photoTourEditor");
   return (
     <div>
       <h3 className="font-display text-base font-semibold text-charcoal">
-        Φωτογραφίες χωρίς χώρο
+        {t("unassignedTitle")}
       </h3>
       <p className="mt-1 text-sm text-muted">
-        Μετακίνησε κάθε φωτογραφία στον σωστό χώρο για να εμφανίζεται στην περιήγηση σπιτιού.
+        {t("unassignedSubtitle")}
       </p>
       <div className="mt-5 grid gap-4 sm:grid-cols-2">
         {photos.map((img) => (
@@ -364,7 +376,7 @@ function UnassignedPanel({
             </div>
             <div className="min-w-0 flex-1">
               <label className="text-[10px] font-medium text-muted uppercase">
-                Ανάθεση σε χώρο
+                {t("assignToRoom")}
               </label>
               <select
                 defaultValue=""
@@ -374,7 +386,7 @@ function UnassignedPanel({
                 }}
                 className="mt-1 w-full rounded-lg border border-border bg-sand/30 px-2 py-2 text-sm text-charcoal"
               >
-                <option value="">Επίλεξε χώρο…</option>
+                <option value="">{t("selectRoom")}</option>
                 {rooms.map((room) => (
                   <option key={room.key} value={room.key}>
                     {room.label}
@@ -391,7 +403,7 @@ function UnassignedPanel({
       {photos.length === 0 && (
         <p className="mt-6 flex items-center gap-2 text-sm text-teal">
           <ImageIcon className="h-4 w-4" />
-          Όλες οι φωτογραφίες είναι ανά χώρο.
+          {t("allAssigned")}
         </p>
       )}
     </div>

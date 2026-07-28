@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { actionError, authActionError } from "@/lib/action-error-i18n";
 import { createClient } from "@/lib/supabase/server";
 import { normalizePhoneToE164, isValidGreekMobileE164 } from "@/lib/phone-e164";
 import {
@@ -11,11 +12,11 @@ import {
 
 async function requireUser() {
   const supabase = await createClient();
-  if (!supabase) return { error: "Δεν ήταν δυνατή η σύνδεση." } as const;
+  if (!supabase) return { error: await actionError("serviceUnavailable") } as const;
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) return { error: "Πρέπει να συνδεθείς." } as const;
+  if (!user) return { error: await authActionError("mustSignIn") } as const;
   return { supabase, user } as const;
 }
 
@@ -25,7 +26,7 @@ export async function sendPhoneOtp(purpose: PhoneVerificationPurpose, phone: str
 
   const e164 = normalizePhoneToE164(phone);
   if (!e164 || !isValidGreekMobileE164(e164)) {
-    return { error: "Συμπλήρωσε έγκυρο κινητό τηλέφωνο (Ελλάδα)." };
+    return { error: await actionError("validMobileRequired") };
   }
 
   return sendPhoneVerificationOtp(auth.supabase, auth.user.id, e164, purpose);
@@ -40,9 +41,9 @@ export async function verifyPhoneOtp(
   if ("error" in auth) return { error: auth.error };
 
   const e164 = normalizePhoneToE164(phone);
-  if (!e164) return { error: "Μη έγκυρος αριθμός τηλεφώνου." };
+  if (!e164) return { error: await actionError("invalidPhone") };
   if (!/^\d{6}$/.test(code.trim())) {
-    return { error: "Ο κωδικός πρέπει να είναι 6 ψηφία." };
+    return { error: await actionError("smsCodeSixDigits") };
   }
 
   const result = await verifyPhoneVerificationOtp(

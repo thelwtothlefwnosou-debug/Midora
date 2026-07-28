@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { useTranslations } from "next-intl";
 import {
   MIN_LOCATION_QUERY_LENGTH,
   MAX_LOCATION_SUGGESTIONS,
@@ -39,7 +40,7 @@ export function CitySearchInput({
   name = "city",
   inputId,
   defaultValue = "",
-  placeholder = "π.χ. Αθήνα, Κουκάκι",
+  placeholder,
   className,
   inputClassName,
   variant = "hero",
@@ -48,6 +49,8 @@ export function CitySearchInput({
   onNearbySelect,
   onFocus,
 }: CitySearchInputProps) {
+  const t = useTranslations("Search.citySearchInput");
+  const resolvedPlaceholder = placeholder ?? t("placeholder");
   const [value, setValue] = useState(defaultValue);
   const [open, setOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(0);
@@ -71,7 +74,7 @@ export function CitySearchInput({
 
   const hint =
     queryLen > 0 && queryLen < MIN_LOCATION_QUERY_LENGTH
-      ? `Πληκτρολόγησε τουλάχιστον ${MIN_LOCATION_QUERY_LENGTH} χαρακτήρες`
+      ? t("minCharsHint", { count: MIN_LOCATION_QUERY_LENGTH })
       : null;
 
   const dropdownOpen =
@@ -193,7 +196,7 @@ export function CitySearchInput({
     type: "text" as const,
     value,
     autoComplete: "off" as const,
-    placeholder,
+    placeholder: resolvedPlaceholder,
     role: "combobox" as const,
     "aria-expanded": dropdownOpen,
     "aria-autocomplete": "list" as const,
@@ -267,7 +270,7 @@ export function CitySearchInput({
           <>
             <li className="flex items-center gap-2 border-b border-border px-4 py-2 text-[10px] font-medium tracking-wider text-muted uppercase">
               <TrendingUp className="h-3 w-3" />
-              Δημοφιλείς περιοχές
+              {t("popularAreas")}
             </li>
             <li role="option">
               {(() => {
@@ -288,7 +291,7 @@ export function CitySearchInput({
                       <Navigation className="h-4 w-4" />
                     </span>
                     <span className="block font-semibold text-teal">
-                      {locating ? "Εντοπισμός..." : NEARBY_LOCATION.label}
+                      {locating ? t("locating") : NEARBY_LOCATION.label}
                     </span>
                   </button>
                 );
@@ -330,9 +333,7 @@ export function CitySearchInput({
         {queryLen >= MIN_LOCATION_QUERY_LENGTH &&
           locationSuggestions.length === 0 &&
           !hint && (
-            <li className="px-4 py-3 text-sm text-muted">
-              Δεν βρέθηκε περιοχή. Δοκίμασε άλλη γραφή.
-            </li>
+            <li className="px-4 py-3 text-sm text-muted">{t("noResults")}</li>
           )}
 
         {queryLen >= MIN_LOCATION_QUERY_LENGTH &&
@@ -377,7 +378,7 @@ export function CitySearchInput({
         type="button"
         onClick={clearInput}
         className="shrink-0 rounded-full p-2 text-muted hover:bg-sand hover:text-charcoal"
-        aria-label="Καθαρισμός"
+        aria-label={t("clearAria")}
       >
         <X className="h-4 w-4" />
       </button>
@@ -390,7 +391,7 @@ export function CitySearchInput({
           <input
             {...inputProps}
             className={cn(
-              "min-h-9 w-full min-w-0 flex-1 bg-transparent text-sm text-charcoal outline-none placeholder:text-muted/50",
+              "min-h-[22px] w-full min-w-0 flex-1 border-0 bg-transparent p-0 text-[15px] leading-snug text-charcoal outline-none placeholder:text-charcoal/45",
               inputClassName
             )}
           />
@@ -408,7 +409,7 @@ export function CitySearchInput({
           <MapPin className="h-5 w-5 shrink-0 text-gold" strokeWidth={1.75} />
           <div className="flex min-w-0 flex-1 flex-col">
             <span className="whitespace-nowrap text-[10px] font-medium tracking-wider text-muted uppercase">
-              Πού ψάχνεις;
+              {t("whereLabel")}
             </span>
             <div className="flex min-w-0 items-center gap-1">
               <input

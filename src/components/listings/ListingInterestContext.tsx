@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useCallback, useContext, useRef } from "react";
+import { useTranslations } from "next-intl";
 import {
   guardPreviewAction,
   useListingPreviewMode,
@@ -15,6 +16,8 @@ export type InterestPrefill = {
   interestEndDate?: string;
   interestStartMonth?: string;
   interestDurationMonths?: number;
+  intent?: "message" | "interest" | "rental_request";
+  rentalMode?: "short_term" | "monthly";
 };
 
 type Ctx = {
@@ -27,6 +30,7 @@ const ListingInterestContext = createContext<Ctx | null>(null);
 export function ListingInterestProvider({ children }: { children: React.ReactNode }) {
   const openerRef = useRef<((prefill?: InterestPrefill) => void) | null>(null);
   const previewMode = useListingPreviewMode();
+  const t = useTranslations("Listing");
 
   const registerOpener = useCallback(
     (fn: ((prefill?: InterestPrefill) => void) | null) => {
@@ -37,9 +41,11 @@ export function ListingInterestProvider({ children }: { children: React.ReactNod
 
   const openInterest = useCallback(
     (prefill?: InterestPrefill) => {
-      guardPreviewAction(previewMode, () => openerRef.current?.(prefill));
+      guardPreviewAction(previewMode, t("previewModeBlocked"), () =>
+        openerRef.current?.(prefill)
+      );
     },
-    [previewMode]
+    [previewMode, t]
   );
 
   return (

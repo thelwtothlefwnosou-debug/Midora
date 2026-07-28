@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { ListingAvailability } from "@/components/listings/ListingAvailability";
 import { ListingRentalModeSwitcher } from "@/components/listings/ListingRentalModeSwitcher";
@@ -9,7 +10,6 @@ import { useListingInterest } from "@/components/listings/ListingInterestContext
 import { useListingRentalMode } from "@/components/listings/ListingRentalModeContext";
 import type { ListingWithImages } from "@/lib/types";
 import type { ListingPublicContact } from "@/lib/listing-contact";
-import { COPY } from "@/lib/copy";
 import { formatAmaDisplay } from "@/lib/rental-types";
 import { formatListingAvailabilityText } from "@/lib/listing-availability-status";
 import {
@@ -38,8 +38,12 @@ function ListingPriceBlock({
   listing: ListingWithImages;
   size?: "lg" | "sm";
 }) {
+  const tCommon = useTranslations("Common");
   const { mode } = useListingRentalMode();
-  const price = publicPricePrimary(listing, mode);
+  const price = publicPricePrimary(listing, mode, null, {
+    perNight: tCommon("perNight"),
+    perMonth: tCommon("perMonth"),
+  });
   const secondaryHint = publicPriceSecondaryHint(listing, mode);
   const titleClass =
     size === "lg" ? "listing-price-display text-3xl" : "listing-price-display text-2xl";
@@ -71,6 +75,8 @@ export function ListingInterestSidebar({
   hostName,
   className,
 }: Omit<ListingInterestProps, "defaultContact"> & { className?: string }) {
+  const tCommon = useTranslations("Common");
+  const tListing = useTranslations("Listing");
   const { openInterest } = useListingInterest();
   const { showBoth, showMonthly, mode } = useListingRentalMode();
   const ama = mode === "short_term" ? formatAmaDisplay(listing) : null;
@@ -82,12 +88,13 @@ export function ListingInterestSidebar({
           {showBoth && <ListingRentalModeSwitcher className="mb-4" />}
           <ListingPriceBlock listing={listing} />
           <p className="mt-1 text-sm text-muted">
-            {publicMinStayHeading(mode)}: {formatPublicMinStayForMode(listing, mode)}
+            {publicMinStayHeading(mode, tListing)}:{" "}
+            {formatPublicMinStayForMode(listing, mode)}
           </p>
           {ama && <p className="mt-1 text-sm text-teal">{ama}</p>}
           {showMonthly && mode === "monthly" && (
             <p className="mt-2 text-sm text-muted">
-              {formatListingAvailabilityText(listing)}
+              {formatListingAvailabilityText(listing, tListing)}
             </p>
           )}
           {mode === "short_term" && (
@@ -101,7 +108,7 @@ export function ListingInterestSidebar({
             onClick={() => openInterest()}
             className="mt-4 flex min-h-11 w-full items-center justify-center rounded-xl bg-gold px-4 text-sm font-semibold text-white hover:bg-gold-dark"
           >
-            {COPY.expressInterest}
+            {tCommon("expressInterest")}
           </button>
           <ListingContactCard contact={contact} primary className={hostName ? "mt-2" : "mt-4"} />
           <ListingPortalNote className="mt-4" />
@@ -116,9 +123,14 @@ export function ListingInterestMobile({
   contact,
   hostName,
 }: Omit<ListingInterestProps, "defaultContact">) {
+  const tCommon = useTranslations("Common");
+  const tListing = useTranslations("Listing");
   const { openInterest } = useListingInterest();
   const { mode, showBoth } = useListingRentalMode();
-  const stickyPrice = publicPricePrimary(listing, mode);
+  const stickyPrice = publicPricePrimary(listing, mode, null, {
+    perNight: tCommon("perNight"),
+    perMonth: tCommon("perMonth"),
+  });
   const ama = mode === "short_term" ? formatAmaDisplay(listing) : null;
   const hasDirectPhone = contact.allowPhone && Boolean(contact.phone);
 
@@ -131,7 +143,8 @@ export function ListingInterestMobile({
         {showBoth && <ListingRentalModeSwitcher />}
         <ListingPriceBlock listing={listing} size="sm" />
         <p className="text-sm text-muted">
-          {publicMinStayHeading(mode)}: {formatPublicMinStayForMode(listing, mode)}
+          {publicMinStayHeading(mode, tListing)}:{" "}
+          {formatPublicMinStayForMode(listing, mode)}
         </p>
         {ama && <p className="text-sm text-teal">{ama}</p>}
         {mode === "short_term" && (
@@ -143,7 +156,7 @@ export function ListingInterestMobile({
           onClick={() => openInterest()}
           className="flex min-h-11 w-full items-center justify-center rounded-xl bg-gold px-4 text-sm font-semibold text-white hover:bg-gold-dark"
         >
-          {COPY.expressInterest}
+          {tCommon("expressInterest")}
         </button>
         <ListingContactCard contact={contact} primary />
         <ListingPortalNote />
@@ -160,14 +173,14 @@ export function ListingInterestMobile({
             >
               {stickyPrice.display}
             </p>
-            <p className="text-[11px] text-muted">Κινητό · email · μήνυμα</p>
+            <p className="text-[11px] text-muted">{tListing("contactChannelsHint")}</p>
           </div>
           <button
             type="button"
             onClick={hasDirectPhone ? scrollToContact : () => openInterest()}
             className="min-h-11 shrink-0 rounded-xl bg-gold px-5 text-sm font-semibold text-white hover:bg-gold-dark"
           >
-            {hasDirectPhone ? COPY.contactPhone : COPY.expressInterest}
+            {hasDirectPhone ? tCommon("contactPhone") : tCommon("expressInterest")}
           </button>
         </div>
       </div>

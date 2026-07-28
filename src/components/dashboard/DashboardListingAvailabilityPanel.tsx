@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { ListingAvailabilityEditor } from "@/components/dashboard/ListingAvailabilityEditor";
 import { ShortTermAvailabilitySection } from "@/components/dashboard/ShortTermAvailabilitySection";
 import {
@@ -24,6 +25,7 @@ type Props = {
 };
 
 export function DashboardListingAvailabilityPanel({ listing, periods, className }: Props) {
+  const t = useTranslations("Workspace.availabilityPanel");
   const supportsShort = resolveSupportsShortTerm(listing);
   const supportsMonthly = resolveSupportsMonthly(listing);
   const bothModes = resolveSupportsBothModes(listing);
@@ -73,7 +75,7 @@ export function DashboardListingAvailabilityPanel({ listing, periods, className 
               : "text-charcoal/70 hover:bg-sand/60"
           )}
         >
-          Βραχυχρόνια
+          {t("tabShortTerm")}
         </button>
         <button
           type="button"
@@ -85,7 +87,7 @@ export function DashboardListingAvailabilityPanel({ listing, periods, className 
               : "text-charcoal/70 hover:bg-sand/60"
           )}
         >
-          Μηνιαία / μεσοπρόθεσμη
+          {t("tabMonthly")}
         </button>
       </div>
 
@@ -93,7 +95,7 @@ export function DashboardListingAvailabilityPanel({ listing, periods, className 
         <div className="mt-3 space-y-2">
           <div className="flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-muted">
             <span>{shortPrice.display}</span>
-            <span>Ελάχ. διαμονή: {formatPublicMinStayNights(listing)}</span>
+            <span>{t("minStayNights", { value: formatPublicMinStayNights(listing) })}</span>
           </div>
           <ShortTermAvailabilitySection
             listingId={listing.id}
@@ -106,7 +108,7 @@ export function DashboardListingAvailabilityPanel({ listing, periods, className 
         <div className="mt-3 space-y-2">
           <div className="flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-muted">
             <span>{monthlyPrice.display}</span>
-            <span>Ελάχ. διάρκεια: {formatPublicMinStayMonths(listing)}</span>
+            <span>{t("minDurationMonths", { value: formatPublicMinStayMonths(listing) })}</span>
           </div>
           <ListingAvailabilityEditor
             listingId={listing.id}

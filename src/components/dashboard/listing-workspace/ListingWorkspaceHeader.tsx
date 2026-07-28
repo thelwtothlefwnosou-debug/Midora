@@ -1,16 +1,27 @@
+"use client";
+
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowLeft, ImageIcon } from "lucide-react";
+import { useLocale, useTranslations } from "next-intl";
 import { DashboardListingStatusBadge } from "@/components/dashboard/DashboardListingStatusBadge";
+import {
+  mapOwnerStatusKeyToUi,
+  resolveOwnerListingUiStatus,
+} from "@/lib/owner-listing-ui-status";
 import { ListingViewButton } from "@/components/dashboard/ListingViewButton";
 import { OwnerListingsNavLink } from "@/components/dashboard/OwnerListingsNavLink";
 import { HelpAssistantTrigger } from "@/components/assistant/HelpAssistantContext";
 import { ListingWorkspaceSwitcher } from "@/components/dashboard/listing-workspace/ListingWorkspaceSwitcher";
 import type { ListingWorkspaceContext, ListingSwitcherItem } from "@/lib/listing-workspace-types";
-import { ownerListingStatusHelper } from "@/lib/dashboard-listings";
-import { formatListingPrice, rentalTypeBadgeLabel } from "@/lib/rental-types";
-import { OWNER_LISTINGS_LIST_PATH } from "@/lib/owner-listings-nav";
 import { formatOwnerListingDate } from "@/lib/dashboard-listings";
+import { pickListingCoverPhotoUrl } from "@/lib/listing-media";
+import { buildOwnerListingRowModel } from "@/lib/owner-listings-page";
+import {
+  getFormattedListingPrice,
+  getRentalTypeBadgeLabel,
+} from "@/lib/rental-types";
+import { OWNER_LISTINGS_LIST_PATH } from "@/lib/owner-listings-nav";
 
 type Props = {
   ctx: ListingWorkspaceContext;
@@ -18,17 +29,29 @@ type Props = {
 };
 
 export function ListingWorkspaceHeader({ ctx, switcherItems }: Props) {
-  const { listing, effectiveStatus, ownerStatusKey, ownerStatusLabel, rentalType } = ctx;
-  const helperText = ownerListingStatusHelper(listing, effectiveStatus, ownerStatusKey);
-  const price = formatListingPrice(listing);
-  const images = listing.listing_images ?? [];
-  const cover = images.find((i) => i.media_type !== "video")?.url;
+  const locale = useLocale();
+  const tHeader = useTranslations("Workspace.header");
+  const tUi = useTranslations("Owner.uiStatus");
+  const tListing = useTranslations("Listing");
+  const tCommon = useTranslations("Common");
+  const { listing, effectiveStatus, ownerStatusKey, rentalType } = ctx;
+  const dateLocale = locale.startsWith("el") ? "el-GR" : "en-US";
+  const row = buildOwnerListingRowModel(listing, effectiveStatus);
+  const ui = resolveOwnerListingUiStatus(row, locale);
+  const statusLabel = tUi(ui.labelKey);
+  const helperText = ui.helperValues
+    ? tUi(ui.helperKey, ui.helperValues)
+    : tUi(ui.helperKey);
+  const price = getFormattedListingPrice(listing, tCommon);
+  const cover = pickListingCoverPhotoUrl(listing);
   const showActiveUntil =
     (ownerStatusKey === "published" ||
       ownerStatusKey === "paused" ||
       ownerStatusKey === "expired") &&
     listing.expires_at;
-  const activeUntil = showActiveUntil ? formatOwnerListingDate(listing.expires_at) : null;
+  const activeUntil = showActiveUntil
+    ? formatOwnerListingDate(listing.expires_at, dateLocale)
+    : null;
 
   return (
     <div className="mb-3 space-y-2">
@@ -37,7 +60,7 @@ export function ListingWorkspaceHeader({ ctx, switcherItems }: Props) {
         className="inline-flex min-h-8 items-center gap-1.5 text-[13px] font-medium text-muted transition-colors hover:text-charcoal"
       >
         <ArrowLeft className="h-3.5 w-3.5" />
-        Όλες οι αγγελίες
+        {tHeader("allListings")}
       </OwnerListingsNavLink>
 
       {switcherItems.length > 1 && (
@@ -59,7 +82,7 @@ export function ListingWorkspaceHeader({ ctx, switcherItems }: Props) {
               </div>
             )}
             <span className="absolute bottom-0.5 left-0.5 rounded bg-charcoal/90 px-1 py-px text-[7px] font-semibold tracking-wide text-white uppercase">
-              {rentalTypeBadgeLabel(rentalType)}
+              {getRentalTypeBadgeLabel(rentalType, tListing)}
             </span>
           </div>
 
@@ -76,13 +99,15 @@ export function ListingWorkspaceHeader({ ctx, switcherItems }: Props) {
                 {price.amount && price.amount > 0 ? price.display : "—"}
               </span>
               <DashboardListingStatusBadge
-                statusKey={ownerStatusKey}
-                label={ownerStatusLabel}
+                statusKey={mapOwnerStatusKeyToUi(ownerStatusKey)}
+                label={statusLabel}
                 helperText={null}
                 compact
               />
               {activeUntil && (
-                <span className="text-[11px] text-muted">έως {activeUntil}</span>
+                <span className="text-[11px] text-muted">
+                  {tHeader("until", { date: activeUntil })}
+                </span>
               )}
             </div>
             {helperText && (
@@ -96,11 +121,11 @@ export function ListingWorkspaceHeader({ ctx, switcherItems }: Props) {
               href={`/dashboard/listings/${listing.id}/edit`}
               className="hidden min-h-8 items-center rounded-lg border border-border px-3 text-xs font-medium text-charcoal hover:bg-sand sm:inline-flex"
             >
-              Επεξεργασία
+              {tHeader("edit")}
             </Link>
             <HelpAssistantTrigger
-              label="Βοήθεια για αυτή την αγγελία"
-              seedQuestion="Πώς ανεβάζω φωτογραφίες;"
+              label={tHeader("helpLabel")}
+              seedQuestion={tHeader("helpSeed")}
               className="hidden min-h-8 items-center text-xs font-medium text-muted hover:text-gold-dark sm:inline-flex"
             />
           </div>

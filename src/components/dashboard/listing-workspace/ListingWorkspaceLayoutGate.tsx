@@ -1,6 +1,7 @@
 "use client";
 
 import { usePathname } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { AccountShell } from "@/components/account/AccountShell";
 import { ListingWorkspaceHeader } from "@/components/dashboard/listing-workspace/ListingWorkspaceHeader";
 import { ListingWorkspaceTabs } from "@/components/dashboard/listing-workspace/ListingWorkspaceTabs";
@@ -26,6 +27,7 @@ export function ListingWorkspaceLayoutGate({
 }: Props) {
   const pathname = usePathname();
   const isOwnerPreview = pathname?.endsWith("/view");
+  const t = useTranslations("Workspace.layoutGate");
 
   if (isOwnerPreview) {
     return <>{children}</>;
@@ -38,7 +40,7 @@ export function ListingWorkspaceLayoutGate({
       active="listings"
       variant="workspace"
       title={ctx.listing.title}
-      subtitle="Διαχείριση ακινήτου — διαθεσιμότητα, τιμές και αιτήματα."
+      subtitle={t("subtitle")}
     >
       <ListingWorkspaceHeader ctx={ctx} switcherItems={switcherItems} />
       <ListingWorkspaceTabs

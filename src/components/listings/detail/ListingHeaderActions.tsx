@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { MoreHorizontal, Share } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { FavoriteButton } from "@/components/listings/FavoriteButton";
 import { ListingReportButton } from "@/components/listings/ListingReportButton";
 import { cn } from "@/lib/utils";
@@ -27,6 +28,7 @@ export function ListingHeaderActions({
   onShare,
   className,
 }: Props) {
+  const t = useTranslations("Listing");
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -45,7 +47,7 @@ export function ListingHeaderActions({
     <div className={cn("flex shrink-0 items-center gap-4 sm:gap-5", className)}>
       <button type="button" onClick={onShare} className={textActionClass}>
         <Share className="h-[18px] w-[18px]" strokeWidth={1.75} aria-hidden />
-        Κοινοποίηση
+        {t("share")}
       </button>
 
       <FavoriteButton
@@ -59,7 +61,7 @@ export function ListingHeaderActions({
           type="button"
           onClick={() => setMenuOpen((v) => !v)}
           className={iconCircleClass}
-          aria-label="Περισσότερες επιλογές"
+          aria-label={t("moreOptions")}
           aria-expanded={menuOpen}
         >
           <MoreHorizontal className="h-[18px] w-[18px]" strokeWidth={1.75} />
@@ -86,6 +88,7 @@ export function ListingHeaderIconActions({
   onShare,
   className,
 }: Props) {
+  const t = useTranslations("Listing");
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -106,7 +109,7 @@ export function ListingHeaderIconActions({
         type="button"
         onClick={onShare}
         className={iconCircleClass}
-        aria-label="Κοινοποίηση"
+        aria-label={t("share")}
       >
         <Share className="h-[18px] w-[18px]" strokeWidth={1.75} />
       </button>
@@ -121,7 +124,7 @@ export function ListingHeaderIconActions({
           type="button"
           onClick={() => setMenuOpen((v) => !v)}
           className={iconCircleClass}
-          aria-label="Περισσότερες επιλογές"
+          aria-label={t("moreOptions")}
           aria-expanded={menuOpen}
         >
           <MoreHorizontal className="h-[18px] w-[18px]" strokeWidth={1.75} />

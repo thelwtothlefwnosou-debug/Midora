@@ -2,21 +2,23 @@
 
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 
 const FILTERS = [
-  { id: "all", label: "Όλες", param: null },
-  { id: "active", label: "Ενεργές", param: "active" },
-  { id: "pending", label: "Σε έλεγχο", param: "pending" },
-  { id: "draft", label: "Πρόχειρες", param: "draft" },
+  { id: "all", labelKey: "all", param: null },
+  { id: "active", labelKey: "active", param: "active" },
+  { id: "pending", labelKey: "pending", param: "pending" },
+  { id: "draft", labelKey: "draft", param: "draft" },
 ] as const;
 
 export function DashboardListingsFilters() {
+  const t = useTranslations("Owner.listingsFilters");
   const searchParams = useSearchParams();
   const current = searchParams.get("status") ?? "all";
 
   return (
-    <div className="flex flex-wrap gap-2" role="tablist" aria-label="Φίλτρο αγγελιών">
+    <div className="flex flex-wrap gap-2" role="tablist" aria-label={t("ariaLabel")}>
       {FILTERS.map((f) => {
         const active = current === f.id || (f.id === "all" && !searchParams.get("status"));
         const href = f.param ? `/dashboard/listings?status=${f.param}` : "/dashboard/listings";
@@ -33,7 +35,7 @@ export function DashboardListingsFilters() {
                 : "border-border text-muted hover:border-gold/40 hover:text-charcoal"
             )}
           >
-            {f.label}
+            {t(f.labelKey)}
           </Link>
         );
       })}

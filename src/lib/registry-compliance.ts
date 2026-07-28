@@ -1,5 +1,6 @@
 import type { LegalRegistryType } from "@/lib/types";
 import { isValidRegistryNumber } from "@/lib/listing-wizard-validation";
+import { pickLocale } from "@/lib/locale-fallbacks";
 
 /** Official AADE informational page — opens in new tab only. */
 export const AADE_SHORT_TERM_REGISTRY_URL =
@@ -12,7 +13,7 @@ export type RegistryOwnerStatus =
   | "reviewed_by_midora"
   | "needs_changes";
 
-export const REGISTRY_OWNER_STATUS_LABELS: Record<RegistryOwnerStatus, string> = {
+const REGISTRY_OWNER_STATUS_LABELS_EL: Record<RegistryOwnerStatus, string> = {
   empty: "Δεν έχει συμπληρωθεί",
   filled: "Συμπληρώθηκε",
   needs_review: "Χρειάζεται έλεγχο",
@@ -20,14 +21,48 @@ export const REGISTRY_OWNER_STATUS_LABELS: Record<RegistryOwnerStatus, string> =
   needs_changes: "Χρειάζονται αλλαγές",
 };
 
-export function getRegistryHelperText(type: LegalRegistryType): string {
+const REGISTRY_OWNER_STATUS_LABELS_EN: Record<RegistryOwnerStatus, string> = {
+  empty: "Not completed",
+  filled: "Completed",
+  needs_review: "Needs review",
+  reviewed_by_midora: "Reviewed by Midora",
+  needs_changes: "Changes required",
+};
+
+/** @deprecated Use `getRegistryOwnerStatusLabel(status, locale)` */
+export const REGISTRY_OWNER_STATUS_LABELS = REGISTRY_OWNER_STATUS_LABELS_EL;
+
+export function getRegistryOwnerStatusLabel(
+  status: RegistryOwnerStatus,
+  locale?: string
+): string {
+  return pickLocale(
+    locale,
+    REGISTRY_OWNER_STATUS_LABELS_EL[status],
+    REGISTRY_OWNER_STATUS_LABELS_EN[status]
+  );
+}
+
+export function getRegistryHelperText(type: LegalRegistryType, locale?: string): string {
   switch (type) {
     case "ama":
-      return "Συμπλήρωσε τον 11ψήφιο ΑΜΑ χωρίς κενά.";
+      return pickLocale(
+        locale,
+        "Συμπλήρωσε τον 11ψήφιο ΑΜΑ χωρίς κενά.",
+        "Enter the 11-digit AMA number with no spaces."
+      );
     case "esl":
-      return "Συμπλήρωσε τον αριθμό ΕΣΛ όπως εμφανίζεται στα στοιχεία του καταλύματος.";
+      return pickLocale(
+        locale,
+        "Συμπλήρωσε τον αριθμό ΕΣΛ όπως εμφανίζεται στα στοιχεία του καταλύματος.",
+        "Enter the ESL number as shown in your accommodation records."
+      );
     case "mag":
-      return "Συμπλήρωσε τον ΜΑΓ όπως εμφανίζεται στη γνωστοποίηση λειτουργίας.";
+      return pickLocale(
+        locale,
+        "Συμπλήρωσε τον ΜΑΓ όπως εμφανίζεται στη γνωστοποίηση λειτουργίας.",
+        "Enter the MAG number as shown on your operation notice."
+      );
     default:
       return "";
   }
@@ -63,7 +98,16 @@ export function getRegistryOwnerStatus(input: {
   return "filled";
 }
 
+/** @deprecated Use `getRegistryFilledStatusLabel(locale)` */
 export const REGISTRY_FILLED_STATUS_LABEL = "Συμπληρώθηκε — απαιτείται βασικός έλεγχος";
+
+export function getRegistryFilledStatusLabel(locale?: string): string {
+  return pickLocale(
+    locale,
+    REGISTRY_FILLED_STATUS_LABEL,
+    "Completed — basic review required"
+  );
+}
 
 export const AADE_GUIDE_STEPS = [
   "Άνοιξε την επίσημη σελίδα της ΑΑΔΕ για βραχυχρόνια μίσθωση.",
@@ -73,4 +117,4 @@ export const AADE_GUIDE_STEPS = [
 ] as const;
 
 export const AADE_DISCLAIMER_NOTE =
-  "Το Midora δεν συνδέεται με την ΑΑΔΕ και δεν ζητά ή αποθηκεύει κωδικούς myAADE.";
+  "Οι πληροφορίες παρέχονται ως γενική ενημέρωση για τη χρήση της πλατφόρμας και δεν αποτελούν φορολογική, λογιστική ή νομική συμβουλή. Το Midora δεν συνδέεται με την ΑΑΔΕ, δεν υποβάλλει δηλώσεις και δεν ζητά ή αποθηκεύει κωδικούς myAADE. Για τη σωστή συμπλήρωση, συμβουλεύσου λογιστή ή την ΑΑΔΕ.";

@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { useTranslations } from "next-intl";
 import type { Profile } from "@/lib/types";
 import {
   profileCompletionItems,
@@ -13,6 +14,13 @@ import { Check, Circle, ChevronDown, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const DISMISS_KEY = "midora-profile-onboarding-dismissed";
+
+const PROFILE_COMPLETION_IDS = ["name", "phone", "avatar", "bio", "languages"] as const;
+type ProfileCompletionId = (typeof PROFILE_COMPLETION_IDS)[number];
+
+function isProfileCompletionId(id: string): id is ProfileCompletionId {
+  return (PROFILE_COMPLETION_IDS as readonly string[]).includes(id);
+}
 
 export function DashboardProfileCard({
   profile,
@@ -27,6 +35,12 @@ export function DashboardProfileCard({
   collapsed?: boolean;
   compact?: boolean;
 }) {
+  const tHeader = useTranslations("Owner.dashboardHeader");
+  const tCard = useTranslations("Owner.profileCard");
+  const tProfile = useTranslations("Owner.home.profile");
+  const tItems = useTranslations("Owner.profileCompletion");
+  const tPreview = useTranslations("Owner.profilePreview");
+  const tShell = useTranslations("Dashboard.shell");
   const percent = profileCompletionPercent(profile, email);
   const items = profileCompletionItems(profile, email);
   const requiredPending = items.filter((item) => item.required && !item.done);
@@ -35,6 +49,10 @@ export function DashboardProfileCard({
   const requiredDone = profileRequiredComplete(profile, email);
   const [expanded, setExpanded] = useState(false);
   const [dismissed, setDismissed] = useState(true);
+
+  function itemLabel(id: string): string {
+    return isProfileCompletionId(id) ? tItems(id) : id;
+  }
 
   useEffect(() => {
     try {
@@ -50,11 +68,11 @@ export function DashboardProfileCard({
         <ProfileAvatar profile={{ ...profile, email }} imageUrl={avatarUrl} size="sm" />
         <div className="min-w-0 flex-1">
           <p className="truncate text-xs font-semibold text-charcoal">
-            {profile.full_name || "Χρήστης"}
+            {profile.full_name || tHeader("userFallback")}
           </p>
           {recommendedPending.length > 0 && (
             <Link href="/dashboard/profile" className="text-[10px] font-medium text-gold-dark hover:underline">
-              Προφίλ {percent}%
+              {tProfile("title")} {percent}%
             </Link>
           )}
         </div>
@@ -77,9 +95,9 @@ export function DashboardProfileCard({
           <ProfileAvatar profile={{ ...profile, email }} imageUrl={avatarUrl} size="lg" />
           <div className="min-w-0 flex-1">
             <p className="truncate font-display text-base font-semibold text-charcoal">
-              {profile.full_name || "Χρήστης"}
+              {profile.full_name || tHeader("userFallback")}
             </p>
-            <p className="mt-0.5 text-xs font-medium text-gold-dark">Αγγελιοδότης</p>
+            <p className="mt-0.5 text-xs font-medium text-gold-dark">{tPreview("ownerRole")}</p>
           </div>
         </div>
       </div>
@@ -94,14 +112,14 @@ export function DashboardProfileCard({
           {!collapsed && (
             <div className="min-w-0 flex-1">
               <p className="truncate text-sm font-semibold text-charcoal">
-                {profile.full_name || "Χρήστης"}
+                {profile.full_name || tHeader("userFallback")}
               </p>
               <button
                 type="button"
                 onClick={() => setExpanded(true)}
                 className="mt-0.5 flex items-center gap-1 text-xs font-medium text-gold-dark hover:underline"
               >
-                Ολοκλήρωσε το προφίλ ({percent}%)
+                {tCard("completePercent", { percent })}
                 <ChevronDown className="h-3 w-3" />
               </button>
             </div>
@@ -127,9 +145,9 @@ export function DashboardProfileCard({
           <div className="flex items-start justify-between gap-2">
             <div>
               <p className="truncate font-display text-base font-semibold text-charcoal">
-                {profile.full_name || "Χρήστης"}
+                {profile.full_name || tHeader("userFallback")}
               </p>
-              <p className="mt-0.5 text-xs font-medium text-gold-dark">Αγγελιοδότης</p>
+              <p className="mt-0.5 text-xs font-medium text-gold-dark">{tPreview("ownerRole")}</p>
             </div>
             <button
               type="button"
@@ -143,12 +161,12 @@ export function DashboardProfileCard({
                 }
               }}
               className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-charcoal/50 hover:bg-sand"
-              aria-label="Απόκρυψη"
+              aria-label={tShell("close")}
             >
               <X className="h-3.5 w-3.5" />
             </button>
           </div>
-          <p className="mt-2 text-xs text-muted">{percent}% ολοκληρωμένο</p>
+          <p className="mt-2 text-xs text-muted">{tProfile("percentDone", { percent })}</p>
         </div>
       </div>
 
@@ -164,7 +182,7 @@ export function DashboardProfileCard({
               className="flex items-center gap-2 text-xs text-charcoal/80 hover:text-gold"
             >
               <Circle className="h-3.5 w-3.5 shrink-0 text-muted/50" />
-              {item.label}
+              {itemLabel(item.id)}
             </Link>
           </li>
         ))}
@@ -174,7 +192,7 @@ export function DashboardProfileCard({
           .map((item) => (
             <li key={item.id} className="flex items-center gap-2 text-xs text-muted">
               <Check className="h-3.5 w-3.5 shrink-0 text-teal" />
-              {item.label}
+              {itemLabel(item.id)}
             </li>
           ))}
       </ul>
@@ -186,7 +204,7 @@ export function DashboardProfileCard({
           "bg-charcoal text-xs font-semibold text-white hover:bg-charcoal/90"
         )}
       >
-        {requiredPending.length > 0 ? "Ολοκλήρωσε το προφίλ" : "Βελτίωσε το προφίλ"}
+        {requiredPending.length > 0 ? tCard("completeCta") : tCard("improveCta")}
       </Link>
     </div>
   );

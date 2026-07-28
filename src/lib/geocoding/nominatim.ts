@@ -533,11 +533,13 @@ export async function searchStreetsInCity(
       boundedPromise,
     ]);
 
-    let filtered = rankStreetSuggestions(
-      filterAddressesForCity([...photon, ...overpass, ...bounded], city, searchCenter, areaName),
-      street,
-      searchCenter
-    );
+  let filtered = rankStreetSuggestions(
+    filterAddressesForCity([...photon, ...overpass, ...bounded], city, searchCenter, areaName).filter(
+      (s) => streetMatchesQuery(s.street ?? s.primary, street)
+    ),
+    street,
+    searchCenter
+  );
 
     if (!areaName && filtered.length < 5 && searchCenter) {
       const extraBounded = await searchBoundedInCity(
@@ -576,7 +578,9 @@ export async function searchStreetsInCity(
 
   let pool = [...photon, ...structured, ...bounded];
   let filtered = rankStreetSuggestions(
-    filterAddressesForCity(pool, city, searchCenter, areaName),
+    filterAddressesForCity(pool, city, searchCenter, areaName).filter((s) =>
+      streetMatchesQuery(s.street ?? s.primary, street)
+    ),
     street,
     searchCenter
   );
@@ -591,7 +595,9 @@ export async function searchStreetsInCity(
       areaName
     );
     filtered = rankStreetSuggestions(
-      filterAddressesForCity([...filtered, ...overpass], city, searchCenter, areaName),
+      filterAddressesForCity([...filtered, ...overpass], city, searchCenter, areaName).filter((s) =>
+        streetMatchesQuery(s.street ?? s.primary, street)
+      ),
       street,
       searchCenter
     );
@@ -619,7 +625,9 @@ export async function searchStreetsInCity(
     }
     const freeResults = (await nominatimFetch(freeParams)).map(mapResult);
     filtered = rankStreetSuggestions(
-      filterAddressesForCity(freeResults, city, searchCenter, areaName),
+      filterAddressesForCity(freeResults, city, searchCenter, areaName).filter((s) =>
+        streetMatchesQuery(s.street ?? s.primary, street)
+      ),
       street,
       searchCenter
     );

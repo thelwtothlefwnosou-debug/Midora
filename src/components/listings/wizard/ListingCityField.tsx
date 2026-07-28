@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { MapPin } from "lucide-react";
+import { useTranslations } from "next-intl";
 import {
   MAX_LOCATION_SUGGESTIONS,
   type SearchLocation,
@@ -29,8 +30,11 @@ function cityLabel(loc: SearchLocation): string {
   return (loc.city || loc.label).trim();
 }
 
-function suggestionSubtitle(loc: SearchLocation): string {
-  return loc.region ?? "Ελλάδα";
+function suggestionSubtitle(
+  loc: SearchLocation,
+  regionFallback: string
+): string {
+  return loc.region ?? regionFallback;
 }
 
 export function ListingCityField({
@@ -41,6 +45,7 @@ export function ListingCityField({
   inputClassName,
   required,
 }: Props) {
+  const t = useTranslations("Wizard.location");
   const [open, setOpen] = useState(false);
   const [focused, setFocused] = useState(false);
   const [draft, setDraft] = useState(value);
@@ -175,7 +180,7 @@ export function ListingCityField({
             className="z-[200] max-h-72 overflow-y-auto rounded-xl border border-border bg-white py-1 shadow-[0_12px_40px_-8px_rgba(26,26,26,0.22)]"
           >
             {loading && suggestions.length === 0 && (
-              <li className="px-4 py-2.5 text-xs text-muted">Αναζήτηση πόλεων...</li>
+              <li className="px-4 py-2.5 text-xs text-muted">{t("citySearching")}</li>
             )}
             {suggestions.map((loc, index) => (
               <li key={`${loc.kind}-${cityLabel(loc)}-${index}`} role="presentation">
@@ -194,7 +199,9 @@ export function ListingCityField({
                   <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-gold-dark" />
                   <span>
                     <span className="block text-sm font-medium text-charcoal">{cityLabel(loc)}</span>
-                    <span className="block text-xs text-muted">{suggestionSubtitle(loc)}</span>
+                    <span className="block text-xs text-muted">
+                      {suggestionSubtitle(loc, t("regionFallback"))}
+                    </span>
                   </span>
                 </button>
               </li>
@@ -211,7 +218,7 @@ export function ListingCityField({
         value={display}
         required={required}
         autoComplete="off"
-        placeholder="π.χ. Αθήνα, Θεσσαλονίκη, Ηράκλειο"
+        placeholder={t("cityPlaceholder")}
         onChange={(e) => {
           const next = e.target.value;
           setDraft(next);
@@ -233,7 +240,7 @@ export function ListingCityField({
         className={inputClassName}
       />
       {open && queryLen === 0 && (
-        <p className="mt-1 text-[11px] text-muted">Ξεκίνα να πληκτρολογείς την πόλη</p>
+        <p className="mt-1 text-[11px] text-muted">{t("cityStartTyping")}</p>
       )}
       {dropdown}
     </div>

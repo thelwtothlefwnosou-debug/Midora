@@ -7,6 +7,7 @@ import {
   parseAvailabilityMonthInput,
   parseListingAvailabilityStatus,
 } from "@/lib/listing-availability-status";
+import { intlLocale, pickLocale } from "@/lib/locale-fallbacks";
 import { listingRentalType } from "@/lib/rental-types";
 import type { Listing } from "@/lib/types";
 import type { ListingUnavailablePeriod } from "@/lib/unavailable-periods";
@@ -76,19 +77,53 @@ export function resolveListingCardAvailabilityDate(
   return todayDateKey();
 }
 
-/** "Available 07 Jul 2026" — matches Blueground card copy. */
-export function formatListingCardAvailabilityLabel(dateKey: string): string {
+function parseDateKeyParts(dateKey: string): { y: number; m: number; d: number } | null {
   const [y, m, d] = dateKey.split("-").map(Number);
-  const day = String(d).padStart(2, "0");
-  const month = new Date(y, m - 1, d).toLocaleDateString("en-GB", { month: "short" });
-  return `Available ${day} ${month} ${y}`;
+  if (!y || !m || !d || Number.isNaN(y) || Number.isNaN(m) || Number.isNaN(d)) {
+    return null;
+  }
+  if (m < 1 || m > 12 || d < 1 || d > 31) return null;
+  const date = new Date(y, m - 1, d);
+  if (
+    Number.isNaN(date.getTime()) ||
+    date.getFullYear() !== y ||
+    date.getMonth() !== m - 1 ||
+    date.getDate() !== d
+  ) {
+    return null;
+  }
+  return { y, m, d };
+}
+
+/** Locale-aware card overlay: "Διαθέσιμο από 28 Ιουλ 2026" / "Available from 28 Jul 2026". */
+export function formatListingCardAvailabilityLabel(
+  dateKey: string,
+  locale?: string
+): string | null {
+  const parts = parseDateKeyParts(dateKey);
+  if (!parts) return null;
+
+  const date = new Date(parts.y, parts.m - 1, parts.d);
+  const month = new Intl.DateTimeFormat(intlLocale(locale), { month: "short" })
+    .format(date)
+    .replace(/\.$/, "")
+    .trim();
+  if (!month) return null;
+
+  const dateText = `${parts.d} ${month} ${parts.y}`;
+  return pickLocale(
+    locale,
+    `Διαθέσιμο από ${dateText}`,
+    `Available from ${dateText}`
+  );
 }
 
 export function getListingCardAvailabilityLabel(
   listing: ListingAvailabilityFields,
-  periods: PeriodSlim[] = []
+  periods: PeriodSlim[] = [],
+  locale?: string
 ): string | null {
   const dateKey = resolveListingCardAvailabilityDate(listing, periods);
   if (!dateKey) return null;
-  return formatListingCardAvailabilityLabel(dateKey);
+  return formatListingCardAvailabilityLabel(dateKey, locale);
 }

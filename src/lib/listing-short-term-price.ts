@@ -2,6 +2,7 @@ import type { Listing, ListingPriceRule } from "@/lib/types";
 import type { ListingUnavailablePeriod } from "@/lib/unavailable-periods";
 import { addDays, stayNightsBetween, todayDateKey } from "@/lib/availability-calendar";
 import { getDefaultFiveNightRange } from "@/lib/listing-default-stay-range";
+import { intlLocale, pickLocale } from "@/lib/locale-fallbacks";
 
 export type ShortTermPricingConfig = Pick<
   Listing,
@@ -134,20 +135,34 @@ export function findPriceRuleForDate(
   return ruleForDate(rules, dateKey);
 }
 
-function resolveDiscountPercent(nights: number, config: ShortTermPricingConfig): {
+function resolveDiscountPercent(
+  nights: number,
+  config: ShortTermPricingConfig,
+  locale?: string
+): {
   percent: number;
   label: string | null;
 } {
   if (nights >= 28 && (config.monthly_discount_percent ?? 0) > 0) {
+    const pct = config.monthly_discount_percent!;
     return {
-      percent: config.monthly_discount_percent!,
-      label: `Έκπτωση 28+ νυχτών (${config.monthly_discount_percent}%)`,
+      percent: pct,
+      label: pickLocale(
+        locale,
+        `Έκπτωση 28+ νυχτών (${pct}%)`,
+        `28+ night discount (${pct}%)`
+      ),
     };
   }
   if (nights >= 7 && (config.weekly_discount_percent ?? 0) > 0) {
+    const pct = config.weekly_discount_percent!;
     return {
-      percent: config.weekly_discount_percent!,
-      label: `Εβδομαδιαία έκπτωση (${config.weekly_discount_percent}%)`,
+      percent: pct,
+      label: pickLocale(
+        locale,
+        `Εβδομαδιαία έκπτωση (${pct}%)`,
+        `Weekly discount (${pct}%)`
+      ),
     };
   }
   return { percent: 0, label: null };
@@ -161,7 +176,8 @@ export function computeIndicativeStayPrice(
   startDate: string,
   endDate: string,
   guests: number,
-  periods: Pick<ListingUnavailablePeriod, "start_date" | "end_date">[] = []
+  periods: Pick<ListingUnavailablePeriod, "start_date" | "end_date">[] = [],
+  locale?: string
 ): IndicativeStayPrice | null {
   if (!startDate || !endDate || endDate < startDate) return null;
 
@@ -189,7 +205,8 @@ export function computeIndicativeStayPrice(
 
   const { percent: discountPercent, label: discountLabel } = resolveDiscountPercent(
     nights,
-    listing
+    listing,
+    locale
   );
   const discountAmount = Math.round(subtotal * (discountPercent / 100));
   const total = subtotal - discountAmount;
@@ -211,41 +228,52 @@ export function countBedsFromSleeping(arrangements: { quantity: number }[]): num
   return arrangements.reduce((sum, a) => sum + a.quantity, 0);
 }
 
-export function formatIndicativePriceBreakdown(price: IndicativeStayPrice): string[] {
+export function formatIndicativePriceBreakdown(
+  price: IndicativeStayPrice,
+  locale?: string
+): string[] {
+  const tag = intlLocale(locale);
   const lines: string[] = [];
   lines.push(
-    `${price.nights} ${price.nights === 1 ? "νύχτα" : "νύχτες"} × ~€${price.averagePerNight.toLocaleString("el-GR")}`
+    `${price.nights} ${formatIndicativeNightsLabel(price.nights, locale)} × ~€${price.averagePerNight.toLocaleString(tag)}`
   );
   if (price.discountAmount > 0 && price.discountLabel) {
-    lines.push(`${price.discountLabel}: -€${price.discountAmount.toLocaleString("el-GR")}`);
+    lines.push(`${price.discountLabel}: -€${price.discountAmount.toLocaleString(tag)}`);
   }
-  lines.push(`Σύνολο: €${price.total.toLocaleString("el-GR")}`);
+  lines.push(
+    `${pickLocale(locale, "Σύνολο", "Total")}: €${price.total.toLocaleString(tag)}`
+  );
   return lines;
 }
 
 /** Default indicative stay length when visitor has not selected dates. */
 export const INDICATIVE_DEFAULT_NIGHTS = 5;
 
-export function formatIndicativeNightsLabel(nights: number): string {
-  return nights === 1 ? "διανυκτέρευση" : "διανυκτερεύσεις";
+export function formatIndicativeNightsLabel(nights: number, locale?: string): string {
+  return nights === 1
+    ? pickLocale(locale, "διανυκτέρευση", "night")
+    : pickLocale(locale, "διανυκτερεύσεις", "nights");
 }
 
 export function formatShortTermIndicativeDisplay(
   total: number,
   nights: number,
-  options?: { prefixFrom?: boolean }
+  options?: { prefixFrom?: boolean; locale?: string }
 ): string {
-  const amount = `€${total.toLocaleString("el-GR")}`;
-  const prefix = options?.prefixFrom ? "Από " : "";
-  return `${prefix}${amount} για ${nights} ${formatIndicativeNightsLabel(nights)}`;
+  const locale = options?.locale;
+  const amount = `€${total.toLocaleString(intlLocale(locale))}`;
+  const prefix = options?.prefixFrom ? pickLocale(locale, "Από ", "From ") : "";
+  const forWord = pickLocale(locale, "για", "for");
+  return `${prefix}${amount} ${forWord} ${nights} ${formatIndicativeNightsLabel(nights, locale)}`;
 }
 
-export function formatPublicStayPriceTotal(total: number): string {
-  return `€${total.toLocaleString("el-GR")} συνολικά`;
+export function formatPublicStayPriceTotal(total: number, locale?: string): string {
+  return `€${total.toLocaleString(intlLocale(locale))} ${pickLocale(locale, "συνολικά", "total")}`;
 }
 
-export function formatPublicStayPriceNightsLine(nights: number): string {
-  return `για ${nights} ${formatIndicativeNightsLabel(nights)}`;
+export function formatPublicStayPriceNightsLine(nights: number, locale?: string): string {
+  const forWord = pickLocale(locale, "για", "for");
+  return `${forWord} ${nights} ${formatIndicativeNightsLabel(nights, locale)}`;
 }
 
 export function stayRangeHasBlockedNight(
@@ -266,7 +294,8 @@ export function computeDefaultIndicativeStayPrice(
   rules: ListingPriceRule[] = [],
   periods: Pick<ListingUnavailablePeriod, "start_date" | "end_date">[] = [],
   guests = 2,
-  minimumStayNights = 1
+  minimumStayNights = 1,
+  locale?: string
 ): IndicativeStayPrice | null {
   const range = getDefaultFiveNightRange(
     listing,
@@ -283,6 +312,7 @@ export function computeDefaultIndicativeStayPrice(
     range.checkIn,
     range.checkOut,
     guests,
-    periods
+    periods,
+    locale
   );
 }

@@ -1,4 +1,5 @@
-import type { Metadata } from "next";
+﻿import type { Metadata } from "next";
+import { getTranslations } from "next-intl/server";
 import { Button } from "@/components/ui/Button";
 import {
   PublicPageLayout,
@@ -7,74 +8,50 @@ import {
 } from "@/components/layout/PublicPageLayout";
 import { OwnerListingLink } from "@/components/owners/OwnerListingLink";
 
-export const metadata: Metadata = {
-  title: "Σχετικά με το Midora",
-  description:
-    "Το Midora είναι portal αγγελιών για βραχυχρόνια και μηνιαία/μεσοπρόθεσμη διαμονή στην Ελλάδα.",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("Marketing.about");
+  return {
+    title: t("metaTitle"),
+    description: t("metaDescription"),
+  };
+}
 
-export default function AboutPage() {
+export default async function AboutPage() {
+  const t = await getTranslations("Marketing.about");
+
   return (
     <PublicPageLayout>
       <StaticHero
-        eyebrow="Σχετικά με το Midora"
-        title="Αγγελίες ακινήτων, πιο απλά"
-        subtitle="Το Midora βοηθά ανθρώπους να βρίσκουν ακίνητα για βραχυχρόνια ή μηνιαία/μεσοπρόθεσμη διαμονή — με καθαρές πληροφορίες και απευθείας επικοινωνία με τον αγγελιοδότη."
+        eyebrow={t("eyebrow")}
+        title={t("title")}
+        subtitle={t("subtitle")}
       >
-        <Button href="/listings" size="lg">
-          Αναζήτηση ακινήτων
+        <Button href="/listings?rentalType=short_term" size="lg">
+          {t("ctaSearch")}
         </Button>
         <OwnerListingLink variant="outline" size="lg">
-          Ανέβασε αγγελία
+          {t("ctaList")}
         </OwnerListingLink>
       </StaticHero>
 
-      <StaticSection title="Τι είναι το Midora">
-        <p>
-          Το Midora είναι portal αγγελιών ακινήτων στην Ελλάδα. Συγκεντρώνουμε
-          αγγελίες για βραχυχρόνια και μηνιαία/μεσοπρόθεσμη διαμονή —
-          όχι πλατφόρμα πληρωμών ή επιβεβαίωσης διαμονής.
-        </p>
-        <p>
-          Στόχος μας είναι να κάνουμε πιο εύκολη την εύρεση σπιτιού, με σαφή τύπο
-          μίσθωσης, τιμή, διάρκεια και διαθεσιμότητα σε κάθε αγγελία.
-        </p>
+      <StaticSection title={t("whatTitle")}>
+        <p>{t("whatP1")}</p>
+        <p>{t("whatP2")}</p>
       </StaticSection>
 
-      <StaticSection title="Για ποιους είναι">
-        <p>
-          Για ενδιαφερόμενους που ψάχνουν σύντομη διαμονή, μηνιαία/μεσοπρόθεσμη βάση
-          ή μηνιαία/μεσοπρόθεσμη διαμονή — για εργασία, σπουδές, μετακόμιση ή προσωρινή
-          ανάγκη.
-        </p>
-        <p>
-          Για αγγελιοδότες που θέλουν να δημοσιεύσουν ακίνητο, να δηλώσουν
-          διαθεσιμότητα και να δέχονται ενδιαφέροντα από ένα dashboard.
-        </p>
+      <StaticSection title={t("whoTitle")}>
+        <p>{t("whoP1")}</p>
+        <p>{t("whoP2")}</p>
       </StaticSection>
 
-      <StaticSection title="Τι θέλουμε να κάνουμε καλύτερα">
-        <p>
-          Θέλουμε η αναζήτηση σπιτιού να είναι πιο κατανοητή: σαφής τύπος μίσθωσης,
-          τιμή, διάρκεια, επιπλώσεις, διαθεσιμότητα και περιοχή — χωρίς ασάφειες που
-          κουράζουν τον χρήστη.
-        </p>
-        <p>
-          Θέλουμε οι αγγελιοδότες να μπορούν να παρουσιάσουν το ακίνητό τους με
-          ποιότητα και να διαχειρίζονται ενδιαφέροντα από ένα σημείο.
-        </p>
+      <StaticSection title={t("betterTitle")}>
+        <p>{t("betterP1")}</p>
+        <p>{t("betterP2")}</p>
       </StaticSection>
 
-      <StaticSection title="Γιατί δίνουμε έμφαση στις καθαρές πληροφορίες">
-        <p>
-          Κάθε τύπος μίσθωσης έχει διαφορετικές ανάγκες. Χρειάζεσαι να ξέρεις από την
-          αρχή τι περιλαμβάνεται, ποια είναι η ελάχιστη διάρκεια και αν το ακίνητο
-          ταιριάζει στον σκοπό σου.
-        </p>
-        <p>
-          Γι&apos; αυτό δίνουμε έμφαση σε δομημένες αγγελίες, φίλτρα αναζήτησης και
-          ξεκάθαρη επικοινωνία μεταξύ ενδιαφερόμενου και αγγελιοδότη.
-        </p>
+      <StaticSection title={t("clarityTitle")}>
+        <p>{t("clarityP1")}</p>
+        <p>{t("clarityP2")}</p>
       </StaticSection>
     </PublicPageLayout>
   );

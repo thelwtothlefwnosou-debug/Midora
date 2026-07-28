@@ -3,13 +3,18 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { MapPin } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { useFloatingDropdown } from "@/hooks/useFloatingDropdown";
 import type { AddressSuggestion } from "@/lib/geocoding/types";
-import { postalCodeForCity, streetSuggestionMatchesScope } from "@/lib/geocoding/geocode-utils";
+import {
+  postalCodeForCity,
+  streetMatchesQuery,
+  streetSuggestionMatchesScope,
+} from "@/lib/geocoding/geocode-utils";
 import { cn } from "@/lib/utils";
 
-const MIN_STREET_QUERY = 1;
-const DEBOUNCE_MS = 80;
+const MIN_STREET_QUERY = 2;
+const DEBOUNCE_MS = 350;
 
 type Props = {
   city: string;
@@ -38,6 +43,7 @@ export function PropertyStreetSearchField({
   inputClassName,
   disabled,
 }: Props) {
+  const t = useTranslations("Wizard.location");
   const [open, setOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(0);
   const [suggestions, setSuggestions] = useState<AddressSuggestion[]>([]);
@@ -48,6 +54,7 @@ export function PropertyStreetSearchField({
   const dropdownRef = useRef<HTMLUListElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const abortRef = useRef<AbortController | null>(null);
+  const requestSeqRef = useRef(0);
   const cityReady = city.trim().length >= 2;
   const dropdownOpen =
     open && cityReady && (loading || searched) && value.trim().length >= MIN_STREET_QUERY;
@@ -75,6 +82,7 @@ export function PropertyStreetSearchField({
       abortRef.current?.abort();
       const controller = new AbortController();
       abortRef.current = controller;
+      const seq = ++requestSeqRef.current;
 
       setLoading(true);
       setSearched(true);
@@ -94,18 +102,25 @@ export function PropertyStreetSearchField({
           signal: controller.signal,
         });
         const data = await res.json();
-        if (controller.signal.aborted) return;
+        if (controller.signal.aborted || seq !== requestSeqRef.current) return;
         const scopeCenter = areaCenter ?? searchCenter ?? null;
-        const items = ((data.suggestions ?? []) as AddressSuggestion[]).filter((s) =>
-          streetSuggestionMatchesScope(s, city.trim(), area?.trim(), scopeCenter)
-        );
+        const items = ((data.suggestions ?? []) as AddressSuggestion[]).filter((s) => {
+          if (!streetSuggestionMatchesScope(s, city.trim(), area?.trim(), scopeCenter)) {
+            return false;
+          }
+          const streetName = s.street?.trim() || s.primary;
+          return streetMatchesQuery(streetName, trimmed);
+        });
         setSuggestions(items);
         setActiveIndex(0);
       } catch (err) {
         if (err instanceof DOMException && err.name === "AbortError") return;
+        if (seq !== requestSeqRef.current) return;
         setSuggestions([]);
       } finally {
-        if (!controller.signal.aborted) setLoading(false);
+        if (!controller.signal.aborted && seq === requestSeqRef.current) {
+          setLoading(false);
+        }
       }
     },
     [city, cityReady, postalCode, area, searchCenter, areaCenter]
@@ -118,16 +133,16 @@ export function PropertyStreetSearchField({
       setSuggestions([]);
       setLoading(false);
       setSearched(false);
+      abortRef.current?.abort();
       return;
     }
 
     setLoading(true);
     setSearched(true);
 
-    const debounceMs = trimmed.length <= 2 ? 0 : DEBOUNCE_MS;
     debounceRef.current = setTimeout(() => {
       void fetchSuggestions(value);
-    }, debounceMs);
+    }, DEBOUNCE_MS);
     return () => {
       if (debounceRef.current) clearTimeout(debounceRef.current);
     };
@@ -196,16 +211,12 @@ export function PropertyStreetSearchField({
             {loading && suggestions.length === 0 && (
               <li className="px-3 py-2.5 text-xs text-muted">
                 {area?.trim()
-                  ? `Αναζήτηση οδών στην ${area.trim()}...`
-                  : `Αναζήτηση οδών στην ${city.trim()}...`}
+                  ? t("searchingInArea", { area: area.trim() })
+                  : t("searchingInCity", { city: city.trim() })}
               </li>
             )}
             {!loading && suggestions.length === 0 && searched && (
-              <li className="px-3 py-2.5 text-xs text-muted">
-                {area?.trim()
-                  ? `Δεν βρέθηκε οδός στην ${area.trim()}. Δοκίμασε άλλη γραφή ή σύρε τον πείρο στον χάρτη.`
-                  : `Δεν βρέθηκε οδός στην ${city.trim()}. Δοκίμασε άλλη γραφή ή σύρε τον πείρο στον χάρτη.`}
-              </li>
+              <li className="px-3 py-2.5 text-xs text-muted">{t("noStreetFound")}</li>
             )}
             {suggestions.map((s, index) => (
               <li key={s.placeId} role="presentation">
@@ -240,7 +251,7 @@ export function PropertyStreetSearchField({
     <div ref={wrapperRef} className="relative">
       <label className="block">
         <span className="text-xs font-medium uppercase tracking-wide text-muted">
-          Οδός *
+          {t("street")}
         </span>
         <input
           type="text"
@@ -251,17 +262,13 @@ export function PropertyStreetSearchField({
           value={value}
           placeholder={
             cityReady
-              ? `Οδός στην ${locationHint} — π.χ. Καυκάσου ή Καυκάσου 17`
-              : "Πρώτα επίλεξε πόλη"
+              ? t("streetPlaceholder", { location: locationHint })
+              : t("chooseCityFirst")
           }
           onChange={(e) => {
             const next = e.target.value;
             onChange(next);
             setOpen(true);
-            if (next.trim().length >= MIN_STREET_QUERY) {
-              setLoading(true);
-              setSearched(true);
-            }
           }}
           onFocus={() => {
             setOpen(true);
@@ -276,24 +283,14 @@ export function PropertyStreetSearchField({
       </label>
       {cityReady && (
         <p className="mt-1 text-[11px] text-muted">
-          Γράψε χειροκίνητα ή διάλεξε από τη λίστα — συμπληρώνονται αυτόματα αριθμός, ΤΚ, περιοχή και χάρτης
-          {area?.trim() ? (
-            <>
-              {" "}
-              (μόνο στην{" "}
-              <span className="font-medium text-charcoal">{area.trim()}</span>)
-            </>
-          ) : (
-            <>
-              {" "}
-              (μόνο εντός{" "}
-              <span className="font-medium text-charcoal">{city.trim()}</span>)
-            </>
-          )}
+          {t("streetHelp")}
+          {area?.trim()
+            ? t("streetHelpInArea", { area: area.trim() })
+            : t("streetHelpInCity", { city: city.trim() })}
         </p>
       )}
       {!cityReady && (
-        <p className="mt-1 text-[11px] text-muted">Συμπλήρωσε πρώτα την πόλη.</p>
+        <p className="mt-1 text-[11px] text-muted">{t("fillCityFirst")}</p>
       )}
       {dropdown}
     </div>

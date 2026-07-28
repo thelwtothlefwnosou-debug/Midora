@@ -3,13 +3,16 @@
 import Link from "next/link";
 import Image from "next/image";
 import { Clock, MoreHorizontal, Pencil } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { DeleteListingButton } from "@/components/dashboard/DeleteListingButton";
 import type { ListingWithImages } from "@/lib/types";
 import { getListingPublicId } from "@/lib/utils";
+import { pickListingCoverPhotoUrl } from "@/lib/listing-media";
 import { cn } from "@/lib/utils";
 
 type Props = {
   listing: ListingWithImages;
+  onDeleted?: (listingId: string) => void;
 };
 
 function formatDraftPrice(listing: ListingWithImages): string {
@@ -30,9 +33,10 @@ function formatDraftDate(iso: string): string {
   });
 }
 
-export function DashboardListingDraftCard({ listing }: Props) {
+export function DashboardListingDraftCard({ listing, onDeleted }: Props) {
+  const t = useTranslations("Owner.list");
   const resumeHref = `/dashboard/listings/new?draft=${listing.id}`;
-  const cover = listing.listing_images?.[0]?.url;
+  const cover = pickListingCoverPhotoUrl(listing);
   const publicId = getListingPublicId(listing);
 
   return (
@@ -49,7 +53,7 @@ export function DashboardListingDraftCard({ listing }: Props) {
             />
           ) : (
             <div className="flex h-full min-h-[120px] w-full items-center justify-center bg-sand/50">
-              <span className="text-xs text-muted">Χωρίς φωτογραφία</span>
+              <span className="text-xs text-muted">{t("noPhoto")}</span>
             </div>
           )}
           <span className="absolute bottom-2 left-2 rounded bg-charcoal/75 px-1.5 py-0.5 text-[10px] font-medium text-white">
@@ -67,7 +71,7 @@ export function DashboardListingDraftCard({ listing }: Props) {
               <Link
                 href={resumeHref}
                 className="flex h-8 w-8 items-center justify-center rounded-lg text-charcoal/60 hover:bg-sand hover:text-gold"
-                title="Συνέχισε την αγγελία"
+                title={t("resumeListingTitle")}
               >
                 <Pencil className="h-4 w-4" />
               </Link>
@@ -76,7 +80,7 @@ export function DashboardListingDraftCard({ listing }: Props) {
                   <MoreHorizontal className="h-4 w-4" />
                 </summary>
                 <div className="absolute right-0 z-10 mt-1 min-w-[140px] rounded-xl border border-border bg-white p-2 shadow-card">
-                  <DeleteListingButton listingId={listing.id} />
+                  <DeleteListingButton listingId={listing.id} onDeleted={onDeleted} />
                 </div>
               </details>
             </div>
@@ -84,7 +88,7 @@ export function DashboardListingDraftCard({ listing }: Props) {
 
           <div className="flex flex-wrap items-center gap-2 text-[11px]">
             <span className="rounded-full border border-charcoal/20 px-2 py-0.5 font-semibold uppercase tracking-wide text-charcoal">
-              Πρόχειρη
+              {t("draftBadge")}
             </span>
             <span className="flex items-center gap-1 text-muted">
               <Clock className="h-3 w-3" />
@@ -95,7 +99,7 @@ export function DashboardListingDraftCard({ listing }: Props) {
           <div className="mt-auto flex flex-wrap items-center justify-between gap-3 border-t border-border pt-3">
             <p className="flex items-start gap-2 text-xs text-muted">
               <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-gold" aria-hidden />
-              Συμπλήρωσε όλα τα στοιχεία της αγγελίας για να την δημοσιεύσεις
+              {t("completeListingHint")}
             </p>
             <Link
               href={resumeHref}
@@ -104,7 +108,7 @@ export function DashboardListingDraftCard({ listing }: Props) {
                 "hover:bg-teal/5"
               )}
             >
-              Συνέχεια δημιουργίας
+              {t("continueCreating")}
             </Link>
           </div>
         </div>

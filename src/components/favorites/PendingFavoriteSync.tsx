@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { useTranslations } from "next-intl";
 import { toggleFavorite } from "@/lib/actions";
 import { PENDING_FAVORITE_KEY } from "@/lib/favorites-storage";
 import { showToast } from "@/lib/toast-store";
@@ -8,6 +9,7 @@ import { createClient, isSupabaseConfigured } from "@/lib/supabase/client";
 
 /** Completes a favorite action after login redirect. */
 export function PendingFavoriteSync() {
+  const t = useTranslations("Favorites");
   const ran = useRef(false);
 
   useEffect(() => {
@@ -31,7 +33,7 @@ export function PendingFavoriteSync() {
         sessionStorage.removeItem(PENDING_FAVORITE_KEY);
         const result = await toggleFavorite(pending);
         if (result?.favorited) {
-          showToast("Προστέθηκε στα αγαπημένα");
+          showToast(t("toastAdded"));
         }
       } catch {
         ran.current = false;

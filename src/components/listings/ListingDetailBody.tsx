@@ -22,9 +22,12 @@ import { notFound } from "next/navigation";
 import { getAcceptedPublicCohosts } from "@/lib/listing-cohosts-db";
 import { getPublicListingContactNumbers } from "@/lib/listing-contact-numbers-db";
 import { ListingJsonLd } from "@/components/seo/ListingJsonLd";
+import { getLocale, getTranslations } from "next-intl/server";
 
 export async function ListingDetailBody({ id }: { id: string }) {
-  const listing = await getListingPublicDetail(id);
+  const t = await getTranslations("Listing");
+  const locale = await getLocale();
+  const listing = await getListingPublicDetail(id, locale);
 
   if (!listing || !isListingActive(listing) || !isPublicMvpListing(listing)) {
     notFound();
@@ -59,7 +62,7 @@ export async function ListingDetailBody({ id }: { id: string }) {
 
   return (
     <ListingInterestProvider>
-      <ListingJsonLd listing={listing} canonicalPath={canonicalPath} />
+      <ListingJsonLd listing={listing} canonicalPath={canonicalPath} locale={locale} />
       <ListingRentalModeProvider listing={listing}>
         <ListingDetailScrollFix />
         <ListingDetailHeader />
@@ -69,7 +72,7 @@ export async function ListingDetailBody({ id }: { id: string }) {
               <Suspense
                 fallback={
                   <span className="inline-flex min-h-7 items-center gap-1.5 text-sm text-muted">
-                    Πίσω στην αναζήτηση
+                    {t("backToSearch")}
                   </span>
                 }
               >

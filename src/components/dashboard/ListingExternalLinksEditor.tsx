@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations, useLocale } from "next-intl";
 import {
   Check,
   ExternalLink,
@@ -82,6 +83,8 @@ function ExternalLinkModal({
   onClose: () => void;
   onSaved: (links?: ListingExternalLink[]) => void;
 }) {
+  const t = useTranslations("Workspace.externalLinksEditor");
+  const locale = useLocale();
   const usedPlatforms = useMemo(
     () => new Set(initialLinks.map((l) => l.platform)),
     [initialLinks]
@@ -103,15 +106,15 @@ function ExternalLinkModal({
   const [localPending, startTransition] = useTransition();
 
   const validation = form.url.trim()
-    ? validateExternalLinkUrl(form.platform, form.url)
+    ? validateExternalLinkUrl(form.platform, form.url, locale)
     : null;
 
   const busy = pending || localPending;
 
   function handleSave() {
-    const result = validateExternalLinkUrl(form.platform, form.url);
+    const result = validateExternalLinkUrl(form.platform, form.url, locale);
     if (!result.valid || !result.normalizedUrl) {
-      setError(result.error ?? "Μη έγκυρο URL.");
+      setError(result.error ?? t("invalidUrl"));
       return;
     }
 
@@ -145,7 +148,7 @@ function ExternalLinkModal({
 
   function handleRemove() {
     if (!editingLink) return;
-    if (!window.confirm("Θέλεις σίγουρα να αφαιρέσεις αυτόν τον σύνδεσμο;")) {
+    if (!window.confirm(t("removeConfirm"))) {
       return;
     }
 
@@ -170,7 +173,7 @@ function ExternalLinkModal({
           className="inline-flex min-h-10 items-center gap-1.5 rounded-xl border border-red-200 px-4 text-sm font-medium text-red-700 hover:bg-red-50 disabled:opacity-40"
         >
           <Trash2 className="h-4 w-4" />
-          Αφαίρεση
+          {t("remove")}
         </button>
       ) : (
         <span />
@@ -183,7 +186,7 @@ function ExternalLinkModal({
           onClick={onClose}
           className="rounded-xl border border-border px-4 py-2 text-sm font-medium text-charcoal hover:bg-sand"
         >
-          Άκυρο
+          {t("cancel")}
         </button>
         <button
           type="button"
@@ -191,7 +194,7 @@ function ExternalLinkModal({
           onClick={handleSave}
           className="rounded-xl bg-charcoal px-4 py-2 text-sm font-semibold text-white hover:bg-charcoal/90 disabled:opacity-40"
         >
-          {busy ? "Αποθήκευση…" : "Αποθήκευση"}
+          {busy ? t("saving") : t("save")}
         </button>
       </div>
     </div>
@@ -201,13 +204,13 @@ function ExternalLinkModal({
     <PortalModal
       open
       onClose={onClose}
-      title={mode === "add" ? "Προσθήκη συνδέσμου αξιοπιστίας" : "Επεξεργασία συνδέσμου"}
+      title={mode === "add" ? t("addModalTitle") : t("editModalTitle")}
       titleId="external-link-modal-title"
       footer={footer}
     >
       <div className="space-y-4">
         <label className="block">
-          <span className="text-xs font-medium uppercase text-muted">Πλατφόρμα</span>
+          <span className="text-xs font-medium uppercase text-muted">{t("platformLabel")}</span>
           <select
             value={form.platform}
             disabled={mode === "edit"}
@@ -228,11 +231,11 @@ function ExternalLinkModal({
         </label>
 
         <label className="block">
-          <span className="text-xs font-medium uppercase text-muted">Σύνδεσμος αγγελίας</span>
+          <span className="text-xs font-medium uppercase text-muted">{t("urlLabel")}</span>
           <input
             type="url"
             inputMode="url"
-            placeholder="https://…"
+            placeholder={t("urlPlaceholder")}
             value={form.url}
             onChange={(e) => setForm((prev) => ({ ...prev, url: e.target.value }))}
             className="mt-1.5 w-full rounded-xl border border-border px-3 py-2.5 text-sm text-charcoal outline-none focus:border-gold/40"
@@ -240,7 +243,7 @@ function ExternalLinkModal({
         </label>
 
         {validation?.valid && (
-          <p className="text-xs text-teal">Ο σύνδεσμος είναι έγκυρος (HTTPS).</p>
+          <p className="text-xs text-teal">{t("urlValid")}</p>
         )}
         {validation?.error && <p className="text-xs text-red-600">{validation.error}</p>}
         {validation?.warning && validation.valid && (
@@ -249,10 +252,10 @@ function ExternalLinkModal({
 
         {form.platform === "other" && (
           <label className="block">
-            <span className="text-xs font-medium uppercase text-muted">Όνομα πλατφόρμας</span>
+            <span className="text-xs font-medium uppercase text-muted">{t("otherPlatformLabel")}</span>
             <input
               type="text"
-              placeholder="Όνομα πλατφόρμας"
+              placeholder={t("otherPlatformPlaceholder")}
               value={form.label}
               onChange={(e) => setForm((prev) => ({ ...prev, label: e.target.value }))}
               className="mt-1.5 w-full rounded-xl border border-border px-3 py-2.5 text-sm text-charcoal outline-none focus:border-gold/40"
@@ -268,11 +271,8 @@ function ExternalLinkModal({
             className="mt-0.5 h-4 w-4 accent-charcoal"
           />
           <span className="text-sm text-charcoal">
-            <span className="font-medium">Εμφάνιση στη δημόσια αγγελία</span>
-            <span className="mt-1 block text-xs text-muted">
-              Αν το ενεργοποιήσεις, ο σύνδεσμος εμφανίζεται χαμηλά στη δημόσια σελίδα — ως
-              εξωτερικός σύνδεσμος, όχι ως επαλήθευση από το Midora.
-            </span>
+            <span className="font-medium">{t("publicToggleLabel")}</span>
+            <span className="mt-1 block text-xs text-muted">{t("publicToggleHint")}</span>
           </span>
         </label>
 
@@ -293,6 +293,7 @@ export function ListingExternalLinksEditor({
   className,
 }: Props) {
   const router = useRouter();
+  const t = useTranslations("Workspace.externalLinksEditor");
   const [links, setLinks] = useState(initialLinks);
   const [modalMode, setModalMode] = useState<ModalMode>(null);
   const [editingLink, setEditingLink] = useState<ListingExternalLink | null>(null);
@@ -322,7 +323,7 @@ export function ListingExternalLinksEditor({
 
   function handleSaved(nextLinks?: ListingExternalLink[]) {
     if (nextLinks) setLinks(nextLinks);
-    setFeedback("Ο σύνδεσμος αποθηκεύτηκε.");
+    setFeedback(t("feedbackSaved"));
     startTransition(() => router.refresh());
   }
 
@@ -332,12 +333,9 @@ export function ListingExternalLinksEditor({
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0 flex-1">
             <h3 className="font-display text-base font-semibold text-charcoal">
-              Σύνδεσμοι αξιοπιστίας
+              {t("title")}
             </h3>
-            <p className="mt-1 max-w-2xl text-sm text-muted">
-              Πρόσθεσε προαιρετικά HTTPS σύνδεσμο από άλλη πλατφόρμα όπου υπάρχει το ίδιο
-              ακίνητο. Βοηθά στη διασταύρωση — χωρίς επαλήθευση από το Midora.
-            </p>
+            <p className="mt-1 max-w-2xl text-sm text-muted">{t("subtitle")}</p>
           </div>
           <Link2 className="h-5 w-5 shrink-0 text-gold/60" aria-hidden />
         </div>
@@ -349,8 +347,7 @@ export function ListingExternalLinksEditor({
           showCardChrome ? "mt-3" : "mt-0"
         )}
       >
-        Το Midora δεν εισάγει ούτε ελέγχει περιεχόμενο από τρίτες πλατφόρμες — αποθηκεύει μόνο
-        το link που επικολλάς.
+        {t("disclaimer")}
       </p>
 
       {feedback && (
@@ -361,14 +358,14 @@ export function ListingExternalLinksEditor({
 
       {links.length === 0 ? (
         <div className="mt-5 rounded-xl border border-dashed border-border bg-sand/10 px-4 py-8 text-center">
-          <p className="text-sm text-muted">Δεν έχεις προσθέσει ακόμα σύνδεσμο αξιοπιστίας.</p>
+          <p className="text-sm text-muted">{t("emptyText")}</p>
           <button
             type="button"
             onClick={openAdd}
             className="mt-4 inline-flex min-h-10 items-center gap-2 rounded-xl bg-charcoal px-4 text-sm font-semibold text-white hover:bg-charcoal/90"
           >
             <Plus className="h-4 w-4" />
-            Προσθήκη συνδέσμου
+            {t("addLink")}
           </button>
         </div>
       ) : (
@@ -398,12 +395,12 @@ export function ListingExternalLinksEditor({
                         {valid ? (
                           <>
                             <Check className="h-3 w-3" />
-                            Έγκυρος σύνδεσμος
+                            {t("validLinkBadge")}
                           </>
                         ) : (
                           <>
                             <X className="h-3 w-3" />
-                            Μη έγκυρος σύνδεσμος
+                            {t("invalidLinkBadge")}
                           </>
                         )}
                       </span>
@@ -415,7 +412,11 @@ export function ListingExternalLinksEditor({
                             : "bg-sand text-muted"
                         )}
                       >
-                        Δημόσια εμφάνιση: {link.is_public ? "Ενεργή" : "Ανενεργή"}
+                        {t("publicStatusLabel", {
+                          status: link.is_public
+                            ? t("publicStatusActive")
+                            : t("publicStatusInactive"),
+                        })}
                       </span>
                     </div>
                     <p className="mt-1 truncate font-mono text-xs text-muted">
@@ -432,7 +433,7 @@ export function ListingExternalLinksEditor({
                         className="inline-flex min-h-8 items-center gap-1 rounded-lg border border-border px-3 text-xs font-medium text-charcoal hover:bg-sand"
                       >
                         <ExternalLink className="h-3.5 w-3.5" />
-                        Άνοιγμα
+                        {t("open")}
                       </a>
                     )}
                     <button
@@ -441,7 +442,7 @@ export function ListingExternalLinksEditor({
                       className="inline-flex min-h-8 items-center gap-1 rounded-lg border border-border px-3 text-xs font-medium text-charcoal hover:bg-sand"
                     >
                       <Pencil className="h-3.5 w-3.5" />
-                      Επεξεργασία
+                      {t("edit")}
                     </button>
                   </div>
                 </div>
@@ -456,7 +457,7 @@ export function ListingExternalLinksEditor({
               className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-border bg-white px-4 text-sm font-semibold text-charcoal hover:border-gold/30 hover:bg-sand/30"
             >
               <Plus className="h-4 w-4" />
-              Προσθήκη συνδέσμου
+              {t("addLink")}
             </button>
           )}
         </div>

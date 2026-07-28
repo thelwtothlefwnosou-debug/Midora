@@ -1,5 +1,8 @@
+"use client";
+
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
+import { useTranslations } from "next-intl";
 import type { OwnerActionItem } from "@/lib/owner-dashboard";
 import { cn } from "@/lib/utils";
 
@@ -11,6 +14,15 @@ const toneStyles = {
 };
 
 export function DashboardActionCard({ item }: { item: OwnerActionItem }) {
+  const t = useTranslations("Owner.alerts");
+  const title = t(item.titleKey, item.titleValues);
+  const description = item.descriptionFallback
+    ? item.descriptionFallback
+    : item.descriptionKey
+      ? t(item.descriptionKey, item.descriptionValues)
+      : "";
+  const cta = t(item.ctaKey);
+
   return (
     <Link
       href={item.href}
@@ -19,10 +31,10 @@ export function DashboardActionCard({ item }: { item: OwnerActionItem }) {
         toneStyles[item.tone]
       )}
     >
-      <h3 className="font-display text-base font-semibold text-charcoal">{item.title}</h3>
-      <p className="mt-1.5 flex-1 text-sm leading-relaxed text-muted">{item.description}</p>
+      <h3 className="font-display text-base font-semibold text-charcoal">{title}</h3>
+      <p className="mt-1.5 flex-1 text-sm leading-relaxed text-muted">{description}</p>
       <span className="mt-4 inline-flex items-center gap-1 text-sm font-semibold text-gold group-hover:gap-2 transition-all">
-        {item.cta}
+        {cta}
         <ArrowRight className="h-4 w-4" />
       </span>
     </Link>

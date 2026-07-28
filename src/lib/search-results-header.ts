@@ -1,53 +1,65 @@
-export function buildResultsPageTitle(input: {
+type TitleInput = {
   rentalType?: string | null;
   cityLabel?: string | null;
   districtLabel?: string | null;
   nearbySearch?: boolean;
   mapAreaSearch?: boolean;
   boundsSearch?: boolean;
-}): { title: string; subtitle: string } {
-  const location =
-    input.districtLabel ??
-    input.cityLabel ??
-    (input.nearbySearch
-      ? "κοντά στην τοποθεσία σου"
-      : input.mapAreaSearch
-        ? "στην επιλεγμένη περιοχή"
-        : input.boundsSearch
-          ? "στην περιοχή του χάρτη"
-          : null);
+};
+
+type Translate = (key: string, values?: Record<string, string | number>) => string;
+
+function resolveLocationLabel(input: TitleInput, t: Translate): string | null {
+  if (input.districtLabel) return input.districtLabel;
+  if (input.cityLabel) return input.cityLabel;
+  if (input.nearbySearch) return t("nearYou");
+  if (input.mapAreaSearch) return t("inSelectedArea");
+  if (input.boundsSearch) return t("inMapArea");
+  return null;
+}
+
+function formatLocationIn(location: string, t: Translate): string {
+  if (
+    location.startsWith("στη ") ||
+    location.startsWith("στο ") ||
+    location.startsWith("στην ") ||
+    location.startsWith("in ") ||
+    location.startsWith("near ")
+  ) {
+    return location;
+  }
+  return t("inLocation", { location });
+}
+
+export function buildResultsPageTitle(
+  input: TitleInput,
+  t: Translate
+): { title: string; subtitle: string } {
+  const location = resolveLocationLabel(input, t);
+  const place = location ? formatLocationIn(location, t) : null;
 
   if (input.rentalType === "short_term") {
     return {
-      title: location ? `Βραχυχρόνια διαμονή ${formatLocationIn(location)}` : "Βραχυχρόνια διαμονή",
+      title: place ? t("shortTermIn", { place }) : t("shortTerm"),
       subtitle: "",
     };
   }
 
   if (input.rentalType === "monthly") {
     return {
-      title: location
-        ? `Μηνιαία / μεσοπρόθεσμη ${formatLocationIn(location)}`
-        : "Μηνιαία / μεσοπρόθεσμη μίσθωση",
+      title: place ? t("monthlyIn", { place }) : t("monthly"),
       subtitle: "",
     };
   }
 
   return {
-    title: location ? `Αγγελίες ${formatLocationIn(location)}` : "Αναζήτηση ακινήτων",
+    title: place ? t("listingsIn", { place }) : t("searchProperties"),
     subtitle: "",
   };
 }
 
-function formatLocationIn(location: string): string {
-  if (location.startsWith("στη ") || location.startsWith("στο ") || location.startsWith("στην ")) {
-    return location;
-  }
-  return `στην ${location}`;
-}
-
-export function buildResultsSubtitle(totalCount: number): string {
-  if (totalCount === 0) return "Δεν βρέθηκαν αγγελίες που να ταιριάζουν";
-  if (totalCount === 1) return "1 αγγελία που ταιριάζει στην αναζήτησή σου";
-  return `${totalCount.toLocaleString("el-GR")} αγγελίες που ταιριάζουν στην αναζήτησή σου`;
+export function buildResultsSubtitle(totalCount: number, t: Translate): string {
+  if (totalCount === 0) return t("noneMatch");
+  if (totalCount === 1) return t("oneMatch");
+  return t("nMatch", { count: totalCount.toLocaleString() });
 }

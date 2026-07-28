@@ -54,12 +54,28 @@ export function avatarInitials(profile: ProfileAvatarFields): string {
   return profileInitials(profile.full_name ?? "", profile.email ?? "");
 }
 
-export function validateAvatarFile(file: File): string | null {
+/** Message keys under `Owner.profileIdentityCard.*` */
+export const AVATAR_FILE_ERROR_KEYS = {
+  invalidMime: "avatarInvalidMime",
+  tooLarge: "avatarTooLarge",
+} as const;
+
+export type AvatarFileErrorKey =
+  (typeof AVATAR_FILE_ERROR_KEYS)[keyof typeof AVATAR_FILE_ERROR_KEYS];
+
+export function isAvatarFileErrorKey(value: string): value is AvatarFileErrorKey {
+  return (
+    value === AVATAR_FILE_ERROR_KEYS.invalidMime ||
+    value === AVATAR_FILE_ERROR_KEYS.tooLarge
+  );
+}
+
+export function validateAvatarFile(file: File): AvatarFileErrorKey | null {
   if (!ALLOWED_AVATAR_MIME.includes(file.type as (typeof ALLOWED_AVATAR_MIME)[number])) {
-    return "Επιτρέπονται μόνο JPG, PNG ή WEBP.";
+    return AVATAR_FILE_ERROR_KEYS.invalidMime;
   }
   if (file.size > MAX_AVATAR_SIZE_BYTES) {
-    return "Το μέγιστο μέγεθος είναι 5 MB.";
+    return AVATAR_FILE_ERROR_KEYS.tooLarge;
   }
   return null;
 }

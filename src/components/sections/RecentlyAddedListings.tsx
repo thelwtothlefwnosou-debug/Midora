@@ -1,4 +1,5 @@
-import Link from "next/link";
+﻿import Link from "next/link";
+import { getLocale, getTranslations } from "next-intl/server";
 import { ArrowRight, Search } from "lucide-react";
 import { ListingCard } from "@/components/listings/ListingCard";
 import { HomeSectionHeader } from "@/components/sections/HomeSectionHeader";
@@ -9,6 +10,8 @@ import { getHomepageListingBadges } from "@/lib/listing-badges";
 import { pickHomepageListings } from "@/lib/homepage-listings";
 
 export async function RecentlyAddedListings() {
+  const t = await getTranslations("Home");
+  const locale = await getLocale();
   const [allListings, favoriteIds] = await Promise.all([
     getHomepageRecentListings(),
     getFavoriteListingIds(),
@@ -19,15 +22,15 @@ export async function RecentlyAddedListings() {
   const periodsMap = await getUnavailablePeriodsByListingIds(listings.map((l) => l.id));
 
   return (
-    <section id="listings" className="home-section home-bg-sand border-t border-border">
+    <section id="listings" className="home-section home-section--editorial home-bg-sand">
       <div className="mx-auto max-w-7xl px-4 sm:px-6">
         <HomeSectionHeader
-          title="Πρόσφατα ακίνητα"
-          subtitle="Νέες αγγελίες που προστέθηκαν πρόσφατα στο Midora."
+          title={t("featuredTitle")}
+          subtitle={t("featuredSubtitlePlain")}
           action={
             listings.length > 0 ? (
-              <Link href="/listings" className="home-btn-secondary shrink-0">
-                Δες όλα τα ακίνητα
+              <Link href="/listings?rentalType=short_term" className="home-btn-secondary shrink-0">
+                {t("featuredCta")}
                 <ArrowRight className="h-4 w-4" />
               </Link>
             ) : undefined
@@ -35,34 +38,39 @@ export async function RecentlyAddedListings() {
         />
 
         {listings.length === 0 ? (
-          <div className="home-card home-card-muted px-6 py-12 text-center">
+          <div className="rounded-[1.35rem] bg-white/70 px-6 py-14 text-center ring-1 ring-border/60">
             <p className="font-display text-lg font-semibold text-charcoal">
-              Νέες αγγελίες έρχονται σύντομα
-            </p>
-            <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-muted">
-              Εξερεύνησε τις διαθέσιμες αγγελίες ή ανέβασε τη δική σου.
+              {t("recentEmpty")}
             </p>
             <div className="mt-6 flex flex-wrap justify-center gap-3">
-              <Link href="/listings" className="home-btn-primary">
+              <Link href="/listings?rentalType=short_term" className="home-btn-primary">
                 <Search className="h-4 w-4" />
-                Δες όλες τις αγγελίες
+                {t("featuredCta")}
               </Link>
             </div>
           </div>
         ) : (
-          <div className="grid auto-rows-fr gap-5 sm:grid-cols-2 sm:gap-6 lg:grid-cols-3">
-            {listings.map((listing, i) => (
-              <ListingCard
-                key={listing.id}
-                listing={listing}
-                index={i}
-                variant="home"
-                favorited={favoriteSet.has(listing.id)}
-                badges={getHomepageListingBadges(listing)}
-                unavailablePeriods={periodsMap.get(listing.id) ?? []}
-              />
-            ))}
-          </div>
+          <>
+            <div className="grid auto-rows-fr gap-5 sm:grid-cols-2 sm:gap-6 lg:grid-cols-3">
+              {listings.map((listing, i) => (
+                <ListingCard
+                  key={listing.id}
+                  listing={listing}
+                  index={i}
+                  variant="home"
+                  favorited={favoriteSet.has(listing.id)}
+                  badges={getHomepageListingBadges(listing, locale)}
+                  unavailablePeriods={periodsMap.get(listing.id) ?? []}
+                />
+              ))}
+            </div>
+            <div className="mt-8 flex justify-center sm:hidden">
+              <Link href="/listings?rentalType=short_term" className="home-btn-secondary">
+                {t("featuredCta")}
+                <ArrowRight className="h-4 w-4" />
+              </Link>
+            </div>
+          </>
         )}
       </div>
     </section>

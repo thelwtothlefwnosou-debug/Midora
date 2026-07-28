@@ -1,16 +1,17 @@
 "use client";
 
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { useLocale, useTranslations } from "next-intl";
 import {
   formatDateKeyDisplay,
   formatMonthYear,
   getCalendarDays,
   getSelectionRole,
+  getWeekdayLabels,
   isBeforeMinimumStayEnd,
   isDateUnavailable,
   isPastDate,
   isToday,
-  WEEKDAY_LABELS,
   type CalendarDay,
 } from "@/lib/availability-calendar";
 import type { ListingUnavailablePeriod } from "@/lib/unavailable-periods";
@@ -47,13 +48,15 @@ type Props = {
 
 function unavailableDayAriaLabel(
   dateKey: string,
-  reason: "past" | "blocked" | "min-stay"
+  reason: "past" | "blocked" | "min-stay",
+  t: (key: string, values?: Record<string, string | number>) => string,
+  locale?: string
 ): string {
-  const formatted = formatDateKeyDisplay(dateKey);
+  const formatted = formatDateKeyDisplay(dateKey, locale);
   if (reason === "past") {
-    return `${formatted}, παρελθούσα ημερομηνία, μη διαθέσιμη`;
+    return t("pastUnavailable", { date: formatted });
   }
-  return `${formatted}, μη διαθέσιμη`;
+  return t("unavailable", { date: formatted });
 }
 
 function DayCell({
@@ -89,6 +92,8 @@ function DayCell({
   compact?: boolean;
   unavailableDayStyle?: UnavailableDayStyle;
 }) {
+  const t = useTranslations("Listing.datePicker");
+  const locale = useLocale();
   const unavailable = isDateUnavailable(day.dateKey, periods);
   const past = isPastDate(day.dateKey);
   const weekend =
@@ -129,11 +134,34 @@ function DayCell({
   const ownerSelected =
     mode === "owner" && (selectionRole === "start" || selectionRole === "end");
   const charcoalSelection = mode === "owner" || mode === "interest";
+  const hasCompleteRange = Boolean(selectionStart && selectionEnd);
+  const showRangeConnector =
+    !premiumBlocked &&
+    hasCompleteRange &&
+    (selectionRole === "start" ||
+      selectionRole === "end" ||
+      selectionRole === "middle");
+
+  /** Airbnb-like continuous range bar — height matches the day circle. */
+  const rangeBarHeightClass =
+    priceCellSize === "large"
+      ? "before:h-10"
+      : compact
+        ? "before:h-9"
+        : "before:h-11";
+  const rangeBarToneClass = charcoalSelection
+    ? "before:bg-[#EBEBEB]"
+    : "before:bg-gold/20";
+  const rangeBarBaseClass = cn(
+    "before:pointer-events-none before:absolute before:top-1/2 before:z-0 before:-translate-y-1/2 before:content-['']",
+    rangeBarHeightClass,
+    rangeBarToneClass
+  );
 
   const content = (
     <span
       className={cn(
-        "calendar-day__number relative z-10 flex flex-col items-center justify-center font-medium transition-all duration-150",
+        "calendar-day__number relative z-10 flex flex-col items-center justify-center font-medium transition-colors duration-150",
         sizeClass,
         premiumBlocked && "calendar-day__number--blocked",
         !premiumBlocked && !day.inMonth && "text-transparent",
@@ -155,10 +183,10 @@ function DayCell({
           "text-charcoal",
         selectionRole === "start" || selectionRole === "end"
           ? ownerSelected || charcoalSelection
-            ? "rounded-full bg-charcoal font-semibold text-white shadow-sm"
-            : "rounded-full bg-gold font-semibold text-white shadow-sm"
+            ? "rounded-full bg-charcoal font-semibold text-white"
+            : "rounded-full bg-gold font-semibold text-white"
           : selectionRole === "middle"
-            ? "rounded-none font-semibold text-charcoal"
+            ? "rounded-none font-medium text-charcoal"
             : !premiumBlocked && today && day.inMonth && !selectionRole
               ? "rounded-full font-semibold text-charcoal ring-2 ring-gold/45 ring-offset-1"
               : !premiumBlocked
@@ -169,7 +197,7 @@ function DayCell({
       {customPrice && !selectionRole && !unavailable && day.inMonth && !past && (
         <span className="absolute top-1 right-1.5 h-1.5 w-1.5 rounded-full bg-gold" aria-hidden />
       )}
-      <span>{day.inMonth ? day.date.getDate() : ""}</span>
+      <span className="leading-none">{day.inMonth ? day.date.getDate() : ""}</span>
       {!premiumBlocked &&
       unavailable &&
       day.inMonth &&
@@ -177,14 +205,14 @@ function DayCell({
       !selectionRole &&
       priceCellSize === "large" ? (
         <span className="mt-0.5 text-[9px] font-normal leading-none text-muted">
-          Μη διαθέσιμο
+          {t("unavailableShort")}
         </span>
       ) : nightPrice != null && day.inMonth && !past && !premiumBlocked ? (
         <span
           className={cn(
             "mt-0.5 font-medium leading-none",
             priceCellSize === "large" ? "text-[11px]" : "text-[9px] font-normal",
-            ownerSelected || selectionRole
+            selectionRole === "start" || selectionRole === "end"
               ? "text-white/90"
               : unavailable
                 ? "text-muted/70"
@@ -204,21 +232,15 @@ function DayCell({
     premiumBlocked && "calendar-day--unavailable cursor-not-allowed",
     priceCellSize === "large" && "min-h-[3.5rem] border-b border-r border-border/40",
     !day.inMonth && "pointer-events-none",
-    !premiumBlocked &&
+    showRangeConnector &&
       selectionRole === "middle" &&
-      (charcoalSelection
-        ? "bg-charcoal/12 before:absolute before:inset-y-1.5 before:left-0 before:right-0 before:-z-0 before:bg-charcoal/12"
-        : "bg-gold/18 before:absolute before:inset-y-1.5 before:left-0 before:right-0 before:-z-0 before:bg-gold/18"),
-    !premiumBlocked &&
+      cn(rangeBarBaseClass, "before:left-0 before:right-0"),
+    showRangeConnector &&
       selectionRole === "start" &&
-      (charcoalSelection
-        ? "bg-charcoal/12 before:absolute before:inset-y-1.5 before:left-1/2 before:right-0 before:-z-0 before:rounded-l-full before:bg-charcoal/12"
-        : "bg-gold/18 before:absolute before:inset-y-1.5 before:left-1/2 before:right-0 before:-z-0 before:rounded-l-full before:bg-gold/18"),
-    !premiumBlocked &&
+      cn(rangeBarBaseClass, "before:left-1/2 before:right-0"),
+    showRangeConnector &&
       selectionRole === "end" &&
-      (charcoalSelection
-        ? "bg-charcoal/12 before:absolute before:inset-y-1.5 before:left-0 before:right-1/2 before:-z-0 before:rounded-r-full before:bg-charcoal/12"
-        : "bg-gold/18 before:absolute before:inset-y-1.5 before:left-0 before:right-1/2 before:-z-0 before:rounded-r-full before:bg-gold/18"),
+      cn(rangeBarBaseClass, "before:left-0 before:right-1/2"),
     !premiumBlocked && unavailable && day.inMonth && !past && !selectionRole && "bg-charcoal/8",
     !premiumBlocked &&
       weekend &&
@@ -229,7 +251,8 @@ function DayCell({
       "bg-gold/6",
     !premiumBlocked && tooEarlyForMinStay && day.inMonth && !past && !unavailable && "bg-sand/50",
     !premiumBlocked && past && day.inMonth && "opacity-45",
-    interactive && "cursor-pointer hover:bg-gold/8"
+    interactive && "cursor-pointer",
+    interactive && !selectionRole && "hover:bg-charcoal/[0.04]"
   );
 
   if (!interactive) {
@@ -250,7 +273,7 @@ function DayCell({
         tabIndex={premiumBlocked ? -1 : undefined}
         aria-label={
           premiumBlocked && blockedReason
-            ? unavailableDayAriaLabel(day.dateKey, blockedReason)
+            ? unavailableDayAriaLabel(day.dateKey, blockedReason, t, locale)
             : undefined
         }
       >
@@ -266,7 +289,12 @@ function DayCell({
       onMouseEnter={() => onDateHover?.(day.dateKey)}
       onMouseLeave={() => onDateHover?.(null)}
       className={cellClass}
-      aria-label={`${formatDateKeyDisplay(day.dateKey)}${unavailable ? ", μη διαθέσιμο" : ""}${past ? ", παρελθόν" : ""}${tooEarlyForMinStay ? ", πριν την ελάχιστη διαμονή" : ""}`}
+      aria-label={t("dayAria", {
+        date: formatDateKeyDisplay(day.dateKey, locale),
+        unavailable: unavailable ? t("unavailableSuffix") : "",
+        past: past ? t("pastSuffix") : "",
+        tooEarly: tooEarlyForMinStay ? t("tooEarlySuffix") : "",
+      })}
     >
       {content}
     </button>
@@ -290,10 +318,12 @@ function MonthGrid({
   compact,
   unavailableDayStyle,
 }: Omit<Props, "onPrevMonth" | "onNextMonth" | "className" | "hideHeader">) {
+  const locale = useLocale();
+  const weekdayLabels = getWeekdayLabels(locale);
   const days = getCalendarDays(month);
   return (
     <div className={cn("grid grid-cols-7", priceCellSize === "large" && "overflow-hidden rounded-xl border border-border")}>
-      {WEEKDAY_LABELS.map((label) => (
+      {weekdayLabels.map((label) => (
         <div
           key={label}
           className="pb-2 text-center text-[11px] font-semibold uppercase tracking-wide text-muted/80"
@@ -332,22 +362,23 @@ function CalendarLegend({
   mode: CalendarMode;
   unavailableDayStyle?: UnavailableDayStyle;
 }) {
+  const t = useTranslations("Listing.datePicker");
   if (unavailableDayStyle === "premium-blocked") {
     return (
       <div className="mt-4 space-y-2 border-t border-border pt-4 text-xs text-muted">
         <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
           <span className="flex items-center gap-2">
             <span className="h-3.5 w-3.5 rounded-full bg-charcoal" />
-            Επιλεγμένες ημερομηνίες
+            {t("legendSelected")}
           </span>
           <span className="flex items-center gap-2">
             <span className="calendar-day-legend-sample relative flex h-3.5 w-3.5 items-center justify-center text-[10px]">
               0
             </span>
-            Μη διαθέσιμες ημερομηνίες
+            {t("legendUnavailable")}
           </span>
         </div>
-        <p>Στις μη διαθέσιμες περιλαμβάνονται και οι ημερομηνίες στο παρελθόν.</p>
+        <p>{t("legendPastNote")}</p>
       </div>
     );
   }
@@ -356,26 +387,26 @@ function CalendarLegend({
     <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-2 border-t border-border pt-4 text-xs text-muted">
       <span className="flex items-center gap-2">
         <span className="h-3.5 w-3.5 rounded-full bg-gold" />
-        Επιλεγμένες ημερομηνίες
+        {t("legendSelected")}
       </span>
       <span className="flex items-center gap-2">
         <span className="relative h-3.5 w-3.5 rounded-sm bg-charcoal/[0.06] after:absolute after:inset-0 after:rotate-45 after:border-t after:border-charcoal/25" />
-        Μη διαθέσιμες ημερομηνίες
+        {t("legendUnavailable")}
       </span>
       <span className="flex items-center gap-2">
         <span className="h-3.5 w-3.5 rounded-full opacity-35 ring-1 ring-border" />
-        Μη διαθέσιμες στο παρελθόν
+        {t("legendPast")}
       </span>
       {mode === "owner" && (
         <span className="flex items-center gap-2">
           <span className="h-3.5 w-3.5 rounded-full border border-border bg-white" />
-          Διαθέσιμο
+          {t("legendAvailable")}
         </span>
       )}
       {mode === "owner" && (
         <span className="flex items-center gap-2">
           <span className="text-[10px] font-semibold text-teal">€</span>
-          Ειδική τιμή
+          {t("legendSpecialPrice")}
         </span>
       )}
     </div>
@@ -404,6 +435,8 @@ export function AvailabilityCalendarGrid({
   showLegend = true,
   unavailableDayStyle = "default",
 }: Props) {
+  const t = useTranslations("Listing.datePicker");
+  const locale = useLocale();
   return (
     <div className={cn("select-none", className)}>
       {!hideHeader && (
@@ -412,18 +445,18 @@ export function AvailabilityCalendarGrid({
             type="button"
             onClick={onPrevMonth}
             className="flex h-10 w-10 items-center justify-center rounded-full border border-border bg-white text-charcoal shadow-sm transition-colors hover:border-gold/40 hover:bg-sand/60"
-            aria-label="Προηγούμενος μήνας"
+            aria-label={t("prevMonth")}
           >
             <ChevronLeft className="h-4 w-4" />
           </button>
           <p className="font-display text-base font-semibold text-charcoal">
-            {formatMonthYear(month)}
+            {formatMonthYear(month, locale)}
           </p>
           <button
             type="button"
             onClick={onNextMonth}
             className="flex h-10 w-10 items-center justify-center rounded-full border border-border bg-white text-charcoal shadow-sm transition-colors hover:border-gold/40 hover:bg-sand/60"
-            aria-label="Επόμενος μήνας"
+            aria-label={t("nextMonth")}
           >
             <ChevronRight className="h-4 w-4" />
           </button>
@@ -480,6 +513,8 @@ export function AvailabilityCalendarPanel({
   compact = false,
   unavailableDayStyle = "default",
 }: Omit<Props, "hideHeader"> & { title?: string; hideNav?: boolean }) {
+  const t = useTranslations("Listing.datePicker");
+  const locale = useLocale();
   const nextMonth = new Date(month.getFullYear(), month.getMonth() + 1, 1);
   const showDual = layout === "dual" || (layout === "responsive");
   const showSingleOnly = layout === "single";
@@ -492,7 +527,7 @@ export function AvailabilityCalendarPanel({
             type="button"
             onClick={onPrevMonth}
             className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-border bg-white text-charcoal shadow-sm transition-colors hover:border-gold/40 hover:bg-gold/8"
-            aria-label="Προηγούμενος μήνας"
+            aria-label={t("prevMonth")}
           >
             <ChevronLeft className="h-4 w-4" />
           </button>
@@ -506,11 +541,11 @@ export function AvailabilityCalendarPanel({
               )}
             >
               <p className="font-display text-sm font-semibold text-charcoal">
-                {formatMonthYear(month)}
+                {formatMonthYear(month, locale)}
                 {showDual && !showSingleOnly && (
                   <>
                     <span className="mx-2 text-muted">—</span>
-                    {formatMonthYear(nextMonth)}
+                    {formatMonthYear(nextMonth, locale)}
                   </>
                 )}
               </p>
@@ -520,7 +555,7 @@ export function AvailabilityCalendarPanel({
             type="button"
             onClick={onNextMonth}
             className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-border bg-white text-charcoal shadow-sm transition-colors hover:border-gold/40 hover:bg-gold/8"
-            aria-label="Επόμενος μήνας"
+            aria-label={t("nextMonth")}
           >
             <ChevronRight className="h-4 w-4" />
           </button>
@@ -531,7 +566,7 @@ export function AvailabilityCalendarPanel({
         <div className="hidden gap-8 md:grid md:grid-cols-2">
           <div>
             <p className="mb-3 text-center font-display text-sm font-semibold text-charcoal">
-              {formatMonthYear(month)}
+              {formatMonthYear(month, locale)}
             </p>
             <MonthGrid
               month={month}
@@ -553,7 +588,7 @@ export function AvailabilityCalendarPanel({
           </div>
           <div>
             <p className="mb-3 text-center font-display text-sm font-semibold text-charcoal">
-              {formatMonthYear(nextMonth)}
+              {formatMonthYear(nextMonth, locale)}
             </p>
             <MonthGrid
               month={nextMonth}
@@ -578,7 +613,7 @@ export function AvailabilityCalendarPanel({
 
       <div className={cn(showDual && !showSingleOnly && "md:hidden")}>
         <p className="mb-3 text-center font-display text-sm font-semibold text-charcoal">
-          {formatMonthYear(month)}
+          {formatMonthYear(month, locale)}
         </p>
         <MonthGrid
           month={month}

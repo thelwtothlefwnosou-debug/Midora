@@ -47,7 +47,7 @@ import { formatInterestRangeLabel } from "@/lib/search-interest-dates";
 
 import { computeIndicativeStayPrice } from "@/lib/listing-short-term-price";
 
-import { COPY } from "@/lib/copy";
+import { useTranslations } from "next-intl";
 
 import { cn } from "@/lib/utils";
 
@@ -80,6 +80,9 @@ export function ShortTermPriceCard({
 }: Props) {
 
   const { openInterest } = useListingInterest();
+  const tCommon = useTranslations("Common");
+  const tListing = useTranslations("Listing");
+  const tListingLabels = useTranslations("Listing.labels");
 
   const searchParams = useSearchParams();
 
@@ -193,7 +196,7 @@ export function ShortTermPriceCard({
 
     if (range && !rangeMeetsMinStay) return;
 
-    const guestLabel = `${guests} ${guests === 1 ? "άτομο" : "άτομα"}`;
+    const guestLabel = `${guests} ${guests === 1 ? tCommon("person") : tCommon("peoplePlural")}`;
 
     if (range) {
 
@@ -207,7 +210,10 @@ export function ShortTermPriceCard({
 
         timingNote: formatInterestRangeLabel(range.start, range.end),
 
-        message: `Ενδιαφέρομαι για το ακίνητο από ${formatInterestRangeLabel(range.start, range.end)}, για ${guestLabel}. Θα ήθελα να επικοινωνήσουμε για περισσότερες πληροφορίες.`,
+        message: tListing("priceCard.interestGuestsMessage", {
+          range: formatInterestRangeLabel(range.start, range.end),
+          guests: guestLabel,
+        }),
 
       });
 
@@ -217,7 +223,7 @@ export function ShortTermPriceCard({
 
         guests,
 
-        message: `Ενδιαφέρομαι για το ακίνητο για ${guestLabel}. Θα ήθελα να επικοινωνήσουμε για περισσότερες πληροφορίες.`,
+        message: tListing("priceCard.interestSimpleMessage", { guests: guestLabel }),
 
       });
 
@@ -247,7 +253,7 @@ export function ShortTermPriceCard({
 
         <p className="text-xs font-medium tracking-wide text-muted uppercase">
 
-          Ημερομηνίες ενδιαφέροντος
+          {tListing("priceCard.interestDates")}
 
         </p>
 
@@ -263,9 +269,7 @@ export function ShortTermPriceCard({
 
             <p className="text-xs text-gold-dark">
 
-              {stayNightsBetween(range.start, range.end)}{" "}
-
-              {stayNightsBetween(range.start, range.end) === 1 ? "νύχτα" : "νύχτες"}
+              {tListing("nightsCount", { count: stayNightsBetween(range.start, range.end) })}
 
             </p>
 
@@ -273,7 +277,7 @@ export function ShortTermPriceCard({
 
         ) : (
 
-          <p className="mt-0.5 text-sm text-muted">Επίλεξε άφιξη και αναχώρηση</p>
+          <p className="mt-0.5 text-sm text-muted">{tListing("priceCard.selectDatesHint")}</p>
 
         )}
 
@@ -329,7 +333,7 @@ export function ShortTermPriceCard({
 
             <h3 className="listing-section-title text-lg sm:text-lg">
 
-              Διαθεσιμότητα και ενδιαφέρον
+              {tListing("priceCard.sectionTitle")}
 
             </h3>
 
@@ -347,9 +351,9 @@ export function ShortTermPriceCard({
 
                 <p className="mt-1 text-sm text-muted">
 
-                  {indicative.nights} {indicative.nights === 1 ? "νύχτα" : "νύχτες"} · €
+                  {tListing("nightsCount", { count: indicative.nights })} · €
 
-                  {nightPrice.toLocaleString("el-GR")} / βράδυ
+                  {nightPrice.toLocaleString("el-GR")} {tCommon("perNight")}
 
                   {indicative.nights > 1
 
@@ -365,9 +369,9 @@ export function ShortTermPriceCard({
 
               <p className="listing-price-display mt-3 text-2xl">
 
-                Από €{nightPrice.toLocaleString("el-GR")}{" "}
+                {tListing("priceCard.fromPricePrefix")} €{nightPrice.toLocaleString("el-GR")}{" "}
 
-                <span className="text-base font-medium text-muted">/ βράδυ</span>
+                <span className="text-base font-medium text-muted">{tCommon("perNight")}</span>
 
               </p>
 
@@ -379,7 +383,7 @@ export function ShortTermPriceCard({
 
               <p className="mt-1 text-sm text-muted">
 
-                Η βασική τιμή περιλαμβάνει έως {listing.included_guests} άτομα
+                {tListing("priceCard.guestsIncludedInPrice", { count: listing.included_guests })}
 
               </p>
 
@@ -391,9 +395,10 @@ export function ShortTermPriceCard({
 
                 <p className="text-sm text-muted">
 
-                  + €{listing.extra_guest_fee_per_night.toLocaleString("el-GR")} / βράδυ για
-
-                  κάθε επιπλέον άτομο
+                  {tListing("priceCard.extraGuestFeeLine", {
+                    fee: `€${listing.extra_guest_fee_per_night.toLocaleString("el-GR")}`,
+                    unit: tCommon("perNight"),
+                  })}
 
                 </p>
 
@@ -405,7 +410,7 @@ export function ShortTermPriceCard({
 
               <p className="mt-1 text-xs text-muted">
 
-                Περιλαμβάνει χρέωση για επιπλέον επισκέπτες
+                {tListing("priceCard.extraGuestFeeIncludedNote")}
 
               </p>
 
@@ -417,9 +422,7 @@ export function ShortTermPriceCard({
 
               <p className="mt-2 text-sm text-amber-800">
 
-                Ελάχιστη διαμονή {minimumStayNights}{" "}
-
-                {minimumStayNights === 1 ? "νύχτα" : "νύχτες"}.
+                {tListing("minStayNights", { count: minimumStayNights })}
 
               </p>
 
@@ -435,7 +438,7 @@ export function ShortTermPriceCard({
 
               <span className="text-xs font-medium tracking-wide text-muted uppercase">
 
-                Επισκέπτες
+                {tListing("guests")}
 
               </span>
 
@@ -453,7 +456,7 @@ export function ShortTermPriceCard({
 
                   <option key={n} value={n}>
 
-                    {n} {n === 1 ? "επισκέπτης" : "επισκέπτες"}
+                    {tListingLabels("guestsSummary", { count: n })}
 
                   </option>
 
@@ -469,7 +472,7 @@ export function ShortTermPriceCard({
 
               <p className="mt-2 text-xs text-muted">
 
-                Ειδική περίοδος: {indicative.ruleLabel}
+                {tListing("priceCard.specialPeriod", { label: indicative.ruleLabel })}
 
               </p>
 
@@ -478,8 +481,7 @@ export function ShortTermPriceCard({
 
 
             <p className="mt-3 text-xs leading-relaxed text-muted">
-              Η τελική διαθεσιμότητα και η συμφωνία επιβεβαιώνονται απευθείας με τον
-              αγγελιοδότη.
+              {tListing("priceCard.availabilityConfirmedNote")}
             </p>
 
             <button
@@ -487,7 +489,7 @@ export function ShortTermPriceCard({
               onClick={openContact}
               className="mt-5 flex min-h-11 w-full items-center justify-center rounded-xl bg-gold px-4 text-sm font-semibold text-white hover:bg-gold-dark"
             >
-              {COPY.expressInterest}
+              {tCommon("expressInterest")}
             </button>
 
             <ListingContactCard contact={contact} primary className="mt-4" />
@@ -539,9 +541,9 @@ export function ShortTermPriceCard({
 
                 <p className="text-[11px] text-muted">
 
-                  {indicative.nights} {indicative.nights === 1 ? "νύχτα" : "νύχτες"} · €
+                  {tListing("nightsCount", { count: indicative.nights })} · €
 
-                  {nightPrice.toLocaleString("el-GR")}/βράδυ
+                  {nightPrice.toLocaleString("el-GR")} {tCommon("perNight")}
 
                 </p>
 
@@ -553,7 +555,7 @@ export function ShortTermPriceCard({
 
                 <p className="listing-price-display text-lg">
 
-                  Από €{nightPrice.toLocaleString("el-GR")} / βράδυ
+                  {tListing("priceCard.fromPricePrefix")} €{nightPrice.toLocaleString("el-GR")} {tCommon("perNight")}
 
                 </p>
 
@@ -563,7 +565,7 @@ export function ShortTermPriceCard({
 
                     ? `${formatDateKeyDisplay(range.start)} – ${formatDateKeyDisplay(range.end)}`
 
-                    : "Ενδιαφέρον · ημερομηνίες"}
+                    : tListing("priceCard.mobileDatesPrompt")}
 
                 </p>
 
@@ -611,13 +613,13 @@ export function ShortTermPriceCard({
 
             {range && rangeMeetsMinStay
 
-              ? "Στείλε ενδιαφέρον"
+              ? tCommon("expressInterest")
 
               : contact.allowPhone && contact.phone
 
-                ? COPY.contactPhone
+                ? tCommon("contactPhone")
 
-                : "Ημερομηνίες"}
+                : tListing("selectDates")}
 
           </button>
 

@@ -209,6 +209,16 @@ export function AdminListingDetail({
           <Field label="Τ.Μ." value={listing.sqm != null ? `${listing.sqm} τ.μ.` : null} />
           <Field label="Υπνοδωμάτια" value={listing.bedrooms} />
           <Field label="Μπάνια" value={listing.bathrooms} />
+          <Field
+            label="Όροφος"
+            value={
+              listing.floor == null
+                ? null
+                : listing.floor === 0
+                  ? "Ισόγειο"
+                  : `${listing.floor}ος`
+            }
+          />
           <Field label="Μέγ. αριθμός ατόμων" value={listing.max_guests} />
           <Field label="Ελάχιστη διαμονή" value={formatMinStayLabel(listing) ?? listing.min_stay_label} />
         </Section>
@@ -219,8 +229,12 @@ export function AdminListingDetail({
           <div className="rounded-lg bg-sand/40 p-3">
             <p className="text-xs font-medium uppercase text-muted">Ιδιωτική διεύθυνση (μόνο admin)</p>
             <p className="mt-1 text-charcoal">{formatPrivateAddress(listing)}</p>
-            {listing.address_floor && (
-              <p className="mt-1 text-muted">Όροφος: {listing.address_floor}</p>
+            {(listing.address_floor || listing.floor != null) && (
+              <p className="mt-1 text-muted">
+                Όροφος:{" "}
+                {listing.address_floor?.trim() ||
+                  (listing.floor === 0 ? "Ισόγειο" : `${listing.floor}ος`)}
+              </p>
             )}
             {listing.address_unit && (
               <p className="text-muted">Διαμέρισμα: {listing.address_unit}</p>

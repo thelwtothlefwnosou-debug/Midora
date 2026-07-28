@@ -1,3 +1,5 @@
+import { buildAadeOwnerGuideHelpContent } from "@/lib/aade-owner-guide";
+
 export type HelpAudience = "visitor" | "owner" | "cohost" | "all";
 
 export type HelpArticle = {
@@ -252,6 +254,26 @@ export const HELP_ARTICLES: HelpArticle[] = [
 Για ασφάλεια: επικοινώνησε μέσα από το Midora και επιβεβαίωσε διαθεσιμότητα πριν συμφωνία.
 
 Δεν δίνουμε νομικές ή φορολογικές συμβουλές.`,
+  },
+  {
+    id: "aade-owner-guide",
+    title: "Οδηγός ΑΑΔΕ για ιδιοκτήτες",
+    category: "midora_owner_listing",
+    audience: "owner",
+    routes: ["/dashboard/", "/help", "/listing-rules"],
+    keywords: [
+      "ααδε",
+      "aade",
+      "αμα",
+      "εσλ",
+      "μαγ",
+      "οδηγος",
+      "δηλωση",
+      "φορολογ",
+      "myaade",
+    ],
+    lastUpdated: "2026-07-18",
+    content: buildAadeOwnerGuideHelpContent(),
   },
   {
     id: "troubleshooting",

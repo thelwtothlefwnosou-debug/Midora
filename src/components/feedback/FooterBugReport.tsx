@@ -1,11 +1,20 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { BugReportButton } from "@/components/feedback/BugReportButton";
+import { cn } from "@/lib/utils";
 
-export function FooterBugReport() {
+export function FooterBugReport({ className }: { className?: string }) {
+  const t = useTranslations("Feedback");
+
   return (
-    <BugReportButton className="text-sm text-muted transition-colors hover:text-gold-dark">
-      Αναφορά προβλήματος
+    <BugReportButton
+      className={cn(
+        "site-footer-link cursor-pointer border-0 bg-transparent p-0 text-left",
+        className
+      )}
+    >
+      {t("reportIssue")}
     </BugReportButton>
   );
 }

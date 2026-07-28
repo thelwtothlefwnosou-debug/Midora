@@ -1,3 +1,4 @@
+import { getTranslations } from "next-intl/server";
 import { AccountShell } from "@/components/account/AccountShell";
 import { CohostManagedListingsSection } from "@/components/dashboard/CohostManagedListingsSection";
 import { DashboardListingsView } from "@/components/dashboard/DashboardListingsView";
@@ -14,6 +15,10 @@ function mapLegacyStatusFilter(status?: string): ListingFilterTab {
   if (status === "active") return "published";
   if (status === "pending") return "review";
   if (status === "draft") return "draft";
+  if (status === "action" || status === "action_required") return "action_required";
+  if (status === "paused" || status === "expired" || status === "inactive") {
+    return "inactive";
+  }
   return "all";
 }
 
@@ -28,6 +33,7 @@ export default async function DashboardListingsPage({
   }>;
 }) {
   const { profile, email } = await requireDashboardContext("/dashboard/listings");
+  const t = await getTranslations("Dashboard.listingsPage");
   const { submitted, saved, draftSaved, status: statusFilter } = await searchParams;
   const [allListings, cohostItems] = await Promise.all([
     attachStoredViewCounts(await getUserListings(profile.id)),
@@ -55,17 +61,17 @@ export default async function DashboardListingsPage({
       profile={profile}
       email={email}
       active="listings"
-      title="Τα ακίνητά μου"
-      subtitle="Διαχειρίσου την προβολή, την κατάσταση και τα αιτήματα για κάθε ακίνητο."
+      title={t("title")}
+      subtitle={t("subtitle")}
     >
       {submitted === "review" && (
         <div className="mb-5 rounded-xl border border-teal/25 bg-teal/10 px-4 py-3 text-sm text-charcoal">
-          Η αγγελία υποβλήθηκε για έλεγχο. Θα ενημερωθείς όταν ολοκληρωθεί ο βασικός έλεγχο.
+          {t("submittedBanner")}
         </div>
       )}
       {(draftSaved === "1" || saved === "draft") && (
         <div className="mb-5 rounded-xl border border-gold/30 bg-gold/10 px-4 py-3 text-sm text-charcoal">
-          Η αγγελία αποθηκεύτηκε ως πρόχειρο.
+          {t("draftSavedBanner")}
         </div>
       )}
 

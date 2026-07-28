@@ -7,23 +7,51 @@ import {
 } from "@/lib/dashboard-listings";
 import type { ListingLeadStats } from "@/lib/owner-listing-analytics";
 import { listingRentalType } from "@/lib/rental-types";
-import { ownerListingCompletenessPercent } from "@/lib/owner-dashboard";
+import {
+  ownerListingCompletenessItems,
+  ownerListingCompletenessPercent,
+} from "@/lib/owner-dashboard";
 import { MIN_LISTING_PHOTOS_FOR_REVIEW } from "@/lib/constants";
 import { getDisplayViewCount } from "@/lib/listing-views";
 
 export type ListingFilterTab =
   | "all"
+  | "action_required"
+  | "draft"
   | "published"
   | "review"
-  | "draft"
-  | "paused"
-  | "expired";
+  | "inactive";
 
 export type ListingSortOption =
   | "recent"
   | "views"
   | "inquiries"
   | "expiring";
+
+export type OwnerActionRequiredMessageKey =
+  | "msgMissingRequired"
+  | "msgNeedsFixes"
+  | "msgExpired"
+  | "msgExpiringSoon"
+  | "msgExpiringDays"
+  | "msgMissingPhotos";
+
+export type OwnerActionRequiredCtaKey =
+  | "ctaContinue"
+  | "ctaFix"
+  | "ctaRenew"
+  | "ctaAdd";
+
+export type OwnerActionRequiredItem = {
+  id: string;
+  listingId: string;
+  title: string;
+  messageKey: OwnerActionRequiredMessageKey;
+  messageValues?: Record<string, string | number>;
+  ctaKey: OwnerActionRequiredCtaKey;
+  href: string;
+  kind: "draft" | "needs_fixes" | "expired" | "photos" | "expiring";
+};
 
 export type OwnerListingAlert = {
   id: string;
@@ -46,6 +74,7 @@ export type OwnerListingRowModel = {
   ownerStatusKey: OwnerListingStatusKey;
   photoCount: number;
   completenessPercent: number;
+  missingRequiredCount: number;
   leadStats: ListingLeadStats;
   daysUntilExpiry: number | null;
 };
@@ -62,6 +91,8 @@ export function buildOwnerListingRowModel(
 ): OwnerListingRowModel {
   const photoCount =
     listing.listing_images?.filter((i) => i.media_type !== "video").length ?? 0;
+  const completenessItems = ownerListingCompletenessItems(listing, photoCount);
+  const missingRequiredCount = completenessItems.filter((i) => !i.done).length;
 
   return {
     listing,
@@ -69,9 +100,33 @@ export function buildOwnerListingRowModel(
     ownerStatusKey: getOwnerListingStatus(listing, effectiveStatus).key,
     photoCount,
     completenessPercent: ownerListingCompletenessPercent(listing, photoCount),
+    missingRequiredCount,
     leadStats,
     daysUntilExpiry: daysUntil(listing.expires_at),
   };
+}
+
+export function isOwnerListingActionRequired(row: OwnerListingRowModel): boolean {
+  const { ownerStatusKey, completenessPercent, photoCount, daysUntilExpiry } = row;
+
+  if (ownerStatusKey === "draft" && completenessPercent < 100) return true;
+  if (ownerStatusKey === "needs_fixes") return true;
+  if (ownerStatusKey === "expired") return true;
+  if (
+    daysUntilExpiry != null &&
+    daysUntilExpiry >= 0 &&
+    daysUntilExpiry <= 14 &&
+    (ownerStatusKey === "published" || ownerStatusKey === "paused")
+  ) {
+    return true;
+  }
+  if (
+    ownerStatusKey === "review" &&
+    photoCount < MIN_LISTING_PHOTOS_FOR_REVIEW
+  ) {
+    return true;
+  }
+  return false;
 }
 
 export function filterOwnerListings(
@@ -81,16 +136,20 @@ export function filterOwnerListings(
   if (tab === "all") return rows;
   return rows.filter((row) => {
     switch (tab) {
+      case "action_required":
+        return isOwnerListingActionRequired(row);
       case "published":
         return row.ownerStatusKey === "published";
       case "review":
-        return row.ownerStatusKey === "review" || row.ownerStatusKey === "needs_fixes";
+        return row.ownerStatusKey === "review";
       case "draft":
         return row.ownerStatusKey === "draft";
-      case "paused":
-        return row.ownerStatusKey === "paused";
-      case "expired":
-        return row.ownerStatusKey === "expired" || row.ownerStatusKey === "rejected";
+      case "inactive":
+        return (
+          row.ownerStatusKey === "paused" ||
+          row.ownerStatusKey === "expired" ||
+          row.ownerStatusKey === "rejected"
+        );
       default:
         return true;
     }
@@ -105,12 +164,7 @@ export function searchOwnerListings(
   if (!q) return rows;
   return rows.filter((row) => {
     const { listing } = row;
-    const haystack = [
-      listing.title,
-      listing.city,
-      listing.area,
-      listing.id,
-    ]
+    const haystack = [listing.title, listing.city, listing.area, listing.id]
       .filter(Boolean)
       .join(" ")
       .toLowerCase();
@@ -137,9 +191,7 @@ export function sortOwnerListings(
         (a, b) => getDisplayViewCount(b.listing) - getDisplayViewCount(a.listing)
       );
     case "inquiries":
-      return copy.sort(
-        (a, b) => b.leadStats.total - a.leadStats.total
-      );
+      return copy.sort((a, b) => b.leadStats.total - a.leadStats.total);
     case "expiring":
       return copy.sort((a, b) => {
         const da = a.daysUntilExpiry ?? Number.POSITIVE_INFINITY;
@@ -156,17 +208,20 @@ export function sortOwnerListings(
   }
 }
 
-export function countListingsByTab(rows: OwnerListingRowModel[]): Record<ListingFilterTab, number> {
+export function countListingsByTab(
+  rows: OwnerListingRowModel[]
+): Record<ListingFilterTab, number> {
   return {
     all: rows.length,
+    action_required: rows.filter((r) => isOwnerListingActionRequired(r)).length,
     published: rows.filter((r) => r.ownerStatusKey === "published").length,
-    review: rows.filter(
-      (r) => r.ownerStatusKey === "review" || r.ownerStatusKey === "needs_fixes"
-    ).length,
+    review: rows.filter((r) => r.ownerStatusKey === "review").length,
     draft: rows.filter((r) => r.ownerStatusKey === "draft").length,
-    paused: rows.filter((r) => r.ownerStatusKey === "paused").length,
-    expired: rows.filter(
-      (r) => r.ownerStatusKey === "expired" || r.ownerStatusKey === "rejected"
+    inactive: rows.filter(
+      (r) =>
+        r.ownerStatusKey === "paused" ||
+        r.ownerStatusKey === "expired" ||
+        r.ownerStatusKey === "rejected"
     ).length,
   };
 }
@@ -186,71 +241,124 @@ export function buildOwnerListingsOverview(
     activeCount: published.length,
     viewsLast30Days: hasViewData ? viewsSum : null,
     newInquiries,
-    needsActionCount: buildOwnerListingAlerts(rows, newInquiries).length,
+    needsActionCount: buildOwnerActionRequiredItems(rows).length,
   };
 }
 
-export function buildOwnerListingAlerts(
-  rows: OwnerListingRowModel[],
-  newInquiries: number
-): OwnerListingAlert[] {
-  const alerts: OwnerListingAlert[] = [];
+/** One organized action item per listing that needs owner attention. */
+export function buildOwnerActionRequiredItems(
+  rows: OwnerListingRowModel[]
+): OwnerActionRequiredItem[] {
+  const items: OwnerActionRequiredItem[] = [];
 
   for (const row of rows) {
-    const { listing, ownerStatusKey, photoCount, completenessPercent, daysUntilExpiry } =
-      row;
-
-    if (daysUntilExpiry != null && daysUntilExpiry >= 1 && daysUntilExpiry <= 14) {
-      alerts.push({
-        id: `expiring-${listing.id}`,
-        message:
-          daysUntilExpiry === 1
-            ? `Η αγγελία «${listing.title}» λήγει αύριο`
-            : `Η αγγελία «${listing.title}» λήγει σε ${daysUntilExpiry} ημέρες`,
-        cta: "Ανανέωση",
-        href: `/dashboard/listings/${listing.id}/pay?reactivate=1`,
-        tone: daysUntilExpiry <= 6 ? "amber" : "gold",
-      });
-    }
+    const {
+      listing,
+      ownerStatusKey,
+      photoCount,
+      completenessPercent,
+      daysUntilExpiry,
+    } = row;
 
     if (ownerStatusKey === "draft" && completenessPercent < 100) {
-      alerts.push({
+      items.push({
         id: `draft-${listing.id}`,
-        message: `Η αγγελία «${listing.title}» χρειάζεται συμπλήρωση πριν υποβληθεί`,
-        cta: "Συνέχισε τη συμπλήρωση",
+        listingId: listing.id,
+        title: listing.title,
+        messageKey: "msgMissingRequired",
+        ctaKey: "ctaContinue",
         href: `/dashboard/listings/new?draft=${listing.id}`,
-        tone: "gold",
+        kind: "draft",
       });
+      continue;
     }
 
     if (ownerStatusKey === "needs_fixes") {
-      alerts.push({
+      items.push({
         id: `fixes-${listing.id}`,
-        message: `Η αγγελία «${listing.title}» χρειάζεται διορθώσεις`,
-        cta: "Δες τις παρατηρήσεις",
+        listingId: listing.id,
+        title: listing.title,
+        messageKey: "msgNeedsFixes",
+        ctaKey: "ctaFix",
         href: `/dashboard/listings/${listing.id}/edit`,
-        tone: "amber",
+        kind: "needs_fixes",
       });
+      continue;
+    }
+
+    if (ownerStatusKey === "expired") {
+      items.push({
+        id: `expired-${listing.id}`,
+        listingId: listing.id,
+        title: listing.title,
+        messageKey: "msgExpired",
+        ctaKey: "ctaRenew",
+        href: `/dashboard/listings/${listing.id}/pay?reactivate=1`,
+        kind: "expired",
+      });
+      continue;
     }
 
     if (
-      ownerStatusKey !== "published" &&
-      ownerStatusKey !== "paused" &&
-      photoCount < MIN_LISTING_PHOTOS_FOR_REVIEW &&
-      ownerStatusKey !== "draft"
+      daysUntilExpiry != null &&
+      daysUntilExpiry >= 0 &&
+      daysUntilExpiry <= 14 &&
+      (ownerStatusKey === "published" || ownerStatusKey === "paused")
     ) {
-      alerts.push({
+      items.push({
+        id: `expiring-${listing.id}`,
+        listingId: listing.id,
+        title: listing.title,
+        messageKey:
+          daysUntilExpiry <= 1 ? "msgExpiringSoon" : "msgExpiringDays",
+        messageValues:
+          daysUntilExpiry <= 1 ? undefined : { days: daysUntilExpiry },
+        ctaKey: "ctaRenew",
+        href: `/dashboard/listings/${listing.id}/pay?reactivate=1`,
+        kind: "expiring",
+      });
+      continue;
+    }
+
+    if (
+      ownerStatusKey === "review" &&
+      photoCount < MIN_LISTING_PHOTOS_FOR_REVIEW
+    ) {
+      items.push({
         id: `photos-${listing.id}`,
-        message: `Η αγγελία «${listing.title}» χρειάζεται φωτογραφίες`,
-        cta: "Πρόσθεσε φωτογραφίες",
+        listingId: listing.id,
+        title: listing.title,
+        messageKey: "msgMissingPhotos",
+        ctaKey: "ctaAdd",
         href: `/dashboard/listings/${listing.id}/photos`,
-        tone: "neutral",
+        kind: "photos",
       });
     }
   }
 
+  return items;
+}
+
+/** @deprecated Prefer buildOwnerActionRequiredItems — kept for overview metrics compatibility. */
+export function buildOwnerListingAlerts(
+  rows: OwnerListingRowModel[],
+  newInquiries: number
+): OwnerListingAlert[] {
+  const items: OwnerListingAlert[] = buildOwnerActionRequiredItems(rows).map((item) => ({
+    id: item.id,
+    message: item.messageKey,
+    cta: item.ctaKey,
+    href: item.href,
+    tone:
+      item.kind === "needs_fixes" || item.kind === "expired"
+        ? ("amber" as const)
+        : item.kind === "draft" || item.kind === "expiring"
+          ? ("gold" as const)
+          : ("neutral" as const),
+  }));
+
   if (newInquiries > 0) {
-    alerts.unshift({
+    items.unshift({
       id: "new-inquiries",
       message:
         newInquiries === 1
@@ -262,15 +370,12 @@ export function buildOwnerListingAlerts(
     });
   }
 
-  const seen = new Set<string>();
-  return alerts.filter((a) => {
-    if (seen.has(a.id)) return false;
-    seen.add(a.id);
-    return true;
-  });
+  return items;
 }
 
-export function listingNeedsCompletenessPanel(ownerStatusKey: OwnerListingStatusKey): boolean {
+export function listingNeedsCompletenessPanel(
+  ownerStatusKey: OwnerListingStatusKey
+): boolean {
   return ownerStatusKey === "draft" || ownerStatusKey === "needs_fixes";
 }
 

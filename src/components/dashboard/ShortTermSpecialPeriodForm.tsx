@@ -2,6 +2,7 @@
 
 import { useActionState } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { saveSpecialPricingPeriod } from "@/lib/listing-pricing-actions";
 import { cn } from "@/lib/utils";
 
@@ -12,6 +13,7 @@ type Props = {
 
 export function ShortTermSpecialPeriodForm({ listingId, onAdded }: Props) {
   const router = useRouter();
+  const t = useTranslations("Workspace.specialPeriodForm");
   const [state, formAction, pending] = useActionState(
     async (_prev: { error?: string; success?: boolean } | null, formData: FormData) => {
       const result = await saveSpecialPricingPeriod(listingId, formData);
@@ -27,12 +29,12 @@ export function ShortTermSpecialPeriodForm({ listingId, onAdded }: Props) {
   return (
     <form action={formAction} className="space-y-3">
       <p className="text-xs font-medium tracking-wide text-muted uppercase">
-        Προσθήκη ειδικής περιόδου
+        {t("title")}
       </p>
       <input
         name="name"
         required
-        placeholder="π.χ. Δεκαπενταύγουστος"
+        placeholder={t("namePlaceholder")}
         className="w-full rounded-xl border border-border px-3 py-2 text-sm outline-none focus:border-gold/50"
       />
       <div className="grid grid-cols-2 gap-2">
@@ -53,22 +55,22 @@ export function ShortTermSpecialPeriodForm({ listingId, onAdded }: Props) {
         name="price_per_night"
         type="number"
         min={1}
-        placeholder="Τιμή / βράδυ"
+        placeholder={t("pricePlaceholder")}
         className="w-full rounded-xl border border-border px-3 py-2 text-sm outline-none focus:border-gold/50"
       />
       <input
         name="min_stay_nights"
         type="number"
         min={1}
-        placeholder="Ελάχ. νύχτες (προαιρ.)"
+        placeholder={t("minNightsPlaceholder")}
         className="w-full rounded-xl border border-border px-3 py-2 text-sm outline-none focus:border-gold/50"
       />
       <label className="flex items-center gap-2 text-xs text-muted">
         <input type="checkbox" name="blocked" className="accent-gold" />
-        Μη διαθέσιμη περίοδος
+        {t("blockedPeriod")}
       </label>
       {state?.error && <p className="text-xs text-red-500">{state.error}</p>}
-      {state?.success && <p className="text-xs text-teal">Η περίοδος προστέθηκε.</p>}
+      {state?.success && <p className="text-xs text-teal">{t("added")}</p>}
       <button
         type="submit"
         disabled={pending}
@@ -77,7 +79,7 @@ export function ShortTermSpecialPeriodForm({ listingId, onAdded }: Props) {
           "hover:border-gold/40 hover:bg-sand/50 disabled:opacity-50"
         )}
       >
-        {pending ? "Αποθήκευση…" : "Προσθήκη περιόδου"}
+        {pending ? t("saving") : t("addPeriod")}
       </button>
     </form>
   );

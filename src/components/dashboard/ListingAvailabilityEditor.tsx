@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { CalendarRange, Check } from "lucide-react";
+import { useLocale, useTranslations } from "next-intl";
 import { updateListingAvailability } from "@/lib/actions";
 import {
   formatAvailabilityMonthNote,
@@ -22,6 +23,12 @@ type Props = {
   className?: string;
 };
 
+const STATUS_LABEL_KEYS: Record<ListingAvailabilityStatus, "statusAvailableNow" | "statusFromMonth" | "statusUponRequest"> = {
+  available_now: "statusAvailableNow",
+  from_month: "statusFromMonth",
+  upon_request: "statusUponRequest",
+};
+
 export function ListingAvailabilityEditor({
   listingId,
   availabilityStatus,
@@ -30,6 +37,9 @@ export function ListingAvailabilityEditor({
   variant = "default",
   className,
 }: Props) {
+  const t = useTranslations("Workspace.availabilityEditor");
+  const tListing = useTranslations("Listing");
+  const locale = useLocale();
   const [status, setStatus] = useState<ListingAvailabilityStatus>(
     parseListingAvailabilityStatus(availabilityStatus ?? undefined)
   );
@@ -42,23 +52,25 @@ export function ListingAvailabilityEditor({
 
   const noteForPreview =
     status === "from_month" && monthValue
-      ? formatAvailabilityMonthNote(monthValue)
+      ? formatAvailabilityMonthNote(monthValue, locale)
       : null;
 
-  const preview = formatListingAvailabilityText({
-    availability_status: status,
-    availability_note: noteForPreview,
-  });
+  const preview = formatListingAvailabilityText(
+    {
+      availability_status: status,
+      availability_note: noteForPreview,
+    },
+    (key, values) => tListing(key, values)
+  );
 
-  const title =
-    variant === "monthly" ? "Διαθεσιμότητα μηνιαίας / μεσοπρόθεσμης" : "Διαθεσιμότητα";
+  const title = variant === "monthly" ? t("titleMonthly") : t("titleDefault");
 
   function handleSave(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
 
     if (status === "from_month" && !monthValue) {
-      setError("Επίλεξε από ποιον μήνα είναι διαθέσιμο.");
+      setError(t("monthRequired"));
       return;
     }
 
@@ -68,7 +80,7 @@ export function ListingAvailabilityEditor({
       fd.set(
         "availability_note",
         status === "from_month" && monthValue
-          ? formatAvailabilityMonthNote(monthValue)
+          ? formatAvailabilityMonthNote(monthValue, locale)
           : ""
       );
       const result = await updateListingAvailability(listingId, fd);
@@ -96,7 +108,7 @@ export function ListingAvailabilityEditor({
         {saved && (
           <span className="inline-flex items-center gap-1 text-teal">
             <Check className="h-3.5 w-3.5" />
-            Η διαθεσιμότητα αποθηκεύτηκε
+            {t("saved")}
           </span>
         )}
       </div>
@@ -120,16 +132,14 @@ export function ListingAvailabilityEditor({
               onChange={() => setStatus(option.value)}
               className="mt-0.5 accent-gold"
             />
-            <span>{option.label}</span>
+            <span>{t(STATUS_LABEL_KEYS[option.value])}</span>
           </label>
         ))}
       </div>
 
       {status === "from_month" && (
         <label className="mt-3 block">
-          <span className="text-[10px] uppercase tracking-wide text-muted">
-            Μήνας διαθεσιμότητας
-          </span>
+          <span className="text-[10px] uppercase tracking-wide text-muted">{t("monthLabel")}</span>
           <input
             type="month"
             required
@@ -143,15 +153,15 @@ export function ListingAvailabilityEditor({
       <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
         <p className="text-[11px] text-muted">
           {status === "from_month" && noteForPreview
-            ? `Διαθέσιμο από ${noteForPreview}`
-            : `Προεπισκόπηση: ${preview}`}
+            ? t("availableFromPreview", { note: noteForPreview })
+            : t("previewLabel", { preview })}
         </p>
         <button
           type="submit"
           disabled={pending}
           className="shrink-0 rounded-lg bg-gold px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-50"
         >
-          {pending ? "..." : "Αποθήκευση"}
+          {pending ? t("saving") : t("save")}
         </button>
       </div>
       {error && <p className="mt-1 text-xs text-red-400">{error}</p>}

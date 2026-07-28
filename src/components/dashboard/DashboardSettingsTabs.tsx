@@ -2,13 +2,14 @@
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 
 export const SETTINGS_TABS = [
-  { id: "contact", label: "Επικοινωνία" },
-  { id: "privacy", label: "Απόρρητο" },
-  { id: "security", label: "Ασφάλεια" },
-  { id: "notifications", label: "Ειδοποιήσεις" },
+  { id: "contact", labelKey: "tabContact" },
+  { id: "privacy", labelKey: "tabPrivacy" },
+  { id: "security", labelKey: "tabSecurity" },
+  { id: "notifications", labelKey: "tabNotifications" },
 ] as const;
 
 export type SettingsTabId = (typeof SETTINGS_TABS)[number]["id"];
@@ -28,6 +29,7 @@ type Props = {
 export function DashboardSettingsTabs({ active, children }: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const t = useTranslations("Owner.settings");
 
   function setTab(tab: SettingsTabId) {
     const params = new URLSearchParams(searchParams.toString());
@@ -39,7 +41,7 @@ export function DashboardSettingsTabs({ active, children }: Props) {
     <div>
       <nav
         className="mb-6 flex gap-1 overflow-x-auto border-b border-border pb-px"
-        aria-label="Ρυθμίσεις"
+        aria-label={t("tabsAriaLabel")}
       >
         {SETTINGS_TABS.map((tab) => (
           <button
@@ -53,7 +55,7 @@ export function DashboardSettingsTabs({ active, children }: Props) {
                 : "border-transparent text-muted hover:text-charcoal"
             )}
           >
-            {tab.label}
+            {t(tab.labelKey)}
           </button>
         ))}
       </nav>

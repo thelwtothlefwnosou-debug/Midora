@@ -2,9 +2,9 @@
 
 import { useState } from "react";
 import { Copy, Mail, MessageSquare, Phone } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { useListingInterest } from "@/components/listings/ListingInterestContext";
 import type { ListingPublicContact } from "@/lib/listing-contact";
-import { COPY } from "@/lib/copy";
 import { cn } from "@/lib/utils";
 
 function WhatsAppIcon({ className }: { className?: string }) {
@@ -35,6 +35,8 @@ type Props = {
 
 export function ListingContactCard({ contact, className, primary = false }: Props) {
   const { openInterest } = useListingInterest();
+  const tCommon = useTranslations("Common");
+  const tInquiry = useTranslations("Listing.inquiry");
   const [phoneRevealed, setPhoneRevealed] = useState(false);
   const [viberCopyHint, setViberCopyHint] = useState(false);
 
@@ -47,10 +49,10 @@ export function ListingContactCard({ contact, className, primary = false }: Prop
 
   if (!hasAnyMethod) return null;
 
-  const mailSubject = encodeURIComponent(`Ενδιαφέρον για: ${contact.listingTitle}`);
-  const mailBody = encodeURIComponent(
-    "Γεια σας,\n\nΕνδιαφέρομαι για την αγγελία σας στο Midora.\n\n"
+  const mailSubject = encodeURIComponent(
+    tInquiry("mailSubject", { title: contact.listingTitle })
   );
+  const mailBody = encodeURIComponent(tInquiry("mailBody"));
 
   async function handleViberClick() {
     if (!contact.viberUrl || !contact.viberPhone) return;
@@ -88,7 +90,7 @@ export function ListingContactCard({ contact, className, primary = false }: Prop
               className="flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-gold px-4 text-sm font-semibold text-white hover:bg-gold-dark"
             >
               <Phone className="h-4 w-4" />
-              {COPY.callNow}
+              {tCommon("callNow")}
             </a>
           </div>
         ) : (
@@ -98,7 +100,7 @@ export function ListingContactCard({ contact, className, primary = false }: Prop
             className={cn(contactButtonClass, "border-gold/25 bg-gold/5 hover:border-gold/40")}
           >
             <Phone className="h-4 w-4 text-gold" />
-            {COPY.showPhone}
+            {tCommon("showPhone")}
           </button>
         )
       ) : null}
@@ -114,7 +116,7 @@ export function ListingContactCard({ contact, className, primary = false }: Prop
           )}
         >
           <WhatsAppIcon className="h-4 w-4 text-[#128C7E]" />
-          WhatsApp
+          {tCommon("whatsApp")}
         </a>
       ) : null}
 
@@ -138,7 +140,7 @@ export function ListingContactCard({ contact, className, primary = false }: Prop
               className="flex min-h-10 w-full items-center justify-center gap-2 rounded-xl border border-dashed border-border px-4 text-xs font-medium text-muted hover:border-gold/30 hover:text-charcoal"
             >
               <Copy className="h-3.5 w-3.5" />
-              Αντιγραφή αριθμού Viber
+              {tCommon("copyViberNumber")}
             </button>
           ) : null}
         </div>
@@ -147,7 +149,7 @@ export function ListingContactCard({ contact, className, primary = false }: Prop
       {contact.allowMessage ? (
         <button type="button" onClick={() => openInterest()} className={contactButtonClass}>
           <MessageSquare className="h-4 w-4 text-gold/80" />
-          Στείλε μήνυμα μέσα από Midora
+          {tCommon("sendMessageViaMidora")}
         </button>
       ) : null}
 
@@ -157,7 +159,7 @@ export function ListingContactCard({ contact, className, primary = false }: Prop
           className={contactButtonClass}
         >
           <Mail className="h-4 w-4 text-gold/80" />
-          {COPY.sendEmail}
+          {tCommon("sendEmail")}
         </a>
       ) : null}
     </div>

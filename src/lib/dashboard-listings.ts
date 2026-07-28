@@ -1,5 +1,6 @@
 import type { ListingWithImages } from "@/lib/types";
 import type { ListingDisplayStatus } from "@/lib/listing-status";
+import { pickLocale } from "@/lib/locale-fallbacks";
 
 export type OwnerListingStatusKey =
   | "draft"
@@ -12,44 +13,151 @@ export type OwnerListingStatusKey =
 
 export type OwnerListingStatus = {
   key: OwnerListingStatusKey;
+  /** @deprecated Prefer `labelKey` + `Owner.uiStatus` in UI */
   label: string;
+  labelKey: keyof typeof OWNER_STATUS_LABEL_KEYS;
+  helperKey?: keyof typeof OWNER_STATUS_HELPER_KEYS;
   helperText?: string;
 };
 
+const OWNER_STATUS_LABEL_KEYS = {
+  needs_fixes: "needsFixes",
+  rejected: "rejected",
+  expired: "expired",
+  paused: "inactive",
+  published: "published",
+  draft: "draft",
+  review: "review",
+} as const;
+
+export function getOwnerListingUiLabelKey(key: OwnerListingStatusKey): string {
+  return OWNER_STATUS_LABEL_KEYS[key];
+}
+
+const OWNER_STATUS_LABELS_EL: Record<OwnerListingStatusKey, string> = {
+  needs_fixes: "Θέλει διόρθωση",
+  rejected: "Απορρίφθηκε",
+  expired: "Έληξε",
+  paused: "Ανενεργή",
+  published: "Δημοσιευμένη",
+  draft: "Πρόχειρη",
+  review: "Σε έλεγχο",
+};
+
+const OWNER_STATUS_LABELS_EN: Record<OwnerListingStatusKey, string> = {
+  needs_fixes: "Needs fixes",
+  rejected: "Rejected",
+  expired: "Expired",
+  paused: "Inactive",
+  published: "Published",
+  draft: "Draft",
+  review: "Under review",
+};
+
+/** Deprecated Greek/English fallback when `Owner.uiStatus` translator is unavailable. */
+export function getOwnerListingStatusLabel(
+  key: OwnerListingStatusKey,
+  locale?: string
+): string {
+  return pickLocale(locale, OWNER_STATUS_LABELS_EL[key], OWNER_STATUS_LABELS_EN[key]);
+}
+
+const OWNER_STATUS_HELPER_EL: Partial<Record<OwnerListingStatusKey, string>> = {
+  needs_fixes: "Απαιτούνται αλλαγές πριν δημοσιευτεί",
+  rejected: "Δεν εμφανίζεται δημόσια",
+  expired: "Δεν εμφανίζεται δημόσια",
+  paused: "Δεν εμφανίζεται δημόσια",
+  draft: "Δεν έχει υποβληθεί ακόμα",
+  review: "Υποβλήθηκε για έλεγχο",
+};
+
+const OWNER_STATUS_HELPER_EN: Partial<Record<OwnerListingStatusKey, string>> = {
+  needs_fixes: "Changes are required before publishing",
+  rejected: "Not visible publicly",
+  expired: "Not visible publicly",
+  paused: "Not visible publicly",
+  draft: "Not submitted yet",
+  review: "Submitted for review",
+};
+
+const OWNER_STATUS_HELPER_KEYS = {
+  needs_fixes: "helperChangesRequired",
+  rejected: "helperNotVisible",
+  expired: "helperNotVisible",
+  paused: "helperNotVisible",
+  draft: "helperNotSubmitted",
+  review: "helperSubmittedForReview",
+} as const;
+
 export function getOwnerListingStatus(
   listing: ListingWithImages,
-  effectiveStatus: ListingDisplayStatus
+  effectiveStatus: ListingDisplayStatus,
+  locale?: string
 ): OwnerListingStatus {
   const hasPhotos = (listing.listing_images?.length ?? 0) > 0;
 
   if (listing.approval_status === "needs_changes") {
-    const fixCount = listing.admin_verification_notes
-      ? Math.max(1, listing.admin_verification_notes.split(/\n|•|-/).filter(Boolean).length)
-      : 1;
     return {
       key: "needs_fixes",
-      label: "Χρειάζεται διόρθωση",
-      helperText:
-        fixCount > 1
-          ? `Υπάρχουν ${Math.min(fixCount, 9)} σημεία προς διόρθωση`
-          : "Υπάρχει 1 σημείο προς διόρθωση",
+      label: getOwnerListingStatusLabel("needs_fixes", locale),
+      labelKey: "needs_fixes",
+      helperKey: "needs_fixes",
+      helperText: pickLocale(
+        locale,
+        OWNER_STATUS_HELPER_EL.needs_fixes!,
+        OWNER_STATUS_HELPER_EN.needs_fixes!
+      ),
     };
   }
 
   if (effectiveStatus === "rejected") {
-    return { key: "rejected", label: "Απορρίφθηκε" };
+    return {
+      key: "rejected",
+      label: getOwnerListingStatusLabel("rejected", locale),
+      labelKey: "rejected",
+      helperKey: "rejected",
+      helperText: pickLocale(
+        locale,
+        OWNER_STATUS_HELPER_EL.rejected!,
+        OWNER_STATUS_HELPER_EN.rejected!
+      ),
+    };
   }
 
   if (effectiveStatus === "expired") {
-    return { key: "expired", label: "Έληξε" };
+    return {
+      key: "expired",
+      label: getOwnerListingStatusLabel("expired", locale),
+      labelKey: "expired",
+      helperKey: "expired",
+      helperText: pickLocale(
+        locale,
+        OWNER_STATUS_HELPER_EL.expired!,
+        OWNER_STATUS_HELPER_EN.expired!
+      ),
+    };
   }
 
   if (effectiveStatus === "approved" && listing.is_hidden) {
-    return { key: "paused", label: "Σε παύση" };
+    return {
+      key: "paused",
+      label: getOwnerListingStatusLabel("paused", locale),
+      labelKey: "paused",
+      helperKey: "paused",
+      helperText: pickLocale(
+        locale,
+        OWNER_STATUS_HELPER_EL.paused!,
+        OWNER_STATUS_HELPER_EN.paused!
+      ),
+    };
   }
 
   if (effectiveStatus === "approved") {
-    return { key: "published", label: "Δημοσιευμένη" };
+    return {
+      key: "published",
+      label: getOwnerListingStatusLabel("published", locale),
+      labelKey: "published",
+    };
   }
 
   const isDraft =
@@ -57,10 +165,30 @@ export function getOwnerListingStatus(
     (effectiveStatus === "pending" && !hasPhotos);
 
   if (isDraft) {
-    return { key: "draft", label: "Πρόχειρη" };
+    return {
+      key: "draft",
+      label: getOwnerListingStatusLabel("draft", locale),
+      labelKey: "draft",
+      helperKey: "draft",
+      helperText: pickLocale(
+        locale,
+        OWNER_STATUS_HELPER_EL.draft!,
+        OWNER_STATUS_HELPER_EN.draft!
+      ),
+    };
   }
 
-  return { key: "review", label: "Σε έλεγχο" };
+  return {
+    key: "review",
+    label: getOwnerListingStatusLabel("review", locale),
+    labelKey: "review",
+    helperKey: "review",
+    helperText: pickLocale(
+      locale,
+      OWNER_STATUS_HELPER_EL.review!,
+      OWNER_STATUS_HELPER_EN.review!
+    ),
+  };
 }
 
 export function isOwnerListingDraft(
@@ -70,9 +198,12 @@ export function isOwnerListingDraft(
   return getOwnerListingStatus(listing, effectiveStatus).key === "draft";
 }
 
-export function formatOwnerListingDate(iso: string | null | undefined): string | null {
+export function formatOwnerListingDate(
+  iso: string | null | undefined,
+  locale: string = "el-GR"
+): string | null {
   if (!iso) return null;
-  return new Date(iso).toLocaleDateString("el-GR", {
+  return new Date(iso).toLocaleDateString(locale, {
     day: "numeric",
     month: "short",
     year: "numeric",
@@ -82,25 +213,52 @@ export function formatOwnerListingDate(iso: string | null | undefined): string |
 export function ownerListingStatusHelper(
   listing: ListingWithImages,
   effectiveStatus: ListingDisplayStatus,
-  ownerKey: OwnerListingStatusKey
+  ownerKey: OwnerListingStatusKey,
+  locale?: string
 ): string | null {
-  const status = getOwnerListingStatus(listing, effectiveStatus);
+  const status = getOwnerListingStatus(listing, effectiveStatus, locale);
   if (status.helperText) return status.helperText;
 
-  if (ownerKey === "published" && listing.published_at) {
-    const d = formatOwnerListingDate(listing.published_at);
-    return d ? `Δημοσιεύτηκε στις ${d}` : null;
+  const dateLocale = locale === "en" ? "en-US" : "el-GR";
+
+  if (ownerKey === "published") {
+    if (listing.expires_at) {
+      const d = formatOwnerListingDate(listing.expires_at, dateLocale);
+      if (d) {
+        return pickLocale(locale, `Ενεργή έως ${d}`, `Active until ${d}`);
+      }
+    }
+    if (listing.published_at) {
+      const d = formatOwnerListingDate(listing.published_at, dateLocale);
+      return d
+        ? pickLocale(locale, `Δημοσιεύτηκε στις ${d}`, `Published on ${d}`)
+        : null;
+    }
   }
   if (ownerKey === "review") {
-    const d = formatOwnerListingDate(listing.updated_at);
-    return d ? `Υποβλήθηκε στις ${d}` : null;
+    const d = formatOwnerListingDate(listing.updated_at, dateLocale);
+    return d
+      ? pickLocale(locale, `Υποβλήθηκε στις ${d}`, `Submitted on ${d}`)
+      : pickLocale(locale, "Υποβλήθηκε για έλεγχο", "Submitted for review");
   }
   if (ownerKey === "expired" && listing.expires_at) {
-    const d = formatOwnerListingDate(listing.expires_at);
-    return d ? `Έληξε στις ${d}` : null;
+    const d = formatOwnerListingDate(listing.expires_at, dateLocale);
+    return d
+      ? pickLocale(locale, `Έληξε στις ${d}`, `Expired on ${d}`)
+      : pickLocale(locale, "Δεν εμφανίζεται δημόσια", "Not visible publicly");
   }
   if (ownerKey === "draft") {
-    return "Δεν έχει δημοσιευτεί ακόμα";
+    return pickLocale(locale, "Δεν έχει υποβληθεί ακόμα", "Not submitted yet");
+  }
+  if (ownerKey === "needs_fixes") {
+    return pickLocale(
+      locale,
+      "Απαιτούνται αλλαγές πριν δημοσιευτεί",
+      "Changes are required before publishing"
+    );
+  }
+  if (ownerKey === "paused" || ownerKey === "rejected") {
+    return pickLocale(locale, "Δεν εμφανίζεται δημόσια", "Not visible publicly");
   }
   return null;
 }

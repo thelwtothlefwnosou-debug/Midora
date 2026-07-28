@@ -1,5 +1,6 @@
 "use server";
 
+import { actionError, authActionError, mustSignInError } from "@/lib/action-error-i18n";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { updateProfileRow } from "@/lib/profile-db-write";
@@ -32,12 +33,12 @@ export async function updateOwnerProfilePage(
   formData: FormData
 ): Promise<ProfilePageSaveState> {
   const supabase = await createClient();
-  if (!supabase) return { error: "Η υπηρεσία δεν είναι διαθέσιμη." };
+  if (!supabase) return { error: await actionError("serviceUnavailable") };
 
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) return { error: "Πρέπει να συνδεθείς." };
+  if (!user) return await mustSignInError();
 
   const fullName = (formData.get("full_name") as string)?.trim();
   const displayName = (formData.get("display_name") as string)?.trim() || null;
@@ -61,15 +62,15 @@ export async function updateOwnerProfilePage(
     true
   );
 
-  if (!fullName) return { error: "Συμπλήρωσε το ονοματεπώνυμο." };
+  if (!fullName) return { error: await actionError("profileFullNameRequired") };
   if (bio && bio.length > PROFILE_BIO_MAX) {
-    return { error: `Η περιγραφή δεν μπορεί να υπερβαίνει τους ${PROFILE_BIO_MAX} χαρακτήρες.` };
+    return { error: await actionError("bioTooLong", { max: PROFILE_BIO_MAX }) };
   }
   if (advertiserType !== "individual" && advertiserType !== "professional") {
-    return { error: "Μη έγκυρος τύπος αγγελιοδότη." };
+    return { error: await actionError("invalidAdvertiserType") };
   }
   if (!["message", "phone", "email"].includes(preferredContact)) {
-    return { error: "Μη έγκυρη προτίμηση επικοινωνίας." };
+    return { error: await actionError("invalidContactPreference") };
   }
 
   const { data: existing } = await supabase
@@ -81,7 +82,7 @@ export async function updateOwnerProfilePage(
   const phone = existing?.phone?.trim();
   if (!phone) {
     return {
-      error: "Πρόσθεσε τηλέφωνο από τις ρυθμίσεις επικοινωνίας πριν αποθηκεύσεις.",
+      error: await actionError("phoneRequiredBeforeSave"),
     };
   }
 
@@ -101,11 +102,11 @@ export async function updateOwnerProfilePage(
     if (!isValidPublicProfileSlug(publicSlug)) {
       return {
         error:
-          "Μη έγκυρο URL προφίλ — χρησιμοποίησε μόνο λατινικούς χαρακτήρες, αριθμούς και παύλες (3–60 χαρακτήρες).",
+          await actionError("invalidProfileSlug"),
       };
     }
     if (await isSlugTaken(publicSlug)) {
-      return { error: "Αυτό το URL προφίλ χρησιμοποιείται ήδη από άλλον χρήστη." };
+      return { error: await actionError("profileSlugTaken") };
     }
   } else if (existing?.public_slug?.trim()) {
     publicSlug = existing.public_slug.trim();

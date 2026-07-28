@@ -11,6 +11,19 @@ export function getListingMapCenter(
   return approximateListingMapCenter(listingId, lat, lng);
 }
 
+/** Finite coordinates required for search list cards and map markers. */
+export function listingHasSearchMapCoordinates(listing: {
+  latitude?: number | null;
+  longitude?: number | null;
+}): boolean {
+  return (
+    listing.latitude != null &&
+    listing.longitude != null &&
+    Number.isFinite(listing.latitude) &&
+    Number.isFinite(listing.longitude)
+  );
+}
+
 /** @deprecated Use getListingMapCenter with location_confirmed_by_owner */
 export function approximateListingMapCenter(
   listingId: string,

@@ -1,3 +1,4 @@
+import { getTranslations } from "next-intl/server";
 import { requireDashboardContext } from "@/lib/dashboard-context";
 import { loadListingWorkspace } from "@/lib/listing-workspace-server";
 import { getOwnerUnavailablePeriods } from "@/lib/unavailable-periods-db";
@@ -15,6 +16,7 @@ export default async function ListingAvailabilityPage({
   const { id } = await params;
   const { profile } = await requireDashboardContext("/dashboard/listings");
   const ctx = await loadListingWorkspace(id, profile.id);
+  const t = await getTranslations("Workspace.availabilityPage");
   const { listing, rentalType } = ctx;
   const isShortTerm = rentalType === "short_term";
 
@@ -37,21 +39,16 @@ export default async function ListingAvailabilityPage({
   return (
     <div>
       <h2 className="mb-1 font-display text-lg font-semibold text-charcoal">
-        Διαθεσιμότητα και όροι μίσθωσης
+        {t("title")}
       </h2>
-      <p className="mb-5 text-sm text-muted">
-        Διαχειρίσου την κατάσταση, τους όρους και τις περιόδους διαθεσιμότητας για μηνιαία
-        μίσθωση.
-      </p>
+      <p className="mb-5 text-sm text-muted">{t("subtitle")}</p>
       <ListingUnavailablePeriodsEditor
         listingId={listing.id}
         periods={unavailablePeriods}
         rentalType={rentalType}
       />
       <GlassCard className="mt-6 p-6">
-        <p className="mb-4 text-sm text-muted">
-          Γρήγορη ενημέρωση κατάστασης διαθεσιμότητας — δεν χρειάζεται επαν-έγκριση.
-        </p>
+        <p className="mb-4 text-sm text-muted">{t("quickUpdateHint")}</p>
         <ListingAvailabilityEditor
           listingId={listing.id}
           availabilityStatus={listing.availability_status}

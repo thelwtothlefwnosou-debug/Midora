@@ -27,11 +27,16 @@ export function isFavoritesTableMissingError(error: {
   );
 }
 
+export const FAVORITES_ERROR_KEYS = {
+  saveFailed: "favoritesSaveFailed",
+  mustSignIn: "mustSignIn",
+} as const;
+
 export function mapFavoritesError(error: {
   message?: string;
   code?: string;
 }): string {
-  return error.message ?? "Δεν ήταν δυνατή η αποθήκευση. Δοκίμασε ξανά.";
+  return error.message ?? FAVORITES_ERROR_KEYS.saveFailed;
 }
 
 function readMetadataIds(user: User): string[] {
@@ -104,7 +109,7 @@ export async function addFavorite(
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user || user.id !== userId) return { error: "Πρέπει να συνδεθείς" };
+  if (!user || user.id !== userId) return { error: FAVORITES_ERROR_KEYS.mustSignIn };
 
   if (!(await tableIsAvailable(supabase))) {
     const ids = readMetadataIds(user);
@@ -138,7 +143,7 @@ export async function removeFavoriteByIds(
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user || user.id !== userId) return { error: "Πρέπει να συνδεθείς" };
+  if (!user || user.id !== userId) return { error: FAVORITES_ERROR_KEYS.mustSignIn };
 
   if (!(await tableIsAvailable(supabase))) {
     return writeMetadataIds(

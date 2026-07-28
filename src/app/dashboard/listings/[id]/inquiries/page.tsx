@@ -1,4 +1,5 @@
 import { Inbox } from "lucide-react";
+import { getTranslations } from "next-intl/server";
 import { DashboardEmptyState } from "@/components/dashboard/DashboardEmptyState";
 import { PropertyLeadRow } from "@/components/dashboard/PropertyLeadRow";
 import { requireDashboardContext } from "@/lib/dashboard-context";
@@ -15,20 +16,21 @@ export default async function ListingInquiriesPage({
   const { id } = await params;
   const { profile } = await requireDashboardContext("/dashboard/listings");
   const ctx = await loadListingWorkspace(id, profile.id);
+  const t = await getTranslations("Owner.inquiriesTab");
   const allLeads = await getAccessibleLeads(profile.id);
   const leads = allLeads.filter((l) => l.listing_id === id && l.status !== "archived");
   const repliesMap = await getLeadRepliesForLeads(leads.map((l) => l.id));
 
   return (
     <div>
-      <h2 className="mb-1 font-display text-base font-semibold text-charcoal">Αιτήματα</h2>
-      <p className="mb-4 text-sm text-muted">Ενδιαφέροντα για «{ctx.listing.title}».</p>
+      <h2 className="mb-1 font-display text-base font-semibold text-charcoal">{t("title")}</h2>
+      <p className="mb-4 text-sm text-muted">{t("subtitle", { title: ctx.listing.title })}</p>
       {leads.length === 0 ? (
         <DashboardEmptyState
           compact
           icon={Inbox}
-          title="Χωρίς αιτήματα"
-          text="Δεν υπάρχουν ακόμη αιτήματα ενδιαφέροντος για αυτό το ακίνητο."
+          title={t("emptyTitle")}
+          text={t("emptyText")}
         />
       ) : (
         <div className="space-y-2">

@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { CheckCircle2 } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { sendPhoneOtp, verifyPhoneOtp } from "@/lib/contact-actions";
 import { formatPhoneForDisplay } from "@/lib/phone-e164";
 import { isProfilePhoneVerified } from "@/lib/listing-contact";
@@ -28,6 +29,7 @@ export function PhoneSmsVerification({
   compact = false,
   onVerified,
 }: Props) {
+  const t = useTranslations("Auth.phoneVerify");
   const router = useRouter();
   const [code, setCode] = useState("");
   const [sent, setSent] = useState(false);
@@ -41,7 +43,7 @@ export function PhoneSmsVerification({
       <div className="flex items-center gap-2 rounded-lg bg-teal/10 px-3 py-2.5 text-sm text-teal">
         <CheckCircle2 className="h-4 w-4 shrink-0" />
         <span>
-          Ο αριθμός επιβεβαιώθηκε ({formatPhoneForDisplay(profile.phone ?? phone)})
+          {t("verified", { phone: formatPhoneForDisplay(profile.phone ?? phone) })}
         </span>
       </div>
     );
@@ -77,15 +79,10 @@ export function PhoneSmsVerification({
   return (
     <div className={compact ? "space-y-3" : "mt-4 space-y-3"}>
       {!compact && (
-        <p className="text-xs leading-relaxed text-muted">
-          Στείλε κωδικό SMS στο κινητό σου για να επιβεβαιώσουμε ότι ο αριθμός είναι δικός σου.
-          Μόνο μετά εμφανίζεται δημόσια για κλήσεις.
-        </p>
+        <p className="text-xs leading-relaxed text-muted">{t("hint")}</p>
       )}
       {compact && (
-        <p className="text-xs leading-relaxed text-amber-900">
-          Για κλήσεις από την αγγελία, επιβεβαίωσε με SMS ότι ο αριθμός είναι δικός σου.
-        </p>
+        <p className="text-xs leading-relaxed text-amber-900">{t("hintCompact")}</p>
       )}
       <button
         type="button"
@@ -93,12 +90,12 @@ export function PhoneSmsVerification({
         onClick={send}
         className="rounded-lg bg-gold px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
       >
-        {pending ? "Αποστολή..." : sent ? "Αποστολή ξανά κωδικού" : "Αποστολή κωδικού SMS"}
+        {pending ? t("sending") : sent ? t("resend") : t("send")}
       </button>
       {sent && (
         <>
           <label className="block">
-            <span className="text-xs text-muted uppercase">Κωδικός SMS (6 ψηφία)</span>
+            <span className="text-xs text-muted uppercase">{t("codeLabel")}</span>
             <input
               inputMode="numeric"
               maxLength={6}
@@ -113,7 +110,7 @@ export function PhoneSmsVerification({
             onClick={verify}
             className="rounded-lg border border-border bg-white px-4 py-2 text-sm font-medium hover:bg-sand/40 disabled:opacity-60"
           >
-            Επιβεβαίωση κωδικού
+            {t("confirm")}
           </button>
         </>
       )}

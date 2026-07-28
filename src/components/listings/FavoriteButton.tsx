@@ -1,6 +1,7 @@
 "use client";
 
 import { Heart } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { useFavoriteToggle } from "@/hooks/useFavoriteToggle";
 import { cn } from "@/lib/utils";
 
@@ -19,7 +20,10 @@ function FavoriteButtonInner({
   size = "md",
   variant = "icon",
 }: Props) {
+  const t = useTranslations("Favorites");
   const { favorited, pending, toggle } = useFavoriteToggle(listingId, initialFavorited);
+  const toggleAria = favorited ? t("removeAria") : t("addAria");
+  const toggleLabel = favorited ? t("savedLabel") : t("saveLabel");
 
   function handleClick(e: React.MouseEvent) {
     e.preventDefault();
@@ -53,7 +57,7 @@ function FavoriteButtonInner({
         type="button"
         onClick={handleClick}
         disabled={pending}
-        aria-label={favorited ? "Αφαίρεση από αγαπημένα" : "Προσθήκη στα αγαπημένα"}
+        aria-label={toggleAria}
         className={cn(
           "inline-flex items-center gap-2 text-sm font-semibold text-charcoal underline decoration-charcoal underline-offset-[3px] transition-colors hover:text-charcoal/80",
           favorited && "decoration-charcoal/80",
@@ -62,7 +66,7 @@ function FavoriteButtonInner({
         )}
       >
         <Heart className={cn(iconSize, favorited && "fill-charcoal text-charcoal")} strokeWidth={1.75} />
-        {favorited ? "Αποθηκευμένο" : "Αποθήκευση"}
+        {toggleLabel}
       </button>
     );
   }
@@ -73,8 +77,8 @@ function FavoriteButtonInner({
         type="button"
         onClick={handleClick}
         disabled={pending}
-        aria-label={favorited ? "Αφαίρεση από αγαπημένα" : "Προσθήκη στα αγαπημένα"}
-        title={favorited ? "Αφαίρεση από αγαπημένα" : "Προσθήκη στα αγαπημένα"}
+        aria-label={toggleAria}
+        title={toggleAria}
         className={circleClasses}
       >
         <Heart className={cn(iconSize, favorited && "fill-charcoal text-charcoal")} strokeWidth={1.75} />
@@ -88,7 +92,7 @@ function FavoriteButtonInner({
         type="button"
         onClick={handleClick}
         disabled={pending}
-        aria-label={favorited ? "Αφαίρεση από αγαπημένα" : "Προσθήκη στα αγαπημένα"}
+        aria-label={toggleAria}
         className={cn(
           sharedClasses,
           "min-h-10 gap-2 px-4 py-2 text-sm font-medium",
@@ -96,7 +100,7 @@ function FavoriteButtonInner({
         )}
       >
         <Heart className={iconClasses} />
-        {favorited ? "Αποθηκευμένο" : "Αποθήκευση"}
+        {toggleLabel}
       </button>
     );
   }
@@ -106,8 +110,8 @@ function FavoriteButtonInner({
       type="button"
       onClick={handleClick}
       disabled={pending}
-      aria-label={favorited ? "Αφαίρεση από αγαπημένα" : "Προσθήκη στα αγαπημένα"}
-      title={favorited ? "Αφαίρεση από αγαπημένα" : "Προσθήκη στα αγαπημένα"}
+      aria-label={toggleAria}
+      title={toggleAria}
       className={cn(sharedClasses, iconBtnSize)}
     >
       <Heart className={iconClasses} />

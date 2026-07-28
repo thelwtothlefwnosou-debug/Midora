@@ -9,13 +9,14 @@ import {
   Zap,
   X,
 } from "lucide-react";
+import { useTranslations } from "next-intl";
 import type { RentalType } from "@/lib/rental-types";
 import type { ListingsFilterValues } from "@/components/listings/ListingsFilters";
 import type { PriceHistogramBucket } from "@/lib/listing-price-histogram";
 import {
-  amenityLabel,
   popularFilterAmenities,
 } from "@/lib/amenities-catalog";
+import { getAmenityLabel } from "@/lib/amenities-i18n";
 import {
   parseAmenityFilterParam,
   serializeAmenityFilterParam,
@@ -32,32 +33,50 @@ import {
 import { FilterPriceSection } from "@/components/listings/filters/FilterPriceSection";
 import { cn } from "@/lib/utils";
 
-const PROPERTY_TYPES = [
-  { value: "apartment", label: "Διαμέρισμα", icon: Building2 },
-  { value: "house", label: "Σπίτι / Μονοκατοικία", icon: Home },
-  { value: "studio", label: "Studio", icon: Building2 },
-  { value: "villa", label: "Βίλα", icon: Home },
-  { value: "room", label: "Δωμάτιο", icon: Building2 },
-  { value: "other", label: "Άλλο", icon: Building2 },
+const PROPERTY_TYPE_VALUES = [
+  "apartment",
+  "house",
+  "studio",
+  "villa",
+  "room",
+  "other",
 ] as const;
+
+const PROPERTY_TYPE_ICONS = {
+  apartment: Building2,
+  house: Home,
+  studio: Building2,
+  villa: Home,
+  room: Building2,
+  other: Building2,
+} as const;
 
 type QuickFilter = {
   key: string;
-  label: string;
+  labelKey:
+    | "furnished"
+    | "billsInPrice"
+    | "petsAllowed"
+    | "freeParking";
   icon: React.ComponentType<{ className?: string }>;
   boolField?: "parking" | "pets" | "furnished" | "bills" | "heating";
 };
 
 const MONTHLY_QUICK: QuickFilter[] = [
-  { key: "furnished", label: "Επιπλωμένο", icon: Sofa, boolField: "furnished" },
-  { key: "bills", label: "Λογαριασμοί μέσα στην τιμή", icon: Zap, boolField: "bills" },
-  { key: "pets", label: "Επιτρέπονται κατοικίδια", icon: Dog, boolField: "pets" },
-  { key: "parking", label: "Δωρεάν στάθμευση", icon: Car, boolField: "parking" },
+  { key: "furnished", labelKey: "furnished", icon: Sofa, boolField: "furnished" },
+  { key: "bills", labelKey: "billsInPrice", icon: Zap, boolField: "bills" },
+  { key: "pets", labelKey: "petsAllowed", icon: Dog, boolField: "pets" },
+  { key: "parking", labelKey: "freeParking", icon: Car, boolField: "parking" },
 ];
 
 type AmenityRow = {
   key: "heating" | "parking" | "pets" | "furnished" | "bills";
-  label: string;
+  labelKey:
+    | "heatingClimate"
+    | "freeParking"
+    | "petsAllowed"
+    | "furnished"
+    | "billsIncluded";
   monthlyOnly?: boolean;
   shortOnly?: boolean;
 };
@@ -93,11 +112,11 @@ function syncLegacyAmenityBools(
 }
 
 const AMENITIES: AmenityRow[] = [
-  { key: "heating", label: "Θέρμανση / κλιματισμός" },
-  { key: "parking", label: "Δωρεάν στάθμευση" },
-  { key: "pets", label: "Επιτρέπονται κατοικίδια" },
-  { key: "furnished", label: "Επιπλωμένο", monthlyOnly: true },
-  { key: "bills", label: "Λογαριασμοί περιλαμβάνονται", monthlyOnly: true },
+  { key: "heating", labelKey: "heatingClimate" },
+  { key: "parking", labelKey: "freeParking" },
+  { key: "pets", labelKey: "petsAllowed" },
+  { key: "furnished", labelKey: "furnished", monthlyOnly: true },
+  { key: "bills", labelKey: "billsIncluded", monthlyOnly: true },
 ];
 
 function activeChipCount(values: ListingsFilterValues, isShort: boolean): number {
@@ -127,42 +146,70 @@ function activeChipCount(values: ListingsFilterValues, isShort: boolean): number
 function buildActiveChips(
   values: ListingsFilterValues,
   isShort: boolean,
-  isMonthly: boolean
+  isMonthly: boolean,
+  t: (key: string, values?: Record<string, string | number>) => string,
+  amenityT: (key: string) => string
 ): { key: string; label: string; clear: () => void }[] {
   const chips: { key: string; label: string; clear: () => void }[] = [];
+
+  const typeLabel = (value: string) => {
+    switch (value) {
+      case "apartment":
+        return t("typeApartment");
+      case "house":
+        return t("typeHouse");
+      case "studio":
+        return t("typeStudio");
+      case "villa":
+        return t("typeVilla");
+      case "room":
+        return t("typeRoom");
+      case "other":
+        return t("typeOther");
+      default:
+        return value;
+    }
+  };
 
   const minP = isShort ? values.minPriceNight : values.minMonthly;
   const maxP = isShort ? values.maxPriceNight : values.maxMonthly;
   if (minP || maxP) {
-    const unit = isShort ? "€/βράδυ" : "€/μήνα";
+    const unit = isShort ? t("unitNight") : t("unitMonth");
+    let label: string;
+    if (minP && maxP) label = t("chipRange", { min: minP, max: maxP, unit });
+    else if (minP) label = t("chipFrom", { value: minP, unit });
+    else label = t("chipTo", { value: maxP as string, unit });
     chips.push({
       key: "price",
-      label: minP && maxP ? `${minP}–${maxP} ${unit}` : minP ? `από ${minP} ${unit}` : `έως ${maxP} ${unit}`,
+      label,
       clear: () => {},
     });
   }
   if (values.bedrooms) {
     chips.push({
       key: "bedrooms",
-      label: `${values.bedrooms}+ υπνοδωμάτια`,
+      label: t("chipBedrooms", { count: values.bedrooms }),
       clear: () => {},
     });
   }
   if (values.bathrooms) {
     chips.push({
       key: "bathrooms",
-      label: `${values.bathrooms}+ μπάνια`,
+      label: t("chipBathrooms", { count: values.bathrooms }),
       clear: () => {},
     });
   }
   if (values.type) {
-    const t = PROPERTY_TYPES.find((p) => p.value === values.type);
-    chips.push({ key: "type", label: t?.label ?? values.type, clear: () => {} });
+    chips.push({
+      key: "type",
+      label: typeLabel(values.type),
+      clear: () => {},
+    });
   }
   for (const key of selectedAmenityKeys(values)) {
     chips.push({
       key: `amenity-${key}`,
-      label: amenityLabel(key),
+      label: getAmenityLabel(key, amenityT),
       clear: () => {},
     });
   }
@@ -170,18 +217,22 @@ function buildActiveChips(
     if (isShort && a.monthlyOnly) continue;
     if (isMonthly && a.shortOnly) continue;
     if (values[a.key] === "true") {
-      chips.push({ key: a.key, label: a.label, clear: () => {} });
+      chips.push({ key: a.key, label: t(a.labelKey), clear: () => {} });
     }
   }
   if (values.minMonths) {
     chips.push({
       key: "minMonths",
-      label: `Ελάχ. ${values.minMonths} μήνες`,
+      label: t("chipMinMonths", { count: values.minMonths }),
       clear: () => {},
     });
   }
   if (values.minSqm) {
-    chips.push({ key: "minSqm", label: `από ${values.minSqm} τ.μ.`, clear: () => {} });
+    chips.push({
+      key: "minSqm",
+      label: t("chipMinSqm", { value: values.minSqm }),
+      clear: () => {},
+    });
   }
   return chips;
 }
@@ -203,6 +254,8 @@ export function ListingsFilterModalContent({
   setBoolField,
   onRemoveChip,
 }: Props) {
+  const t = useTranslations("Listings.filter");
+  const tAmenities = useTranslations("Amenities");
   const isShort = rentalType === "short_term";
   const isMonthly = rentalType === "monthly";
 
@@ -269,10 +322,33 @@ export function ListingsFilterModalContent({
   const bookingActiveCount =
     (isMonthly && draft.minMonths ? 1 : 0) + (isMonthly && draft.minSqm ? 1 : 0);
 
-  const chips = buildActiveChips(draft, isShort, isMonthly).map((c) => ({
+  const chips = buildActiveChips(
+    draft,
+    isShort,
+    isMonthly,
+    (key, values) => t(key as Parameters<typeof t>[0], values),
+    tAmenities
+  ).map((c) => ({
     ...c,
     clear: () => onRemoveChip(c.key),
   }));
+
+  const typeLabel = (value: (typeof PROPERTY_TYPE_VALUES)[number]) => {
+    switch (value) {
+      case "apartment":
+        return t("typeApartment");
+      case "house":
+        return t("typeHouse");
+      case "studio":
+        return t("typeStudio");
+      case "villa":
+        return t("typeVilla");
+      case "room":
+        return t("typeRoom");
+      case "other":
+        return t("typeOther");
+    }
+  };
 
   return (
     <div className="px-5 sm:px-6">
@@ -293,7 +369,7 @@ export function ListingsFilterModalContent({
       )}
 
       {quickFilters.length > 0 && (
-        <FilterModalSection title="Προτεινόμενα" defaultOpen>
+        <FilterModalSection title={t("recommended")} defaultOpen>
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-2">
             {quickFilters.map((f) => {
               const active = f.boolField ? draft[f.boolField] === "true" : false;
@@ -311,7 +387,7 @@ export function ListingsFilterModalContent({
                   )}
                 >
                   <Icon className="h-4 w-4 shrink-0 text-gold-dark" aria-hidden />
-                  <span className="leading-snug">{f.label}</span>
+                  <span className="leading-snug">{t(f.labelKey)}</span>
                 </button>
               );
             })}
@@ -329,36 +405,36 @@ export function ListingsFilterModalContent({
       />
 
       <FilterModalSection
-        title="Χώροι και κρεβάτια"
+        title={t("roomsBeds")}
         defaultOpen
         activeCount={roomsActiveCount}
       >
         <FilterStepperRow
-          label="Υπνοδωμάτια"
+          label={t("bedrooms")}
           value={draft.bedrooms ?? ""}
           onChange={(v) => setField("bedrooms", v)}
         />
         <FilterStepperRow
-          label="Μπάνια"
+          label={t("bathrooms")}
           value={draft.bathrooms ?? ""}
           onChange={(v) => setField("bathrooms", v)}
         />
       </FilterModalSection>
 
       <FilterModalSection
-        title="Τύπος ακινήτου"
+        title={t("propertyType")}
         defaultOpen
         activeCount={typeActiveCount}
       >
         <div className="grid grid-cols-2 gap-2">
-          {PROPERTY_TYPES.map((t) => {
-            const active = draft.type === t.value;
-            const Icon = t.icon;
+          {PROPERTY_TYPE_VALUES.map((value) => {
+            const active = draft.type === value;
+            const Icon = PROPERTY_TYPE_ICONS[value];
             return (
               <button
-                key={t.value}
+                key={value}
                 type="button"
-                onClick={() => toggleType(t.value)}
+                onClick={() => toggleType(value)}
                 className={cn(
                   "flex min-h-11 items-center gap-2 rounded-xl border px-3 py-2 text-sm transition-colors",
                   active
@@ -367,7 +443,7 @@ export function ListingsFilterModalContent({
                 )}
               >
                 <Icon className="h-4 w-4 shrink-0 text-gold-dark" aria-hidden />
-                {t.label}
+                {typeLabel(value)}
               </button>
             );
           })}
@@ -375,7 +451,7 @@ export function ListingsFilterModalContent({
       </FilterModalSection>
 
       <FilterModalSection
-        title="Δημοφιλείς παροχές"
+        title={t("popularAmenities")}
         defaultOpen
         activeCount={amenityActiveCount}
       >
@@ -394,7 +470,7 @@ export function ListingsFilterModalContent({
                     : "border-charcoal/12 bg-white text-charcoal hover:border-gold/30"
                 )}
               >
-                {def.label}
+                {getAmenityLabel(def.key, tAmenities)}
               </button>
             );
           })}
@@ -403,32 +479,32 @@ export function ListingsFilterModalContent({
 
       {isMonthly && (
         <FilterModalSection
-          title="Όροι μηνιαίας μίσθωσης"
+          title={t("monthlyTerms")}
           defaultOpen={false}
           activeCount={bookingActiveCount}
         >
           <div className="space-y-3">
             <label className="flex flex-col gap-1.5">
               <span className="text-xs font-medium text-muted">
-                Ελάχιστη διάρκεια μίσθωσης (μήνες)
+                {t("minStayMonths")}
               </span>
               <input
                 type="number"
                 min={1}
                 value={draft.minMonths ?? ""}
                 onChange={(e) => setField("minMonths", e.target.value)}
-                placeholder="π.χ. 3"
+                placeholder={t("placeholderMonths")}
                 className="min-h-11 rounded-xl border border-charcoal/12 px-3 text-sm outline-none focus:border-gold/50 focus:ring-2 focus:ring-gold/20"
               />
             </label>
             <label className="flex flex-col gap-1.5">
-              <span className="text-xs font-medium text-muted">Ελάχιστα τ.μ.</span>
+              <span className="text-xs font-medium text-muted">{t("minSqm")}</span>
               <input
                 type="number"
                 min={0}
                 value={draft.minSqm ?? ""}
                 onChange={(e) => setField("minSqm", e.target.value)}
-                placeholder="π.χ. 45"
+                placeholder={t("placeholderSqm")}
                 className="min-h-11 rounded-xl border border-charcoal/12 px-3 text-sm outline-none focus:border-gold/50 focus:ring-2 focus:ring-gold/20"
               />
             </label>

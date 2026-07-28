@@ -45,6 +45,8 @@ type Props = {
   onMarkerHover?: (id: string | null) => void;
   onMarkerDeselect?: () => void;
   flush?: boolean;
+  /** When false, every marker renders individually (no Supercluster merge). */
+  clusterMarkers?: boolean;
 };
 
 function boundsFromMap(map: MapRef): MapBounds {
@@ -188,6 +190,7 @@ export function MidoraResultsMap({
   onMarkerHover,
   onMarkerDeselect,
   flush = false,
+  clusterMarkers = true,
 }: Props) {
   const mapRef = useRef<MapRef>(null);
   const userMovedRef = useRef(false);
@@ -207,11 +210,19 @@ export function MidoraResultsMap({
 
   onViewportChangeRef.current = onViewportChange;
 
-  const { index: clusterIndex, items: clusterItems } = useMapClusterLayer(
-    markers,
-    clusterBounds,
-    clusterZoom
-  );
+  const clusteredLayer = useMapClusterLayer(markers, clusterBounds, clusterZoom);
+
+  const clusterIndex = clusteredLayer.index;
+  const clusterItems = useMemo(() => {
+    if (clusterMarkers) return clusteredLayer.items;
+    return markers.map((marker) => ({
+      kind: "marker" as const,
+      marker,
+      longitude: marker.lng,
+      latitude: marker.lat,
+    }));
+  }, [clusterMarkers, clusteredLayer.items, markers]);
+
   const clusterIndexRef = useRef(clusterIndex);
   clusterIndexRef.current = clusterIndex;
 
@@ -394,6 +405,7 @@ export function MidoraResultsMap({
             >
               <MidoraMapCluster
                 label={item.label}
+                pointCount={item.pointCount}
                 onClick={() =>
                   handleClusterClick(item.clusterId, item.longitude, item.latitude)
                 }

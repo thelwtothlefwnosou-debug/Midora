@@ -1,6 +1,7 @@
 "use client";
 
 import { MapPin } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { ListingHeaderActions } from "@/components/listings/detail/ListingHeaderActions";
 import type { ListingPublicDetail } from "@/lib/types";
 import {
@@ -8,7 +9,9 @@ import {
   formatPublicBathroomsLabel,
   formatPublicBedsLabel,
   formatPublicGuestsLabel,
+  formatPublicLocationLabel,
   formatPublicSqmLabel,
+  type PublicLabelsT,
 } from "@/lib/listing-public-labels";
 import { resolveListingBathrooms } from "@/lib/listing-filter-helpers";
 import { countBedsFromSleeping } from "@/lib/listing-short-term-price";
@@ -16,14 +19,17 @@ import { cn } from "@/lib/utils";
 
 type Props = {
   listing: ListingPublicDetail;
-  rentalLabel: "Βραχυχρόνια" | "Μηνιαία / Μεσοπρόθεσμη";
+  rentalLabel: string;
   isFavorited: boolean;
   onShare: () => void;
   modeSwitcher?: React.ReactNode;
   className?: string;
 };
 
-function buildMetadataLine(listing: ListingPublicDetail): string {
+function buildMetadataLine(
+  listing: ListingPublicDetail,
+  tLabels: PublicLabelsT
+): string {
   const beds =
     listing.sleeping_arrangements.length > 0
       ? countBedsFromSleeping(listing.sleeping_arrangements)
@@ -32,12 +38,12 @@ function buildMetadataLine(listing: ListingPublicDetail): string {
   const parts: string[] = [];
 
   if (listing.max_guests != null) {
-    parts.push(formatPublicGuestsLabel(listing.max_guests));
+    parts.push(formatPublicGuestsLabel(listing.max_guests, tLabels));
   }
-  parts.push(formatPublicBedroomsLabel(listing.bedrooms));
-  if (beds > 0) parts.push(formatPublicBedsLabel(beds));
-  parts.push(formatPublicBathroomsLabel(baths));
-  if (listing.sqm) parts.push(formatPublicSqmLabel(listing.sqm));
+  parts.push(formatPublicBedroomsLabel(listing.bedrooms, tLabels));
+  if (beds > 0) parts.push(formatPublicBedsLabel(beds, tLabels));
+  parts.push(formatPublicBathroomsLabel(baths, tLabels));
+  if (listing.sqm) parts.push(formatPublicSqmLabel(listing.sqm, tLabels));
 
   return parts.join(" · ");
 }
@@ -50,7 +56,8 @@ export function ListingIdentityHeader({
   modeSwitcher,
   className,
 }: Props) {
-  const metadata = buildMetadataLine(listing);
+  const tLabels = useTranslations("Listing.labels");
+  const metadata = buildMetadataLine(listing, tLabels);
 
   return (
     <header className={cn("mt-8", className)}>
@@ -62,7 +69,7 @@ export function ListingIdentityHeader({
           <h1 className="listing-page-title mt-3">{listing.title}</h1>
           <p className="listing-meta mt-2 flex items-center gap-2">
             <MapPin className="h-3.5 w-3.5 shrink-0 text-gold/80" aria-hidden />
-            {listing.area}, {listing.city}, Ελλάδα
+            {formatPublicLocationLabel(listing, tLabels)}
           </p>
           {metadata && (
             <p className="mt-2 text-sm text-charcoal/60">{metadata}</p>

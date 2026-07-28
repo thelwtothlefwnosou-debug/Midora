@@ -4,6 +4,7 @@ import { useMemo, useState, useTransition } from "react";
 import Image from "next/image";
 import { Bed, Plus, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { BED_TYPES } from "@/lib/amenities-catalog";
 import {
@@ -12,13 +13,6 @@ import {
 } from "@/lib/listing-sleeping-arrangements";
 import type { ListingSleepingArrangement, ListingWithImages } from "@/lib/types";
 import { cn } from "@/lib/utils";
-
-const ROOM_NAME_SUGGESTIONS = [
-  "Κύριο υπνοδωμάτιο",
-  "Δεύτερο υπνοδωμάτιο",
-  "Τρίτο υπνοδωμάτιο",
-  "Σαλόνι",
-] as const;
 
 const inputClass =
   "mt-1 w-full rounded-xl border border-border bg-white px-3 py-2.5 text-sm text-charcoal outline-none focus:border-gold/50";
@@ -36,10 +30,10 @@ function toDraft(row: ListingSleepingArrangement): DraftRow {
   };
 }
 
-function emptyDraft(index: number): DraftRow {
+function emptyDraft(index: number, suggestions: string[], fallback: string): DraftRow {
   return {
     key: `new-${Date.now()}-${index}`,
-    room_name: ROOM_NAME_SUGGESTIONS[index] ?? `Υπνοδωμάτιο ${index + 1}`,
+    room_name: suggestions[index] ?? fallback,
     bed_type: BED_TYPES[0],
     quantity: 1,
     bed_size_note: "",
@@ -54,6 +48,16 @@ type Props = {
 
 export function ListingBedroomsEditor({ listing, initialArrangements }: Props) {
   const router = useRouter();
+  const t = useTranslations("Workspace.bedroomsEditor");
+  const roomSuggestions = useMemo(
+    () => [
+      t("suggestionMaster"),
+      t("suggestionSecond"),
+      t("suggestionThird"),
+      t("suggestionLiving"),
+    ],
+    [t]
+  );
   const [rows, setRows] = useState<DraftRow[]>(() =>
     initialArrangements.length > 0
       ? initialArrangements.map(toDraft)
@@ -74,7 +78,10 @@ export function ListingBedroomsEditor({ listing, initialArrangements }: Props) {
 
   function addRow() {
     if (rows.length >= 8) return;
-    setRows((prev) => [...prev, emptyDraft(prev.length)]);
+    setRows((prev) => [
+      ...prev,
+      emptyDraft(prev.length, roomSuggestions, t("roomFallback", { index: prev.length + 1 })),
+    ]);
   }
 
   function removeRow(key: string) {
@@ -103,11 +110,7 @@ export function ListingBedroomsEditor({ listing, initialArrangements }: Props) {
       } else {
         setRows([]);
       }
-      setMessage(
-        payload.length > 0
-          ? "Τα υπνοδωμάτια αποθηκεύτηκαν."
-          : "Τα υπνοδωμάτια αφαιρέθηκαν από την αγγελία."
-      );
+      setMessage(payload.length > 0 ? t("savedRooms") : t("removedRooms"));
       router.refresh();
     });
   }
@@ -118,20 +121,17 @@ export function ListingBedroomsEditor({ listing, initialArrangements }: Props) {
         <Bed className="mt-0.5 h-5 w-5 shrink-0 text-gold" />
         <div className="min-w-0 flex-1">
           <h2 className="font-display text-lg font-semibold text-charcoal">
-            Υπνοδωμάτια (προαιρετικά)
+            {t("title")}
           </h2>
           <p className="mt-2 max-w-2xl text-sm leading-relaxed text-muted">
-            Πρόσθεσε λεπτομέρειες για κάθε δωμάτιο — όνομα, τύπο κρεβατιού, διαστάσεις και
-            φωτογραφία από τις υπάρχουσες της αγγελίας. Εμφανίζονται στη δημόσια σελίδα όπως
-            στο Blueground.
+            {t("subtitle")}
           </p>
         </div>
       </div>
 
       {rows.length === 0 ? (
         <p className="mt-5 rounded-xl border border-dashed border-border bg-sand/20 px-4 py-6 text-center text-sm text-muted">
-          Δεν έχεις προσθέσει ακόμα δωμάτια. Πάτα «Προσθήκη δωματίου» αν θέλεις να τα
-          εμφανίσεις στην αγγελία.
+          {t("empty")}
         </p>
       ) : (
         <div className="mt-5 grid gap-4 lg:grid-cols-2">
@@ -142,36 +142,36 @@ export function ListingBedroomsEditor({ listing, initialArrangements }: Props) {
             >
               <div className="flex items-start justify-between gap-2">
                 <p className="text-xs font-medium uppercase tracking-wide text-muted">
-                  Δωμάτιο
+                  {t("room")}
                 </p>
                 <button
                   type="button"
                   onClick={() => removeRow(row.key)}
                   className="rounded-lg p-1.5 text-muted hover:bg-white hover:text-red-600"
-                  aria-label="Αφαίρεση δωματίου"
+                  aria-label={t("removeRoom")}
                 >
                   <Trash2 className="h-4 w-4" />
                 </button>
               </div>
 
               <label className="mt-3 block">
-                <span className="text-xs text-muted">Όνομα δωματίου</span>
+                <span className="text-xs text-muted">{t("roomName")}</span>
                 <input
                   list={`room-names-${row.key}`}
                   value={row.room_name}
                   onChange={(e) => updateRow(row.key, { room_name: e.target.value })}
-                  placeholder="π.χ. Κύριο υπνοδωμάτιο"
+                  placeholder={t("roomNamePlaceholder")}
                   className={inputClass}
                 />
                 <datalist id={`room-names-${row.key}`}>
-                  {ROOM_NAME_SUGGESTIONS.map((name) => (
+                  {roomSuggestions.map((name) => (
                     <option key={name} value={name} />
                   ))}
                 </datalist>
               </label>
 
               <label className="mt-3 block">
-                <span className="text-xs text-muted">Τύπος κρεβατιού</span>
+                <span className="text-xs text-muted">{t("bedType")}</span>
                 <select
                   value={row.bed_type}
                   onChange={(e) => updateRow(row.key, { bed_type: e.target.value })}
@@ -186,18 +186,18 @@ export function ListingBedroomsEditor({ listing, initialArrangements }: Props) {
               </label>
 
               <label className="mt-3 block">
-                <span className="text-xs text-muted">Διαστάσεις (προαιρετικά)</span>
+                <span className="text-xs text-muted">{t("dimensions")}</span>
                 <input
                   value={row.bed_size_note ?? ""}
                   onChange={(e) => updateRow(row.key, { bed_size_note: e.target.value })}
-                  placeholder="π.χ. 160 cm / 63 in"
+                  placeholder={t("dimensionsPlaceholder")}
                   className={inputClass}
                 />
               </label>
 
               {photos.length > 0 && (
                 <div className="mt-3">
-                  <p className="text-xs text-muted">Φωτογραφία δωματίου (προαιρετικά)</p>
+                  <p className="text-xs text-muted">{t("roomPhoto")}</p>
                   <div className="mt-2 flex flex-wrap gap-2">
                     <button
                       type="button"
@@ -209,7 +209,7 @@ export function ListingBedroomsEditor({ listing, initialArrangements }: Props) {
                           : "border-border bg-white text-muted"
                       )}
                     >
-                      Χωρίς φωτό
+                      {t("noPhoto")}
                     </button>
                     {photos.map((photo) => (
                       <button
@@ -250,7 +250,7 @@ export function ListingBedroomsEditor({ listing, initialArrangements }: Props) {
           className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-border bg-white px-4 py-2.5 text-sm font-medium text-charcoal hover:border-gold/30 disabled:opacity-40"
         >
           <Plus className="h-4 w-4" />
-          Προσθήκη δωματίου
+          {t("addRoom")}
         </button>
         <button
           type="button"
@@ -258,13 +258,13 @@ export function ListingBedroomsEditor({ listing, initialArrangements }: Props) {
           disabled={pending}
           className="min-h-11 rounded-xl bg-gold px-5 py-2.5 text-sm font-semibold text-white disabled:opacity-40"
         >
-          {pending ? "Αποθήκευση…" : "Αποθήκευση δωματίων"}
+          {pending ? t("saving") : t("save")}
         </button>
       </div>
 
       {photos.length === 0 && rows.length > 0 && (
         <p className="mt-3 text-xs text-muted">
-          Ανέβασε φωτογραφίες στην αγγελία για να επιλέξεις μία ανά δωμάτιο.
+          {t("uploadHint")}
         </p>
       )}
 

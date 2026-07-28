@@ -1,11 +1,15 @@
 "use client";
 
 import { useActionState } from "react";
+import { useTranslations } from "next-intl";
 import { updatePassword } from "@/lib/actions";
+import { resolveAuthError } from "@/components/auth/auth-errors";
 import { Button } from "@/components/ui/Button";
 import { GlassCard } from "@/components/ui/GlassCard";
 
 export function UpdatePasswordForm() {
+  const t = useTranslations("Auth.updatePassword");
+  const tErrors = useTranslations("Auth.errors");
   const [state, formAction, pending] = useActionState(
     async (_prev: { error?: string } | null, formData: FormData) => {
       return (await updatePassword(formData)) ?? null;
@@ -15,12 +19,12 @@ export function UpdatePasswordForm() {
 
   return (
     <GlassCard glow className="w-full max-w-md p-8">
-      <h1 className="font-display text-2xl font-bold text-charcoal">Νέος κωδικός</h1>
-      <p className="mt-2 text-sm text-muted">Διάλεξε νέο κωδικό για τον λογαριασμό σου.</p>
+      <h1 className="font-display text-2xl font-bold text-charcoal">{t("title")}</h1>
+      <p className="mt-2 text-sm text-muted">{t("subtitle")}</p>
 
       <form action={formAction} className="mt-8 space-y-4">
         <div>
-          <label className="text-xs text-muted uppercase">Νέος κωδικός</label>
+          <label className="text-xs text-muted uppercase">{t("newPassword")}</label>
           <input
             name="password"
             type="password"
@@ -29,9 +33,11 @@ export function UpdatePasswordForm() {
             className="mt-1 w-full rounded-xl border border-border bg-sand/50 px-4 py-3 text-charcoal outline-none focus:border-gold/50"
           />
         </div>
-        {state?.error && <p className="text-sm text-red-400">{state.error}</p>}
+        {state?.error && (
+          <p className="text-sm text-red-400">{resolveAuthError(tErrors, state.error)}</p>
+        )}
         <Button type="submit" size="lg" className="w-full">
-          {pending ? "Αποθήκευση..." : "Αποθήκευση κωδικού"}
+          {pending ? t("saving") : t("save")}
         </Button>
       </form>
     </GlassCard>

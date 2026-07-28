@@ -3,6 +3,7 @@ import {
   isKnownAmenityKey,
   normalizeAmenityKey,
 } from "@/lib/amenities-catalog";
+import { pickLocale } from "@/lib/locale-fallbacks";
 import type { ListingAmenityRow, ListingHighlight, ListingWithImages } from "@/lib/types";
 
 type ListingAmenitySource = Pick<
@@ -83,29 +84,73 @@ type ListingHighlightSource = ListingAmenitySource &
     highlights?: ListingHighlight[];
   };
 
-export function resolvePublicHighlights(listing: ListingHighlightSource): ListingHighlight[] {
+function inferredHighlightLabel(
+  kind:
+    | "metro"
+    | "parking"
+    | "pets"
+    | "furnished"
+    | "beach",
+  detail: string | null,
+  locale?: string
+): string {
+  switch (kind) {
+    case "metro":
+      return detail
+        ? pickLocale(locale, `Κοντά σε μετρό · ${detail}`, `Near metro · ${detail}`)
+        : pickLocale(locale, "Κοντά σε μετρό", "Near metro");
+    case "parking":
+      return pickLocale(locale, "Δωρεάν ιδιωτικό parking", "Free private parking");
+    case "pets":
+      return pickLocale(locale, "Επιτρέπονται κατοικίδια", "Pets allowed");
+    case "furnished":
+      return pickLocale(
+        locale,
+        "Επιπλωμένο και έτοιμο για κατοίκηση",
+        "Furnished and move-in ready"
+      );
+    case "beach":
+      return detail
+        ? pickLocale(locale, `Κοντά σε παραλία · ${detail}`, `Near beach · ${detail}`)
+        : pickLocale(locale, "Κοντά σε παραλία", "Near beach");
+  }
+}
+
+export function resolvePublicHighlights(
+  listing: ListingHighlightSource,
+  locale?: string
+): ListingHighlight[] {
   if (listing.highlights?.length) return listing.highlights;
 
   const inferred: { label: string; icon_key: string }[] = [];
 
   if (listing.nearby_metro?.trim()) {
     inferred.push({
-      label: `Κοντά σε μετρό · ${listing.nearby_metro.trim()}`,
+      label: inferredHighlightLabel("metro", listing.nearby_metro.trim(), locale),
       icon_key: "train",
     });
   }
   if (listing.has_parking) {
-    inferred.push({ label: "Δωρεάν ιδιωτικό parking", icon_key: "car" });
+    inferred.push({
+      label: inferredHighlightLabel("parking", null, locale),
+      icon_key: "car",
+    });
   }
   if (listing.pets_allowed) {
-    inferred.push({ label: "Επιτρέπονται κατοικίδια", icon_key: "paw" });
+    inferred.push({
+      label: inferredHighlightLabel("pets", null, locale),
+      icon_key: "paw",
+    });
   }
   if (listing.furnished) {
-    inferred.push({ label: "Επιπλωμένο και έτοιμο για κατοίκηση", icon_key: "users" });
+    inferred.push({
+      label: inferredHighlightLabel("furnished", null, locale),
+      icon_key: "users",
+    });
   }
   if (listing.distance_beach?.trim()) {
     inferred.push({
-      label: `Κοντά σε παραλία · ${listing.distance_beach.trim()}`,
+      label: inferredHighlightLabel("beach", listing.distance_beach.trim(), locale),
       icon_key: "umbrella",
     });
   }

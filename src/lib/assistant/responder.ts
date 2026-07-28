@@ -84,8 +84,28 @@ function detectBookingPaymentQuestion(message: string): boolean {
   );
 }
 
+function detectAadeTaxQuestion(message: string): boolean {
+  const text = normalize(message);
+  return /ααδε|aade|φορολογ|δηλωση βραχυχρον|μισθωτηρ|myaade|ψηφιακ.*πλατφορμ/.test(
+    text
+  );
+}
+
+function detectDamageQuestion(message: string): boolean {
+  const text = normalize(message);
+  return /ζημι|φθορα|αποζημιω|ασφαλισ|damage|incident|περιστατικ/.test(text);
+}
+
 function buildRuleBasedAnswer(message: string, articles: HelpArticle[]): string | null {
   const text = normalize(message);
+
+  if (detectDamageQuestion(message)) {
+    return "Το Midora λειτουργεί ως πλατφόρμα προβολής αγγελιών και αρχικής επικοινωνίας. Ζημιές, φθορές ή οικονομικές διαφορές αποτελούν ζήτημα μεταξύ των μερών. Το Midora δεν παρέχει ασφάλιση, εγγύηση ζημιών, διαχείριση απαιτήσεων ή αποζημίωση.";
+  }
+
+  if (detectAadeTaxQuestion(message)) {
+    return "Το Midora δεν υποβάλλει δηλώσεις στην ΑΑΔΕ για λογαριασμό ιδιοκτητών. Αν η συμφωνία προήλθε από αγγελία στο Midora και αφορά βραχυχρόνια διαμονή, ο ιδιοκτήτης/διαχειριστής είναι υπεύθυνος για τη Δήλωση Βραχυχρόνιας Διαμονής. Αν η εφαρμογή ζητά πλατφόρμα, μπορεί να υπάρχει επιλογή όπως «Άλλες ψηφιακές πλατφόρμες», όπου ο ιδιοκτήτης μπορεί να αναφέρει το Midora σύμφωνα με όσα επιτρέπει η εφαρμογή. Οι πληροφορίες είναι γενική ενημέρωση — για τη σωστή συμπλήρωση, συμβουλεύσου λογιστή ή την ΑΑΔΕ.";
+  }
 
   if (detectBookingPaymentQuestion(message)) {
     return "Το Midora δεν ολοκληρώνει κρατήσεις ή πληρωμές. Μπορείς να στείλεις αίτημα διαθεσιμότητας (βραχυχρόνια) ή αίτημα μίσθωσης (μηνιαία) στον ιδιοκτήτη. Η τελική διαθεσιμότητα και συμφωνία επιβεβαιώνονται από τον ιδιοκτήτη.";

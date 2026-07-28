@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { MapPin, Search } from "lucide-react";
 import { LocationSearchField } from "@/components/search/LocationSearchField";
 import { appendRentalSearchParams } from "@/components/search/RentalTypeSearchFields";
@@ -19,29 +20,30 @@ import type { RentalType } from "@/lib/rental-types";
 import {
   type ActiveSearchField,
   getPartialDateRangeMessage,
-  SEARCH_LOCATION_PLACEHOLDER,
 } from "@/lib/guided-search";
 import { saveLastSearchState } from "@/lib/midora-search-state";
 import { cn } from "@/lib/utils";
 
-const HERO_SUGGESTIONS = [
-  { label: "Αθήνα", href: "/listings?city=%CE%91%CE%B8%CE%AE%CE%BD%CE%B1" },
-  {
-    label: "Θεσσαλονίκη",
-    href: "/listings?city=%CE%98%CE%B5%CF%83%CF%83%CE%B1%CE%BB%CE%BD%CE%AF%CE%BA%CE%B7",
-  },
-  { label: "Βραχυχρόνια", href: "/listings?rentalType=short_term" },
-  { label: "Μηνιαία", href: "/listings?rentalType=monthly" },
-] as const;
-
-const LOCATION_PLACEHOLDERS: Record<"short_term" | "monthly", string> = {
-  short_term: SEARCH_LOCATION_PLACEHOLDER,
-  monthly: SEARCH_LOCATION_PLACEHOLDER,
-};
+const HERO_CITY_SUGGESTION_HREFS = {
+  athens: "/listings?city=%CE%91%CE%B8%CE%AE%CE%BD%CE%B1",
+  thessaloniki: "/listings?city=%CE%98%CE%B5%CF%83%CF%83%CE%B1%CE%BB%CE%BD%CE%AF%CE%BA%CE%B7",
+} as const;
 
 const HERO_LOCATION_INPUT_ID = "hero-search-location";
 
-export function SearchBar() {
+type SearchBarProps = {
+  variant?: "default" | "fullscreen";
+};
+
+export function SearchBar({ variant = "default" }: SearchBarProps) {
+  const t = useTranslations("Home");
+  const tListings = useTranslations("Listings");
+  const locationPlaceholder = tListings("addDestination");
+  const isFullscreen = variant === "fullscreen";
+  const heroCitySuggestions = [
+    { label: t("cityAthens"), href: HERO_CITY_SUGGESTION_HREFS.athens },
+    { label: t("cityThessaloniki"), href: HERO_CITY_SUGGESTION_HREFS.thessaloniki },
+  ] as const;
   const router = useRouter();
   const formRef = useRef<HTMLFormElement>(null);
   const heroSearchShellRef = useRef<HTMLDivElement>(null);
@@ -155,11 +157,13 @@ export function SearchBar() {
   }
 
   return (
-    <div className="space-y-3 sm:space-y-3.5">
+    <div className={cn("space-y-3", isFullscreen ? "sm:space-y-3" : "sm:space-y-3.5")}>
       <div
         className={cn(
-          "rounded-2xl border border-border bg-white/97 p-2.5 shadow-[0_8px_32px_-12px_rgba(26,26,26,0.14)] backdrop-blur-md sm:p-3.5",
-          "ring-1 ring-white/60",
+          "border border-border bg-white/97 backdrop-blur-md",
+          isFullscreen
+            ? "rounded-[1.75rem] p-3 shadow-[0_20px_50px_-18px_rgba(20,16,12,0.45)] sm:p-4"
+            : "rounded-2xl p-2.5 shadow-[0_8px_32px_-12px_rgba(26,26,26,0.14)] sm:p-3.5 ring-1 ring-white/60",
           (datePickerOpen || guestPickerOpen) && "search-shell--popover-open"
         )}
       >
@@ -171,9 +175,18 @@ export function SearchBar() {
         >
           <input type="hidden" name="rentalType" value={rentalType} />
 
-          <div className="home-hero-search-tabs" role="tablist" aria-label="Τύπος μίσθωσης">
+          <div
+            className={cn(
+              isFullscreen ? "home-hero-search-segment" : "home-hero-search-tabs"
+            )}
+            role="tablist"
+            aria-label={t("searchModeAria")}
+          >
             {RENTAL_TYPE_SEARCH_TABS.map((tab) => {
               const active = rentalType === tab.value;
+              const label = tab.value === "short_term" ? t("tabShort") : t("tabMonthly");
+              const description =
+                tab.value === "short_term" ? t("tabShortDesc") : t("tabMonthlyDesc");
               return (
                 <button
                   key={tab.value}
@@ -182,18 +195,32 @@ export function SearchBar() {
                   aria-selected={active}
                   onClick={() => handleRentalTypeChange(tab.value)}
                   className={cn(
-                    "flex h-full min-h-[3.75rem] min-w-[8.5rem] shrink-0 flex-col justify-center rounded-xl border px-3 py-2 text-left transition-all sm:min-h-[4rem] sm:min-w-0",
-                    active
-                      ? "border-gold/40 bg-[#f7f0e6] ring-1 ring-gold/20"
-                      : "border-border bg-white hover:border-gold/20 hover:bg-sand/30"
+                    isFullscreen
+                      ? cn(
+                          "home-hero-search-segment__btn",
+                          active && "home-hero-search-segment__btn--active"
+                        )
+                      : cn(
+                          "flex h-full min-h-[3.75rem] min-w-[8.5rem] shrink-0 flex-col justify-center rounded-xl border px-3 py-2 text-left transition-all sm:min-h-[4rem] sm:min-w-0",
+                          active
+                            ? "border-gold/40 bg-[#f7f0e6] ring-1 ring-gold/20"
+                            : "border-border bg-white hover:border-gold/20 hover:bg-sand/30"
+                        )
                   )}
                 >
-                  <span className="block text-sm font-semibold leading-snug text-charcoal">
-                    {tab.label}
+                  <span
+                    className={cn(
+                      "block font-semibold leading-snug text-charcoal",
+                      isFullscreen ? "text-[13px] sm:text-sm" : "text-sm"
+                    )}
+                  >
+                    {label}
                   </span>
-                  <span className="mt-0.5 block text-[11px] leading-snug text-muted/90 sm:text-xs">
-                    {tab.description}
-                  </span>
+                  {!isFullscreen && (
+                    <span className="mt-0.5 block text-[11px] leading-snug text-muted/90 sm:text-xs">
+                      {description}
+                    </span>
+                  )}
                 </button>
               );
             })}
@@ -221,17 +248,13 @@ export function SearchBar() {
                 className="pointer-events-none h-[18px] w-[18px] shrink-0 text-gold/85"
                 strokeWidth={1.75}
               />
-              <div className="flex min-w-0 flex-1 flex-col justify-center gap-1">
-                <span className="home-search-field-label pointer-events-none">Πού</span>
+              <div className="flex min-w-0 flex-1 flex-col justify-center gap-0.5">
+                <span className="home-search-field-label pointer-events-none">{t("searchWhere")}</span>
                 <div className="min-w-0">
                   <LocationSearchField
                     variant="embedded"
                     inputId={HERO_LOCATION_INPUT_ID}
-                    placeholder={
-                      rentalType === "short_term"
-                        ? LOCATION_PLACEHOLDERS.short_term
-                        : LOCATION_PLACEHOLDERS.monthly
-                    }
+                    placeholder={locationPlaceholder}
                     onFocus={() => {
                       setActiveField("location");
                       setDatePickerOpen(false);
@@ -275,29 +298,37 @@ export function SearchBar() {
           <div ref={heroSearchActionsRef} className="flex flex-wrap items-center gap-2">
             <button type="submit" className="home-btn-primary home-hero-search-submit min-w-0 flex-1">
               <Search className="h-4 w-4" />
-              Αναζήτηση
+              {t("searchSubmit")}
             </button>
             <button
               type="button"
               onClick={clearAll}
               className="shrink-0 rounded-xl border border-border px-4 py-2.5 text-sm font-medium text-muted transition-colors hover:border-gold/30 hover:text-charcoal"
             >
-              Καθαρισμός
+              {t("searchClear")}
             </button>
           </div>
         </form>
       </div>
 
-      <div className="flex flex-wrap items-center gap-x-2 gap-y-2 pt-0.5">
-        <span className="mr-0.5 text-[10px] font-medium tracking-[0.1em] text-muted/75 uppercase">
-          Δημοφιλή
-        </span>
-        {HERO_SUGGESTIONS.map((item) => (
-          <Link key={item.label} href={item.href} className="home-chip">
-            {item.label}
+      {!isFullscreen && (
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-2 pt-0.5">
+          <span className="mr-0.5 text-[10px] font-medium tracking-[0.1em] text-muted/75 uppercase">
+            {t("popularLabel")}
+          </span>
+          {heroCitySuggestions.map((item) => (
+            <Link key={item.label} href={item.href} className="home-chip">
+              {item.label}
+            </Link>
+          ))}
+          <Link href="/listings?rentalType=short_term" className="home-chip">
+            {t("tabShort")}
           </Link>
-        ))}
-      </div>
+          <Link href="/listings?rentalType=monthly" className="home-chip">
+            {t("tabMonthly")}
+          </Link>
+        </div>
+      )}
     </div>
   );
 }

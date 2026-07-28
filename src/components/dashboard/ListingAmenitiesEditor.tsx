@@ -3,6 +3,7 @@
 import { useMemo, useState, useTransition } from "react";
 import { Check, ChevronDown, Search, Sparkles } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { GlassCard } from "@/components/ui/GlassCard";
 import {
   AMENITY_CATEGORY_LABELS,
@@ -25,6 +26,7 @@ type Props = {
 };
 
 export function ListingAmenitiesEditor({ listing, initialAmenities }: Props) {
+  const t = useTranslations("Workspace.amenities");
   const router = useRouter();
   const rentalMode = listingRentalType(listing) === "monthly" ? "monthly" : "short_term";
 
@@ -99,7 +101,7 @@ export function ListingAmenitiesEditor({ listing, initialAmenities }: Props) {
         setError(result.error);
         return;
       }
-      setMessage(`Αποθηκεύτηκαν ${result.count ?? selected.size} παροχές.`);
+      setMessage(t("saved", { count: result.count ?? selected.size }));
       router.refresh();
     });
   }
@@ -108,13 +110,11 @@ export function ListingAmenitiesEditor({ listing, initialAmenities }: Props) {
     <GlassCard className="mb-6 p-6 sm:p-8">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h3 className="font-display text-base font-semibold text-charcoal">Παροχές</h3>
-          <p className="mt-1 text-sm text-muted">
-            Επίλεξε ό,τι προσφέρει πραγματικά το ακίνητο. Οι επισκέπτες βλέπουν μόνο τις επιλεγμένες παροχές.
-          </p>
+          <h3 className="font-display text-base font-semibold text-charcoal">{t("title")}</h3>
+          <p className="mt-1 text-sm text-muted">{t("subtitle")}</p>
         </div>
         <p className="rounded-full bg-gold/10 px-3 py-1 text-xs font-semibold text-gold-dark">
-          {selected.size} επιλεγμένες
+          {t("selectedCount", { count: selected.size })}
         </p>
       </div>
 
@@ -124,14 +124,14 @@ export function ListingAmenitiesEditor({ listing, initialAmenities }: Props) {
           type="search"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Αναζήτηση παροχών…"
+          placeholder={t("searchPlaceholder")}
           className="w-full rounded-xl border border-border bg-white py-2.5 pl-10 pr-3 text-sm text-charcoal outline-none focus:border-gold/50"
         />
       </div>
 
       {popular.length > 0 && !normalizedQuery ? (
         <div className="mt-5">
-          <p className="text-xs font-semibold uppercase tracking-wide text-muted">Δημοφιλείς</p>
+          <p className="text-xs font-semibold uppercase tracking-wide text-muted">{t("popular")}</p>
           <div className="mt-3 flex flex-wrap gap-2">
             {popular.map((def) => {
               const active = selected.has(def.key);
@@ -159,8 +159,9 @@ export function ListingAmenitiesEditor({ listing, initialAmenities }: Props) {
       {missingRecommended.length > 0 && !normalizedQuery ? (
         <p className="mt-4 flex items-start gap-2 rounded-xl border border-amber-200/80 bg-amber-50 px-3.5 py-3 text-sm text-amber-900">
           <Sparkles className="mt-0.5 h-4 w-4 shrink-0" />
-          Πρόσθεσε βασικές παροχές για πιο ολοκληρωμένη αγγελία (π.χ.{" "}
-          {missingRecommended.slice(0, 3).map(amenityLabel).join(", ")}).
+          {t("recommendedHint", {
+            examples: missingRecommended.slice(0, 3).map(amenityLabel).join(", "),
+          })}
         </p>
       ) : null}
 
@@ -182,7 +183,9 @@ export function ListingAmenitiesEditor({ listing, initialAmenities }: Props) {
                   {AMENITY_CATEGORY_LABELS[category]}
                 </span>
                 <span className="flex items-center gap-2 text-xs text-muted">
-                  {selectedInCategory > 0 ? `${selectedInCategory} επιλεγμένες` : null}
+                  {selectedInCategory > 0
+                    ? t("selectedCount", { count: selectedInCategory })
+                    : null}
                   <ChevronDown
                     className={cn("h-4 w-4 transition-transform", isOpen && "rotate-180")}
                   />
@@ -247,7 +250,7 @@ export function ListingAmenitiesEditor({ listing, initialAmenities }: Props) {
         disabled={pending}
         className="mt-5 inline-flex min-h-11 items-center justify-center rounded-xl bg-gold px-5 text-sm font-semibold text-white transition-colors hover:bg-gold-dark disabled:opacity-60"
       >
-        {pending ? "Αποθήκευση…" : "Αποθήκευση παροχών"}
+        {pending ? t("saving") : t("save")}
       </button>
     </GlassCard>
   );

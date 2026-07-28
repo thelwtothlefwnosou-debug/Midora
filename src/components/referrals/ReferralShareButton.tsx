@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { Copy, Check } from "lucide-react";
 
 export function ReferralShareButton({
@@ -10,6 +11,7 @@ export function ReferralShareButton({
   url: string;
   code: string;
 }) {
+  const t = useTranslations("Refer");
   const [copied, setCopied] = useState(false);
 
   async function copy() {
@@ -26,11 +28,11 @@ export function ReferralShareButton({
     >
       {copied ? (
         <>
-          <Check className="h-4 w-4" /> Αντιγράφηκε
+          <Check className="h-4 w-4" /> {t("copied")}
         </>
       ) : (
         <>
-          <Copy className="h-4 w-4" /> Αντιγραφή ({code})
+          <Copy className="h-4 w-4" /> {t("copy", { code })}
         </>
       )}
     </button>

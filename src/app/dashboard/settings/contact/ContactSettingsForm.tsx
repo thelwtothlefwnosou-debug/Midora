@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import type { Profile } from "@/lib/types";
 import { updateContactPreferences } from "@/lib/contact-actions";
 import { PhoneSmsVerification } from "@/components/contact/PhoneSmsVerification";
@@ -12,6 +13,7 @@ type Props = {
 };
 
 export function ContactSettingsForm({ profile }: Props) {
+  const t = useTranslations("Owner.contactSettings");
   const [phone, setPhone] = useState(profile.phone ?? "");
 
   const [prefsPending, startPrefs] = useTransition();
@@ -42,19 +44,18 @@ export function ContactSettingsForm({ profile }: Props) {
   return (
     <div className="space-y-8">
       <section>
-        <h2 className="font-display text-lg font-semibold text-charcoal">Βασικό τηλέφωνο</h2>
-        <p className="mt-2 text-sm text-muted">
-          Χρησιμοποιείται για κλήσεις και ως προεπιλογή για WhatsApp/Viber. Η επιβεβαίωση με SMS
-          αποδεικνύει ότι ο αριθμός είναι δικός σου.
-        </p>
+        <h2 className="font-display text-lg font-semibold text-charcoal">
+          {t("primaryPhoneTitle")}
+        </h2>
+        <p className="mt-2 text-sm text-muted">{t("primaryPhoneDesc")}</p>
         <div className="mt-5 rounded-xl border border-border bg-white p-5">
           <label className="block">
-            <span className="text-xs text-muted uppercase">Αριθμός (+30)</span>
+            <span className="text-xs text-muted uppercase">{t("phoneNumberLabel")}</span>
             <input
               type="tel"
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
-              placeholder="69xxxxxxxx"
+              placeholder={t("phonePlaceholder")}
               className="mt-1 w-full rounded-xl border border-border bg-sand/40 px-4 py-3 text-sm text-charcoal outline-none focus:border-gold/50"
             />
           </label>
@@ -64,7 +65,7 @@ export function ContactSettingsForm({ profile }: Props) {
 
       <section>
         <h2 className="font-display text-lg font-semibold text-charcoal">
-          WhatsApp και Viber
+          {t("whatsappViberTitle")}
         </h2>
         <form onSubmit={savePrefs} className="mt-5 space-y-4">
           <label className="flex items-center gap-2 text-sm">
@@ -74,7 +75,7 @@ export function ContactSettingsForm({ profile }: Props) {
               defaultChecked={profile.allow_whatsapp === true}
               className="accent-gold"
             />
-            Εμφάνιση WhatsApp στις αγγελίες
+            {t("showWhatsapp")}
           </label>
           <label className="flex items-center gap-2 text-sm">
             <input
@@ -83,7 +84,7 @@ export function ContactSettingsForm({ profile }: Props) {
               onChange={(e) => setWhatsappUsePrimary(e.target.checked)}
               className="accent-gold"
             />
-            Χρήση βασικού τηλεφώνου για WhatsApp
+            {t("useWhatsappPrimary")}
           </label>
           <input
             type="hidden"
@@ -98,7 +99,7 @@ export function ContactSettingsForm({ profile }: Props) {
               defaultChecked={profile.allow_viber === true}
               className="accent-gold"
             />
-            Εμφάνιση Viber στις αγγελίες
+            {t("showViber")}
           </label>
           <label className="flex items-center gap-2 text-sm">
             <input
@@ -107,7 +108,7 @@ export function ContactSettingsForm({ profile }: Props) {
               onChange={(e) => setViberUsePrimary(e.target.checked)}
               className="accent-gold"
             />
-            Χρήση βασικού τηλεφώνου για Viber
+            {t("useViberPrimary")}
           </label>
           <input type="hidden" name="viber_use_primary_phone" value={viberUsePrimary ? "on" : "off"} />
 
@@ -118,7 +119,7 @@ export function ContactSettingsForm({ profile }: Props) {
               defaultChecked={profile.allow_phone_contact !== false}
               className="accent-gold"
             />
-            Εμφάνιση τηλεφώνου για κλήσεις
+            {t("showPhoneCalls")}
           </label>
           <label className="flex items-center gap-2 text-sm">
             <input
@@ -127,7 +128,7 @@ export function ContactSettingsForm({ profile }: Props) {
               defaultChecked={profile.allow_message !== false}
               className="accent-gold"
             />
-            Μηνύματα μέσω Midora
+            {t("allowMessages")}
           </label>
 
           <button
@@ -137,18 +138,16 @@ export function ContactSettingsForm({ profile }: Props) {
               "rounded-xl bg-charcoal px-5 py-2.5 text-sm font-semibold text-white disabled:opacity-60"
             )}
           >
-            {prefsPending ? "Αποθήκευση…" : "Αποθήκευση προτιμήσεων"}
+            {prefsPending ? t("saving") : t("savePreferences")}
           </button>
-          {prefsSaved && (
-            <p className="text-sm text-teal">Οι αλλαγές αποθηκεύτηκαν.</p>
-          )}
+          {prefsSaved && <p className="text-sm text-teal">{t("saved")}</p>}
           {prefsError && <p className="text-sm text-red-600">{prefsError}</p>}
         </form>
       </section>
 
       <p className="text-xs text-muted">
         <Link href="/dashboard/settings" className="text-gold-dark hover:underline">
-          ← Επιστροφή στις ρυθμίσεις
+          {t("backToSettings")}
         </Link>
       </p>
     </div>

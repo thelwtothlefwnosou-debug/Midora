@@ -1,3 +1,5 @@
+import { pickLocale } from "@/lib/locale-fallbacks";
+
 export type SearchDurationValue =
   | "1plus"
   | "2-3"
@@ -8,12 +10,13 @@ export type SearchDurationValue =
 export const SEARCH_DURATION_OPTIONS: {
   value: SearchDurationValue;
   label: string;
+  labelKey: string;
 }[] = [
-  { value: "1plus", label: "1+ μήνας" },
-  { value: "2-3", label: "2–3 μήνες" },
-  { value: "4-6", label: "4–6 μήνες" },
-  { value: "6-12", label: "6–12 μήνες" },
-  { value: "12plus", label: "12+ μήνες" },
+  { value: "1plus", label: "1+ μήνας", labelKey: "duration1plus" },
+  { value: "2-3", label: "2–3 μήνες", labelKey: "duration2_3" },
+  { value: "4-6", label: "4–6 μήνες", labelKey: "duration4_6" },
+  { value: "6-12", label: "6–12 μήνες", labelKey: "duration6_12" },
+  { value: "12plus", label: "12+ μήνες", labelKey: "duration12plus" },
 ];
 
 export const DEFAULT_SEARCH_DURATION: SearchDurationValue = "1plus";
@@ -48,8 +51,22 @@ export function durationRangeToMaxListingMinMonths(
   }
 }
 
-export function searchDurationLabel(value: string | null | undefined): string {
+const SEARCH_DURATION_FALLBACK_EN: Record<SearchDurationValue, string> = {
+  "1plus": "1+ month",
+  "2-3": "2–3 months",
+  "4-6": "4–6 months",
+  "6-12": "6–12 months",
+  "12plus": "12+ months",
+};
+
+export function searchDurationLabel(
+  value: string | null | undefined,
+  locale?: string
+): string {
   if (!value) return "—";
+  if (isSearchDurationValue(value)) {
+    return pickLocale(locale, SEARCH_DURATION_OPTIONS.find((o) => o.value === value)!.label, SEARCH_DURATION_FALLBACK_EN[value]);
+  }
   const found = SEARCH_DURATION_OPTIONS.find((option) => option.value === value);
   return found?.label ?? value;
 }

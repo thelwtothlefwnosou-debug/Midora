@@ -2,6 +2,7 @@
 
 import { useEffect, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
+import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 
 type Props = {
@@ -31,6 +32,7 @@ export function PortalModal({
   className,
   size = "md",
 }: Props) {
+  const t = useTranslations("Common");
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -60,7 +62,7 @@ export function PortalModal({
     >
       <button
         type="button"
-        aria-label="Κλείσιμο"
+        aria-label={t("close")}
         className="absolute inset-0 bg-charcoal/45"
         onClick={onClose}
       />

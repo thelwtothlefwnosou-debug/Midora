@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { useTranslations, useLocale } from "next-intl";
 import type { ListingWithImages } from "@/lib/types";
 import { NearbyListingCard } from "@/components/listings/detail/NearbyListingCard";
 import { resolveListingSearchPrice } from "@/lib/listing-search-links";
@@ -23,7 +24,8 @@ function isRenderableNearbyCard(
   rentalMode: "short_term" | "monthly",
   interestFrom?: string,
   interestTo?: string,
-  durationMonths?: number
+  durationMonths?: number,
+  locale?: string
 ): boolean {
   if (!isNearbyListingCandidate(listing, rentalMode)) return false;
   const resolved = resolveListingSearchPrice(listing, {
@@ -31,7 +33,7 @@ function isRenderableNearbyCard(
     interestTo,
     durationMonths,
     rentalTypeFilter: rentalMode,
-  });
+  }, locale);
   return Boolean(resolved.display && resolved.sortAmount > 0 && !resolved.isUnavailable);
 }
 
@@ -43,6 +45,8 @@ export function NearbyListingsCarousel({
   interestTo,
   durationMonths,
 }: Props) {
+  const t = useTranslations("Listing.nearby");
+  const locale = useLocale();
   const searchParams = useSearchParams();
   const trackRef = useRef<HTMLDivElement>(null);
   const [page, setPage] = useState(0);
@@ -60,9 +64,9 @@ export function NearbyListingsCarousel({
       listings
         .filter((l) => l.id !== currentListingId)
         .filter((l) =>
-          isRenderableNearbyCard(l, rentalMode, interestFrom, interestTo, durationMonths)
+          isRenderableNearbyCard(l, rentalMode, interestFrom, interestTo, durationMonths, locale)
         ),
-    [currentListingId, durationMonths, interestFrom, interestTo, listings, rentalMode]
+    [currentListingId, durationMonths, interestFrom, interestTo, listings, rentalMode, locale]
   );
 
   const measure = useCallback(() => {
@@ -132,9 +136,7 @@ export function NearbyListingsCarousel({
   if (visibleListings.length < 1) return null;
 
   const title =
-    rentalMode === "short_term"
-      ? "Περισσότερα καταλύματα σε κοντινή απόσταση"
-      : "Περισσότερα ακίνητα σε κοντινή απόσταση";
+    rentalMode === "short_term" ? t("titleShortTerm") : t("titleMonthly");
 
   const atStart = page <= 0;
   const atEnd = page >= pageCount - 1;
@@ -158,7 +160,7 @@ export function NearbyListingsCarousel({
               type="button"
               onClick={() => scrollToPage(page - 1)}
               disabled={atStart}
-              aria-label="Προηγούμενη σελίδα"
+              aria-label={t("previousPageAria")}
               className={cn(
                 "inline-flex h-8 w-8 items-center justify-center rounded-full border border-charcoal/15 bg-white text-charcoal transition",
                 atStart
@@ -172,7 +174,7 @@ export function NearbyListingsCarousel({
               type="button"
               onClick={() => scrollToPage(page + 1)}
               disabled={atEnd}
-              aria-label="Επόμενη σελίδα"
+              aria-label={t("nextPageAria")}
               className={cn(
                 "inline-flex h-8 w-8 items-center justify-center rounded-full border border-charcoal/15 bg-white text-charcoal transition",
                 atEnd

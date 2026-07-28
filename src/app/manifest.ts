@@ -1,17 +1,19 @@
 import type { MetadataRoute } from "next";
-import { getSiteUrl } from "@/lib/site-url";
+import { getLocale, getTranslations } from "next-intl/server";
 
-export default function manifest(): MetadataRoute.Manifest {
+export default async function manifest(): Promise<MetadataRoute.Manifest> {
+  const t = await getTranslations("Site");
+  const locale = await getLocale();
+
   return {
-    name: "Midora — Αγγελίες ακινήτων",
+    name: t("manifestName"),
     short_name: "Midora",
-    description:
-      "Αναζήτηση και δημοσίευση αγγελιών για βραχυχρόνια και μηνιαία μίσθωση στην Ελλάδα.",
+    description: t("manifestDescription"),
     start_url: "/",
     display: "standalone",
     background_color: "#ffffff",
     theme_color: "#b8956f",
-    lang: "el",
+    lang: locale,
     icons: [
       {
         src: "/brand/midora-logo.png",

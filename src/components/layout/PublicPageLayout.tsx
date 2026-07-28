@@ -131,11 +131,12 @@ export function FaqAccordion({ items }: { items: FaqItem[] }) {
 type LegalSectionProps = {
   title: string;
   children: React.ReactNode;
+  id?: string;
 };
 
-export function LegalSection({ title, children }: LegalSectionProps) {
+export function LegalSection({ title, children, id }: LegalSectionProps) {
   return (
-    <section className="mt-8">
+    <section id={id} className="mt-8 scroll-mt-24">
       <h2 className="font-display text-lg font-semibold text-charcoal">{title}</h2>
       <div className="mt-3 space-y-3 text-sm leading-relaxed text-charcoal/75">
         {children}

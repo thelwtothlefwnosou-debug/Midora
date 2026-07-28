@@ -1,7 +1,12 @@
 import Link from "next/link";
+import { getTranslations } from "next-intl/server";
 import type { ListingWithImages } from "@/lib/types";
-import { estimateBathrooms, propertyTypeLabel } from "@/lib/listing-filter-helpers";
-import { heatingTypeLabel, energyClassLabel } from "@/lib/listing-labels";
+import {
+  estimateBathrooms,
+  formatFloorLabel,
+  getPropertyTypeLabel,
+} from "@/lib/listing-filter-helpers";
+import { getHeatingTypeLabel, getEnergyClassLabel } from "@/lib/listing-labels";
 import { getListingPublicId } from "@/lib/utils";
 
 type Row = {
@@ -9,49 +14,71 @@ type Row = {
   values: (string | number | boolean | null | undefined)[];
 };
 
-function yesNo(v: boolean | null | undefined) {
+type Translator = (key: string, values?: Record<string, string | number>) => string;
+
+function yesNo(v: boolean | null | undefined, yes: string, no: string) {
   if (v == null) return "—";
-  return v ? "Ναι" : "Όχι";
+  return v ? yes : no;
 }
 
-function buildRows(listings: ListingWithImages[]): Row[] {
+function buildRows(
+  listings: ListingWithImages[],
+  t: Translator,
+  tPropertyTypes: Translator,
+  tLabels: Translator,
+  tCommon: Translator
+): Row[] {
+  const yes = tCommon("yes");
+  const no = tCommon("no");
   return [
     {
-      label: "Τιμή / μήνα",
+      label: t("pricePerMonth"),
       values: listings.map((l) => `€${l.price_monthly}`),
     },
-    { label: "Πόλη", values: listings.map((l) => l.city) },
-    { label: "Περιοχή", values: listings.map((l) => l.area) },
-    { label: "Τύπος", values: listings.map((l) => propertyTypeLabel(l.property_type)) },
-    { label: "τ.μ.", values: listings.map((l) => l.sqm ?? "—") },
-    { label: "Υ/δ", values: listings.map((l) => l.bedrooms) },
+    { label: t("city"), values: listings.map((l) => l.city) },
+    { label: t("area"), values: listings.map((l) => l.area) },
     {
-      label: "Μπάνια",
+      label: t("propertyType"),
+      values: listings.map((l) => getPropertyTypeLabel(l.property_type, tPropertyTypes)),
+    },
+    { label: t("sqm"), values: listings.map((l) => l.sqm ?? "—") },
+    { label: t("bedrooms"), values: listings.map((l) => l.bedrooms) },
+    {
+      label: t("bathrooms"),
       values: listings.map((l) => l.bathrooms ?? estimateBathrooms(l.bedrooms)),
     },
-    { label: "Όροφος", values: listings.map((l) => l.floor ?? "—") },
-    { label: "Όροφοι κτιρίου", values: listings.map((l) => l.total_floors ?? "—") },
-    { label: "Έτος κατασκευής", values: listings.map((l) => l.year_built ?? "—") },
-    { label: "Επιπλωμένο", values: listings.map((l) => yesNo(l.furnished)) },
-    { label: "Μπαλκόνι", values: listings.map((l) => yesNo(l.has_balcony)) },
-    { label: "Ασανσέρ", values: listings.map((l) => yesNo(l.has_elevator)) },
-    { label: "Πάρκινγκ", values: listings.map((l) => yesNo(l.has_parking)) },
+    { label: t("floor"), values: listings.map((l) => formatFloorLabel(l.floor) ?? "—") },
+    { label: t("totalFloors"), values: listings.map((l) => l.total_floors ?? "—") },
+    { label: t("yearBuilt"), values: listings.map((l) => l.year_built ?? "—") },
+    { label: t("furnished"), values: listings.map((l) => yesNo(l.furnished, yes, no)) },
+    { label: t("balcony"), values: listings.map((l) => yesNo(l.has_balcony, yes, no)) },
+    { label: t("elevator"), values: listings.map((l) => yesNo(l.has_elevator, yes, no)) },
+    { label: t("parking"), values: listings.map((l) => yesNo(l.has_parking, yes, no)) },
     {
-      label: "Θέρμανση",
-      values: listings.map((l) => heatingTypeLabel(l.heating_type)),
+      label: t("heating"),
+      values: listings.map((l) => getHeatingTypeLabel(l.heating_type, tLabels)),
     },
     {
-      label: "Ενεργ. κλάση",
-      values: listings.map((l) => energyClassLabel(l.energy_class)),
+      label: t("energyClass"),
+      values: listings.map((l) => getEnergyClassLabel(l.energy_class, tLabels)),
     },
-    { label: "Κατοικίδια", values: listings.map((l) => yesNo(l.pets_allowed)) },
-    { label: "Λογαριασμοί", values: listings.map((l) => yesNo(l.utilities_included)) },
-    { label: "Ελάχ. μήνες", values: listings.map((l) => l.min_months) },
+    { label: t("pets"), values: listings.map((l) => yesNo(l.pets_allowed, yes, no)) },
+    {
+      label: t("utilities"),
+      values: listings.map((l) => yesNo(l.utilities_included, yes, no)),
+    },
+    { label: t("minMonths"), values: listings.map((l) => l.min_months) },
   ];
 }
 
-export function FavoritesCompareTable({ listings }: { listings: ListingWithImages[] }) {
-  const rows = buildRows(listings);
+export async function FavoritesCompareTable({ listings }: { listings: ListingWithImages[] }) {
+  const [t, tPropertyTypes, tLabels, tCommon] = await Promise.all([
+    getTranslations("Favorites.table"),
+    getTranslations("PropertyTypes"),
+    getTranslations("Listing.labels"),
+    getTranslations("Common"),
+  ]);
+  const rows = buildRows(listings, t, tPropertyTypes, tLabels, tCommon);
 
   return (
     <div className="mt-8 overflow-x-auto rounded-2xl border border-border">
@@ -59,7 +86,7 @@ export function FavoritesCompareTable({ listings }: { listings: ListingWithImage
         <thead>
           <tr className="border-b border-border bg-sand/40">
             <th className="p-4 text-left text-xs font-medium tracking-wider text-muted uppercase">
-              Χαρακτηριστικό
+              {t("feature")}
             </th>
             {listings.map((l) => (
               <th key={l.id} className="max-w-[180px] p-4 text-left align-top">

@@ -1,17 +1,17 @@
 import type { ListingFilters } from "@/lib/types";
+import { pickLocale, intlLocale } from "@/lib/locale-fallbacks";
 import { toDateKey } from "@/lib/availability-calendar";
-
 export const MID_TERM_DURATION_OPTIONS = [
-  { value: 2, label: "2 μήνες" },
-  { value: 3, label: "3 μήνες" },
-  { value: 6, label: "6 μήνες" },
-  { value: 9, label: "9 μήνες" },
-  { value: 12, label: "12+ μήνες" },
+  { value: 2, label: "2 μήνες", labelKey: "months2" },
+  { value: 3, label: "3 μήνες", labelKey: "months3" },
+  { value: 6, label: "6 μήνες", labelKey: "months6" },
+  { value: 9, label: "9 μήνες", labelKey: "months9" },
+  { value: 12, label: "12+ μήνες", labelKey: "months12plus" },
 ] as const;
 
 export const LONG_TERM_DURATION_OPTIONS = [
-  { value: 12, label: "12+ μήνες" },
-  { value: 0, label: "Κατόπιν συνεννόησης" },
+  { value: 12, label: "12+ μήνες", labelKey: "months12plus" },
+  { value: 0, label: "Κατόπιν συνεννόησης", labelKey: "uponRequest" },
 ] as const;
 
 export function monthlyInterestRange(
@@ -45,8 +45,8 @@ export function resolveInterestDateRange(
   return null;
 }
 
-export function formatInterestRangeLabel(from: string, to: string): string {
-  const fmt = new Intl.DateTimeFormat("el-GR", {
+export function formatInterestRangeLabel(from: string, to: string, locale?: string): string {
+  const fmt = new Intl.DateTimeFormat(intlLocale(locale), {
     day: "2-digit",
     month: "2-digit",
     year: "numeric",
@@ -54,9 +54,19 @@ export function formatInterestRangeLabel(from: string, to: string): string {
   return `${fmt.format(new Date(from))} – ${fmt.format(new Date(to))}`;
 }
 
-export function formatMonthLabel(yyyyMm: string): string {
+export function formatMonthLabel(yyyyMm: string, locale?: string): string {
   const match = /^(\d{4})-(\d{2})$/.exec(yyyyMm);
   if (!match) return yyyyMm;
   const d = new Date(parseInt(match[1], 10), parseInt(match[2], 10) - 1, 1);
-  return new Intl.DateTimeFormat("el-GR", { month: "long", year: "numeric" }).format(d);
+  return new Intl.DateTimeFormat(intlLocale(locale), { month: "long", year: "numeric" }).format(d);
+}
+
+export function midTermDurationLabel(value: number, locale?: string): string {
+  if (value === 12) return pickLocale(locale, "12+ μήνες", "12+ months");
+  return pickLocale(locale, `${value} μήνες`, `${value} months`);
+}
+
+export function longTermDurationLabel(value: number, locale?: string): string {
+  if (value === 0) return pickLocale(locale, "Κατόπιν συνεννόησης", "By arrangement");
+  return pickLocale(locale, "12+ μήνες", "12+ months");
 }

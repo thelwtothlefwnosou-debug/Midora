@@ -3,18 +3,20 @@
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import { Bell, BellOff, Pencil, Trash2, ExternalLink } from "lucide-react";
+import { useTranslations } from "next-intl";
 import type { SavedSearch } from "@/lib/types";
 import { deleteSavedSearch, updateSavedSearch } from "@/lib/actions";
 import { savedSearchToUrl } from "@/lib/saved-searches";
 
 export function SavedSearchRow({ search }: { search: SavedSearch }) {
+  const t = useTranslations("Owner.savedSearchRow");
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState(search.name);
   const [emailAlerts, setEmailAlerts] = useState(search.email_alerts !== false);
   const [pending, startTransition] = useTransition();
 
   function handleDelete() {
-    if (!confirm(`Διαγραφή αναζήτησης «${search.name}»;`)) return;
+    if (!confirm(t("confirmDelete", { name: search.name }))) return;
     startTransition(async () => {
       await deleteSavedSearch(search.id);
     });
@@ -59,7 +61,7 @@ export function SavedSearchRow({ search }: { search: SavedSearch }) {
               disabled={pending}
               className="rounded-lg bg-gold px-3 py-2 text-xs font-semibold text-white"
             >
-              Αποθήκευση
+              {t("save")}
             </button>
             <button
               type="button"
@@ -69,7 +71,7 @@ export function SavedSearchRow({ search }: { search: SavedSearch }) {
               }}
               className="text-xs text-muted hover:text-charcoal"
             >
-              Άκυρο
+              {t("cancel")}
             </button>
           </form>
         ) : (
@@ -79,12 +81,12 @@ export function SavedSearchRow({ search }: { search: SavedSearch }) {
               {emailAlerts && (
                 <span className="inline-flex items-center gap-1 rounded-full bg-gold/10 px-2 py-0.5 text-[10px] font-medium text-gold">
                   <Bell className="h-3 w-3" />
-                  Ειδοποιήσεις email
+                  {t("emailAlertsBadge")}
                 </span>
               )}
             </div>
             <p className="mt-1 truncate text-xs text-muted">
-              {savedSearchToUrl(search.filters).replace("/listings?", "") || "Χωρίς φίλτρα"}
+              {savedSearchToUrl(search.filters).replace("/listings?", "") || t("noFilters")}
             </p>
           </>
         )}
@@ -96,7 +98,7 @@ export function SavedSearchRow({ search }: { search: SavedSearch }) {
             type="button"
             onClick={toggleEmailAlerts}
             disabled={pending}
-            title={emailAlerts ? "Απενεργοποίηση email" : "Ενεργοποίηση email"}
+            title={emailAlerts ? t("disableEmail") : t("enableEmail")}
             className="rounded-lg border border-border p-2 text-muted hover:text-gold"
           >
             {emailAlerts ? <Bell className="h-4 w-4" /> : <BellOff className="h-4 w-4" />}
@@ -106,13 +108,13 @@ export function SavedSearchRow({ search }: { search: SavedSearch }) {
             className="flex items-center gap-1.5 rounded-lg border border-border px-3 py-2 text-xs text-charcoal/70 hover:border-gold/30 hover:text-gold"
           >
             <ExternalLink className="h-3.5 w-3.5" />
-            Αναζήτηση
+            {t("search")}
           </Link>
           <button
             type="button"
             onClick={() => setEditing(true)}
             className="rounded-lg border border-border p-2 text-muted hover:text-gold"
-            aria-label="Επεξεργασία"
+            aria-label={t("edit")}
           >
             <Pencil className="h-4 w-4" />
           </button>
@@ -121,7 +123,7 @@ export function SavedSearchRow({ search }: { search: SavedSearch }) {
             onClick={handleDelete}
             disabled={pending}
             className="rounded-lg border border-border p-2 text-muted hover:text-red-400"
-            aria-label="Διαγραφή"
+            aria-label={t("delete")}
           >
             <Trash2 className="h-4 w-4" />
           </button>

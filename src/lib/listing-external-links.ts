@@ -1,3 +1,5 @@
+import { pickLocale } from "@/lib/locale-fallbacks";
+
 export type ExternalLinkPlatform = "airbnb" | "booking" | "vrbo" | "other";
 
 export type ListingExternalLink = {
@@ -18,10 +20,21 @@ export type ExternalLinkValidation = {
   warning?: string;
 };
 
+const EXTERNAL_LINKS_DISCLAIMER_EL =
+  "Οι εξωτερικοί σύνδεσμοι προστίθενται από τον ιδιοκτήτη. Το Midora δεν ελέγχει ούτε διαχειρίζεται το περιεχόμενο ή τις συναλλαγές σε τρίτες πλατφόρμες.";
+const EXTERNAL_LINKS_DISCLAIMER_EN =
+  "External links are added by the owner. Midora does not control or manage content or transactions on third-party platforms.";
+
 /** Configurable legal disclaimer for public external-link sections. */
 export const EXTERNAL_LINKS_DISCLAIMER =
-  process.env.NEXT_PUBLIC_EXTERNAL_LINKS_DISCLAIMER ??
-  "Οι εξωτερικοί σύνδεσμοι προστίθενται από τον ιδιοκτήτη. Το Midora δεν ελέγχει ούτε διαχειρίζεται το περιεχόμενο ή τις συναλλαγές σε τρίτες πλατφόρμες.";
+  process.env.NEXT_PUBLIC_EXTERNAL_LINKS_DISCLAIMER ?? EXTERNAL_LINKS_DISCLAIMER_EL;
+
+export function externalLinksDisclaimer(locale?: string): string {
+  if (process.env.NEXT_PUBLIC_EXTERNAL_LINKS_DISCLAIMER) {
+    return EXTERNAL_LINKS_DISCLAIMER;
+  }
+  return pickLocale(locale, EXTERNAL_LINKS_DISCLAIMER_EL, EXTERNAL_LINKS_DISCLAIMER_EN);
+}
 
 export const EXTERNAL_LINK_PLATFORM_LABELS: Record<ExternalLinkPlatform, string> = {
   airbnb: "Airbnb",
@@ -30,12 +43,48 @@ export const EXTERNAL_LINK_PLATFORM_LABELS: Record<ExternalLinkPlatform, string>
   other: "Άλλη πλατφόρμα",
 };
 
+const EXTERNAL_LINK_PLATFORM_LABELS_EN: Record<ExternalLinkPlatform, string> = {
+  airbnb: "Airbnb",
+  booking: "Booking.com",
+  vrbo: "Vrbo",
+  other: "Other platform",
+};
+
+export function externalLinkPlatformLabel(
+  platform: ExternalLinkPlatform,
+  locale?: string
+): string {
+  return pickLocale(
+    locale,
+    EXTERNAL_LINK_PLATFORM_LABELS[platform],
+    EXTERNAL_LINK_PLATFORM_LABELS_EN[platform]
+  );
+}
+
 export const EXTERNAL_LINK_PUBLIC_BUTTON_LABELS: Record<ExternalLinkPlatform, string> = {
   airbnb: "Άνοιγμα αγγελίας στο Airbnb",
   booking: "Άνοιγμα αγγελίας στο Booking.com",
   vrbo: "Άνοιγμα αγγελίας στο Vrbo",
   other: "Άνοιγμα εξωτερικής αγγελίας",
 };
+
+const EXTERNAL_LINK_PUBLIC_BUTTON_LABELS_EN: Record<ExternalLinkPlatform, string> = {
+  airbnb: "Open listing on Airbnb",
+  booking: "Open listing on Booking.com",
+  vrbo: "Open listing on Vrbo",
+  other: "Open external listing",
+};
+
+export function externalLinkPublicButtonLabel(
+  platform: ExternalLinkPlatform,
+  locale?: string
+): string {
+  return pickLocale(
+    locale,
+    EXTERNAL_LINK_PUBLIC_BUTTON_LABELS[platform],
+    EXTERNAL_LINK_PUBLIC_BUTTON_LABELS_EN[platform]
+  );
+}
 
 const PLATFORM_HOSTS: Record<Exclude<ExternalLinkPlatform, "other">, string[]> = {
   airbnb: ["airbnb.com", "www.airbnb.com", "airbnb.gr", "www.airbnb.gr"],
@@ -62,30 +111,48 @@ function hostMatches(hostname: string, allowed: string[]): boolean {
 
 export function validateExternalLinkUrl(
   platform: ExternalLinkPlatform,
-  rawUrl: string
+  rawUrl: string,
+  locale?: string
 ): ExternalLinkValidation {
   const trimmed = rawUrl.trim();
   if (!trimmed) {
-    return { valid: false, error: "Συμπλήρωσε URL." };
+    return {
+      valid: false,
+      error: pickLocale(locale, "Συμπλήρωσε URL.", "Enter a URL."),
+    };
   }
 
   let parsed: URL;
   try {
     parsed = new URL(trimmed);
   } catch {
-    return { valid: false, error: "Μη έγκυρο URL." };
+    return {
+      valid: false,
+      error: pickLocale(locale, "Μη έγκυρο URL.", "Invalid URL."),
+    };
   }
 
   if (parsed.protocol !== "https:") {
     return {
       valid: false,
-      error: "Πρόσθεσε έγκυρο σύνδεσμο που ξεκινά με https://",
+      error: pickLocale(
+        locale,
+        "Πρόσθεσε έγκυρο σύνδεσμο που ξεκινά με https://",
+        "Add a valid link starting with https://"
+      ),
     };
   }
 
   const hostname = parsed.hostname.toLowerCase();
   if (SUSPICIOUS_SHORTENERS.some((s) => hostname === s || hostname.endsWith(`.${s}`))) {
-    return { valid: false, error: "Μη επιτρεπτοί συντομευμένοι σύνδεσμοι." };
+    return {
+      valid: false,
+      error: pickLocale(
+        locale,
+        "Μη επιτρεπτοί συντομευμένοι σύνδεσμοι.",
+        "Shortened links are not allowed."
+      ),
+    };
   }
 
   if (platform !== "other") {
@@ -93,14 +160,22 @@ export function validateExternalLinkUrl(
     if (!hostMatches(hostname, allowed)) {
       return {
         valid: false,
-        error: "Ο σύνδεσμος δεν φαίνεται να ανήκει στην επιλεγμένη πλατφόρμα.",
+        error: pickLocale(
+          locale,
+          "Ο σύνδεσμος δεν φαίνεται να ανήκει στην επιλεγμένη πλατφόρμα.",
+          "The link doesn't appear to belong to the selected platform."
+        ),
       };
     }
   }
 
   const warning =
     platform === "other"
-      ? "Βεβαιώσου ότι το link οδηγεί σε δική σου αγγελία."
+      ? pickLocale(
+          locale,
+          "Βεβαιώσου ότι το link οδηγεί σε δική σου αγγελία.",
+          "Make sure the link leads to your own listing."
+        )
       : undefined;
 
   return {

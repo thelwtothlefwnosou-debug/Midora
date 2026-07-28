@@ -1,7 +1,8 @@
 "use client";
 
+import { useTranslations, useLocale } from "next-intl";
 import { DoorOpen } from "lucide-react";
-import { arrivalInfoItems, hasArrivalInfo } from "@/lib/listing-arrival";
+import { getArrivalInfoItems, hasArrivalInfo } from "@/lib/listing-arrival";
 import type { ListingPublicDetail } from "@/lib/types";
 
 type Props = {
@@ -9,16 +10,16 @@ type Props = {
 };
 
 export function ListingArrivalSection({ listing }: Props) {
+  const tSection = useTranslations("Listing.arrivalSection");
+  const t = useTranslations("Listing.houseRules");
   if (!hasArrivalInfo(listing)) return null;
 
-  const items = arrivalInfoItems(listing);
+  const items = getArrivalInfoItems(listing, t);
 
   return (
     <section id="arrival" className="listing-section scroll-mt-32">
-      <h2 className="listing-section-title">Άφιξη και αναχώρηση</h2>
-      <p className="listing-meta mt-2">
-        Πρακτικές πληροφορίες για check-in, check-out και τρόπο άφιξης.
-      </p>
+      <h2 className="listing-section-title">{tSection("title")}</h2>
+      <p className="listing-meta mt-2">{tSection("intro")}</p>
 
       <dl className="listing-card mt-5 space-y-4 p-5">
         {items.map((item) => (

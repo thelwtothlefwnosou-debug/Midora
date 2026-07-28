@@ -1,8 +1,11 @@
 import Link from "next/link";
+import { getTranslations } from "next-intl/server";
 import { ArrowLeft } from "lucide-react";
 import { MidoraLogo } from "@/components/brand/MidoraLogo";
 
-export function AuthLayout({ children }: { children: React.ReactNode }) {
+export async function AuthLayout({ children }: { children: React.ReactNode }) {
+  const t = await getTranslations("Auth");
+
   return (
     <div className="relative min-h-screen bg-cream">
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(201,169,98,0.08),transparent_50%)]" />
@@ -14,7 +17,7 @@ export function AuthLayout({ children }: { children: React.ReactNode }) {
             className="inline-flex items-center gap-2 text-sm text-muted transition-colors hover:text-gold"
           >
             <ArrowLeft className="h-4 w-4" />
-            Αρχική
+            {t("home")}
           </Link>
         </div>
       </header>

@@ -1,14 +1,16 @@
 import type { Listing, ListingAvailabilityStatus } from "@/lib/types";
+import { pickLocale } from "@/lib/locale-fallbacks";
 
 export type { ListingAvailabilityStatus };
 
 export const LISTING_AVAILABILITY_STATUS_OPTIONS: {
   value: ListingAvailabilityStatus;
   label: string;
+  labelKey: "statusAvailableNow" | "statusFromMonth" | "statusUponRequest";
 }[] = [
-  { value: "available_now", label: "Άμεσα διαθέσιμο" },
-  { value: "from_month", label: "Από συγκεκριμένο μήνα" },
-  { value: "upon_request", label: "Κατόπιν συνεννόησης" },
+  { value: "available_now", label: "Άμεσα διαθέσιμο", labelKey: "statusAvailableNow" },
+  { value: "from_month", label: "Από συγκεκριμένο μήνα", labelKey: "statusFromMonth" },
+  { value: "upon_request", label: "Κατόπιν συνεννόησης", labelKey: "statusUponRequest" },
 ];
 
 export const DEFAULT_LISTING_AVAILABILITY_STATUS: ListingAvailabilityStatus =
@@ -27,12 +29,21 @@ export function parseListingAvailabilityStatus(
   return DEFAULT_LISTING_AVAILABILITY_STATUS;
 }
 
+const AVAILABILITY_STATUS_EN: Record<ListingAvailabilityStatus, string> = {
+  available_now: "Available now",
+  from_month: "From a specific month",
+  upon_request: "By arrangement",
+};
+
 export function listingAvailabilityStatusLabel(
-  status: ListingAvailabilityStatus
+  status: ListingAvailabilityStatus,
+  locale?: string
 ): string {
-  return (
-    LISTING_AVAILABILITY_STATUS_OPTIONS.find((option) => option.value === status)
-      ?.label ?? "Άμεσα διαθέσιμο"
+  const option = LISTING_AVAILABILITY_STATUS_OPTIONS.find((o) => o.value === status);
+  return pickLocale(
+    locale,
+    option?.label ?? "Άμεσα διαθέσιμο",
+    AVAILABILITY_STATUS_EN[status] ?? AVAILABILITY_STATUS_EN.available_now
   );
 }
 
@@ -42,29 +53,46 @@ type AvailabilityFields = Pick<
 >;
 
 export function formatListingAvailabilityText(
-  listing: AvailabilityFields
+  listing: AvailabilityFields,
+  t?: (
+    key:
+      | "availabilityAvailableNow"
+      | "availabilityFromMonth"
+      | "availabilityFromNote"
+      | "availabilityUponRequest",
+    values?: Record<string, string>
+  ) => string,
+  locale?: string
 ): string {
   const status = parseListingAvailabilityStatus(listing.availability_status);
 
   switch (status) {
     case "available_now":
-      return "Άμεσα διαθέσιμο";
+      return t ? t("availabilityAvailableNow") : pickLocale(locale, "Άμεσα διαθέσιμο", "Available now");
     case "from_month": {
       const note = listing.availability_note?.trim();
-      if (!note) return "Από συγκεκριμένο μήνα";
-      return note.toLowerCase().startsWith("από")
+      if (!note) {
+        return t
+          ? t("availabilityFromMonth")
+          : pickLocale(locale, "Από συγκεκριμένο μήνα", "From a specific month");
+      }
+      if (t) return t("availabilityFromNote", { note });
+      return note.toLowerCase().startsWith("από") || note.toLowerCase().startsWith("from")
         ? note.charAt(0).toUpperCase() + note.slice(1)
-        : `Από ${note}`;
+        : pickLocale(locale, `Από ${note}`, `From ${note}`);
     }
     case "upon_request":
-      return "Κατόπιν συνεννόησης";
+      return t ? t("availabilityUponRequest") : pickLocale(locale, "Κατόπιν συνεννόησης", "By arrangement");
   }
 }
 
 export function formatListingAvailabilityLabel(
-  listing: AvailabilityFields
+  listing: AvailabilityFields,
+  locale?: string,
+  t?: (key: "availabilityPrefix") => string
 ): string {
-  return `Διαθεσιμότητα: ${formatListingAvailabilityText(listing)}`;
+  const prefix = t ? t("availabilityPrefix") : pickLocale(locale, "Διαθεσιμότητα:", "Availability:");
+  return `${prefix} ${formatListingAvailabilityText(listing, undefined, locale)}`;
 }
 
 const GREEK_MONTH_NAMES = [
@@ -82,12 +110,16 @@ const GREEK_MONTH_NAMES = [
   "Δεκέμβριος",
 ] as const;
 
-/** HTML month input value (YYYY-MM) → Greek label for storage */
-export function formatAvailabilityMonthNote(monthValue: string): string {
+/** HTML month input value (YYYY-MM) → localized label for storage */
+export function formatAvailabilityMonthNote(monthValue: string, locale = "el"): string {
   const [year, month] = monthValue.split("-");
   const idx = parseInt(month, 10) - 1;
   if (!year || idx < 0 || idx > 11) return monthValue;
-  return `${GREEK_MONTH_NAMES[idx]} ${year}`;
+  const date = new Date(parseInt(year, 10), idx, 1);
+  return new Intl.DateTimeFormat(locale === "en" ? "en-GB" : "el-GR", {
+    month: "long",
+    year: "numeric",
+  }).format(date);
 }
 
 /** Parse stored note or YYYY-MM into month input value */

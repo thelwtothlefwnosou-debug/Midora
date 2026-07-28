@@ -1,6 +1,10 @@
 import type { ListingWithImages } from "@/lib/types";
 import { MIN_LISTING_PHOTOS_FOR_REVIEW } from "@/lib/constants";
-import { MIN_LISTING_DESCRIPTION_LENGTH } from "@/lib/listing-wizard-validation";
+import {
+  MIN_LISTING_DESCRIPTION_LENGTH,
+  isListingDescriptionWithinMax,
+} from "@/lib/listing-wizard-validation";
+import { isPresentNumber } from "@/lib/listing-wizard-step-validation";
 import { listingSupportsShortTerm, listingRentalType, requiresAmaRegistry } from "@/lib/rental-types";
 
 export type CompletenessItem = {
@@ -26,31 +30,31 @@ export function shortTermCompletenessItems(
   return [
     {
       id: "basics",
-      label: "Βασικά στοιχεία",
+      label: "basics",
       done: Boolean(listing.title?.trim() && listing.city && listing.area),
       required: true,
     },
     {
       id: "address",
-      label: "Πλήρης ιδιωτική διεύθυνση",
+      label: "address",
       done: Boolean(listing.address_street?.trim() || listing.address?.trim()),
       required: true,
     },
     {
       id: "price",
-      label: "Τιμή / βράδυ",
+      label: "price",
       done: Boolean(listing.price_per_night && listing.price_per_night > 0),
       required: true,
     },
     {
       id: "guests",
-      label: "Μέγιστος αριθμός ατόμων",
-      done: Boolean(listing.max_guests && listing.max_guests > 0),
+      label: "guests",
+      done: isPresentNumber(listing.max_guests) && (listing.max_guests as number) > 0,
       required: true,
     },
     {
       id: "min_stay",
-      label: "Ελάχιστη διαμονή",
+      label: "min_stay",
       done: Boolean(
         listing.minimum_stay_nights ||
           listing.min_stay_label?.includes("νύχτ")
@@ -59,48 +63,54 @@ export function shortTermCompletenessItems(
     },
     {
       id: "photos",
-      label: `${MIN_LISTING_PHOTOS_FOR_REVIEW}+ φωτογραφίες`,
+      label: "photos",
       done: photoCount >= MIN_LISTING_PHOTOS_FOR_REVIEW,
       required: true,
     },
     {
       id: "registry",
-      label: "Αριθμός καταχώρισης",
+      label: "registry",
       done: Boolean(listing.ama_number?.trim() && listing.legal_registry_type !== "none"),
       required: needsAma,
     },
     {
       id: "description",
-      label: "Περιγραφή",
-      done: (listing.description?.trim().length ?? 0) >= MIN_LISTING_DESCRIPTION_LENGTH,
+      label: "description",
+      done:
+        (listing.description?.trim().length ?? 0) >= MIN_LISTING_DESCRIPTION_LENGTH &&
+        isListingDescriptionWithinMax(listing.description ?? ""),
       required: true,
     },
     {
       id: "availability",
-      label: "Διαθεσιμότητα",
+      label: "availability",
       done: Boolean(listing.availability_status),
       required: true,
     },
     {
       id: "declarations",
-      label: "Υποχρεωτικές δηλώσεις",
+      label: "declarations",
       done: Boolean(
         listing.owner_responsibility_accepted &&
           listing.platform_role_accepted &&
           listing.terms_privacy_accepted &&
+          (listing.tax_obligation_accepted === true ||
+            Boolean(listing.declarations_submitted_at)) &&
+          (listing.authority_disclosure_accepted === true ||
+            Boolean(listing.declarations_submitted_at)) &&
           (!needsAma || listing.ama_declaration_accepted)
       ),
       required: true,
     },
     {
       id: "amenities",
-      label: "Παροχές",
+      label: "amenities",
       done: amenityCount >= 5,
       required: false,
     },
     {
       id: "house_rules",
-      label: "Όροι διαμονής",
+      label: "house_rules",
       done: false,
       required: false,
     },

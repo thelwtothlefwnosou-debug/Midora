@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Image from "next/image";
 import { Bed, Bath, Home, Maximize, Users, Building2 } from "lucide-react";
+import { useTranslations } from "next-intl";
 import type { ListingImage, ListingPublicDetail } from "@/lib/types";
 import {
   formatFloorLabel,
@@ -25,27 +26,37 @@ import {
 import { highlightIconForKey } from "@/lib/amenity-icons";
 
 export function ListingShortTermFacts({ listing }: { listing: ListingPublicDetail }) {
+  const t = useTranslations("Listing");
+  const tLabels = useTranslations("Listing.labels");
+  const tPropertyTypes = useTranslations("PropertyTypes");
   const beds =
     listing.sleeping_arrangements.length > 0
       ? countBedsFromSleeping(listing.sleeping_arrangements)
       : listing.bedrooms;
   const baths = resolveListingBathrooms(listing.bathrooms, listing.bedrooms);
   const floorLabel = formatFloorLabel(listing.floor);
-  const propertyLabel = formatPublicPropertyTypeLabel(listing.property_type);
+  const propertyLabel = formatPublicPropertyTypeLabel(
+    listing.property_type,
+    tLabels,
+    tPropertyTypes
+  );
 
   const facts = [
     listing.max_guests != null && {
       icon: Users,
-      label: formatPublicGuestsLabel(listing.max_guests),
+      label: formatPublicGuestsLabel(listing.max_guests, tLabels),
     },
     {
       icon: Bed,
-      label: formatPublicBedroomsLabel(listing.bedrooms),
+      label: formatPublicBedroomsLabel(listing.bedrooms, tLabels),
     },
-    beds > 0 && { icon: Bed, label: formatPublicBedsLabel(beds) },
-    { icon: Bath, label: formatPublicBathroomsLabel(baths) },
+    beds > 0 && { icon: Bed, label: formatPublicBedsLabel(beds, tLabels) },
+    { icon: Bath, label: formatPublicBathroomsLabel(baths, tLabels) },
     floorLabel && { icon: Building2, label: floorLabel },
-    listing.sqm && { icon: Maximize, label: formatPublicSqmLabel(listing.sqm) },
+    listing.sqm && {
+      icon: Maximize,
+      label: formatPublicSqmLabel(listing.sqm, tLabels),
+    },
     { icon: Home, label: propertyLabel },
   ].filter(Boolean) as { icon: typeof Users; label: string }[];
 
@@ -61,7 +72,7 @@ export function ListingShortTermFacts({ listing }: { listing: ListingPublicDetai
         </span>
       ))}
       <span className="w-full text-sm text-charcoal/85 sm:w-auto">
-        Ελάχιστη διαμονή: {formatPublicMinStayNights(listing)}
+        {t("minStayPrefix", { value: formatPublicMinStayNights(listing) })}
       </span>
     </div>
   );
@@ -72,6 +83,7 @@ export function ListingHighlightsSection({
 }: {
   highlights: ListingPublicDetail["highlights"];
 }) {
+  const t = useTranslations("Listing.shortTermSections");
   const items = highlights
     .filter((h) => isValidPublicHighlightLabel(h.label))
     .slice(0, 3);
@@ -80,7 +92,7 @@ export function ListingHighlightsSection({
 
   return (
     <section id="highlights" className="listing-section">
-      <h2 className="listing-section-title">Τι ξεχωρίζει</h2>
+      <h2 className="listing-section-title">{t("highlightsTitle")}</h2>
       <ul className="mt-5 grid gap-3 sm:grid-cols-3">
         {items.map((h) => {
           const Icon = highlightIconForKey(h.icon_key);
@@ -102,6 +114,7 @@ export function ListingHighlightsSection({
 }
 
 export function ListingAboutSection({ description }: { description: string }) {
+  const t = useTranslations("Listing.shortTermSections");
   const clean = sanitizePublicListingText(description);
   if (!clean) return null;
 
@@ -111,15 +124,17 @@ export function ListingAboutSection({ description }: { description: string }) {
 
   return (
     <section id="about" className="listing-section">
-      <h2 className="listing-section-title">Σχετικά με αυτό το ακίνητο</h2>
-      <p className="listing-body mt-5 whitespace-pre-wrap">{shown}</p>
+      <h2 className="listing-section-title">{t("aboutThisProperty")}</h2>
+      <p className="listing-body mt-5 max-w-full min-w-0 break-words whitespace-pre-wrap [overflow-wrap:anywhere]">
+        {shown}
+      </p>
       {long && (
         <button
           type="button"
           onClick={() => setExpanded((v) => !v)}
           className="mt-4 text-sm font-semibold text-gold-dark hover:text-gold"
         >
-          {expanded ? "Λιγότερα" : "Περισσότερα"}
+          {expanded ? t("showLess") : t("showMore")}
         </button>
       )}
     </section>
@@ -133,13 +148,14 @@ export function ListingSleepingSection({
   arrangements: ListingPublicDetail["sleeping_arrangements"];
   images?: ListingImage[];
 }) {
+  const t = useTranslations("Listing.shortTermSections");
   if (!arrangements.length) return null;
 
   const imageById = new Map(images.map((img) => [img.id, img.url]));
 
   return (
     <section id="sleeping" className="listing-section">
-      <h2 className="listing-section-title">Τα υπνοδωμάτια</h2>
+      <h2 className="listing-section-title">{t("sleepingTitle")}</h2>
       <div className="mt-5 grid gap-4 sm:grid-cols-2">
         {arrangements.map((row) => {
           const photoUrl = row.listing_image_id

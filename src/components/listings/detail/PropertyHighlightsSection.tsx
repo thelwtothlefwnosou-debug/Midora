@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import type { ListingPublicDetail } from "@/lib/types";
 import { isValidPublicHighlightLabel } from "@/lib/listing-public-text";
 import { highlightIconForKey } from "@/lib/amenity-icons";
@@ -9,6 +10,7 @@ type Props = {
 };
 
 export function PropertyHighlightsSection({ highlights }: Props) {
+  const t = useTranslations("Listing.shortTermSections");
   const items = highlights
     .filter((h) => isValidPublicHighlightLabel(h.label))
     .slice(0, 3);
@@ -17,7 +19,7 @@ export function PropertyHighlightsSection({ highlights }: Props) {
 
   return (
     <section id="highlights" className="listing-section scroll-mt-32">
-      <h2 className="listing-section-title">Τι ξεχωρίζει</h2>
+      <h2 className="listing-section-title">{t("highlightsTitle")}</h2>
       <ul className="mt-5 space-y-4">
         {items.map((item) => {
           const Icon = highlightIconForKey(item.icon_key);

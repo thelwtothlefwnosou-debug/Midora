@@ -1,5 +1,6 @@
 import "server-only";
 
+import { getLocale } from "next-intl/server";
 import type { ListingWithImages } from "@/lib/types";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
@@ -10,6 +11,7 @@ import { listingRentalType } from "@/lib/rental-types";
 import type { ListingWorkspaceContext, ListingSwitcherItem } from "@/lib/listing-workspace-types";
 import { resolveListingAccess, type ListingAccessContext } from "@/lib/listing-access";
 import { OWNER_FULL_PERMISSIONS } from "@/lib/listing-cohost-permissions";
+import { pickListingCoverPhotoUrl } from "@/lib/listing-media";
 
 const LISTING_WORKSPACE_SELECT = "*, listing_images(*)" as const;
 
@@ -84,7 +86,8 @@ export async function loadListingWorkspace(
   if (!listing) notFound();
 
   const effectiveStatus = getEffectiveListingStatus(listing);
-  const ownerStatus = getOwnerListingStatus(listing, effectiveStatus);
+  const locale = await getLocale();
+  const ownerStatus = getOwnerListingStatus(listing, effectiveStatus, locale);
   const photoCount =
     listing.listing_images?.filter((i: { media_type?: string }) => i.media_type !== "video")
       .length ?? 0;
@@ -111,14 +114,15 @@ export async function loadOwnerListingSwitcherItems(
   const { data: listings, error } = await supabase
     .from("listings")
     .select(
-      "id, title, area, area_display_name, city, city_display_name, status, is_hidden, expires_at, published_at, approval_status, admin_verification_notes, rental_type, listing_images(url, media_type, sort_order)"
+      "id, title, area, area_display_name, city, city_display_name, status, is_hidden, expires_at, published_at, approval_status, admin_verification_notes, rental_type, listing_images(url, media_type, sort_order, is_cover)"
     )
     .eq("user_id", userId)
     .order("updated_at", { ascending: false });
 
   if (error || !listings?.length) return [];
 
-  return listings.map((listing) => mapSwitcherItem(listing as ListingWithImages, false));
+  const locale = await getLocale();
+  return listings.map((listing) => mapSwitcherItem(listing as ListingWithImages, false, locale));
 }
 
 export async function loadCohostListingSwitcherItems(
@@ -159,6 +163,7 @@ export async function loadCohostListingSwitcherItems(
 
   if (!listingRows?.length) return [];
 
+  const locale = await getLocale();
   const imageClient = createServiceClient() ?? supabase;
   const { data: imageRows } = await imageClient
     .from("listing_images")
@@ -180,23 +185,20 @@ export async function loadCohostListingSwitcherItems(
   return listingRows.map((listing) =>
     mapSwitcherItem(
       { ...listing, listing_images: imagesByListing.get(listing.id) ?? [] },
-      true
+      true,
+      locale
     )
   );
 }
 
-function mapSwitcherItem(listing: ListingWithImages, isCohost: boolean): ListingSwitcherItem {
+function mapSwitcherItem(
+  listing: ListingWithImages,
+  isCohost: boolean,
+  locale?: string
+): ListingSwitcherItem {
   const effectiveStatus = getEffectiveListingStatus(listing);
-  const ownerStatus = getOwnerListingStatus(listing, effectiveStatus);
-  const images = (listing.listing_images ?? []) as {
-    url: string;
-    media_type?: string;
-    sort_order?: number;
-  }[];
-  const cover =
-    images
-      .filter((i) => i.media_type !== "video")
-      .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))[0]?.url ?? null;
+  const ownerStatus = getOwnerListingStatus(listing, effectiveStatus, locale);
+  const cover = pickListingCoverPhotoUrl(listing);
 
   const location = [
     listing.area_display_name || listing.area,

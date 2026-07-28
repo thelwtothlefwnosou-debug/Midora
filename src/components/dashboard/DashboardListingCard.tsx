@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { useLocale, useTranslations } from "next-intl";
 import {
   Clock,
   CheckCircle,
@@ -20,21 +21,25 @@ import { Button } from "@/components/ui/Button";
 import { DeleteListingButton } from "@/components/dashboard/DeleteListingButton";
 import type { ListingWithImages } from "@/lib/types";
 import { getListingPublicId, cn } from "@/lib/utils";
+import { pickListingCoverPhotoUrl } from "@/lib/listing-media";
 import type { ListingDisplayStatus } from "@/lib/listing-status";
-import { getOwnerListingStatus } from "@/lib/dashboard-listings";
+import { getOwnerListingStatus, getOwnerListingUiLabelKey } from "@/lib/dashboard-listings";
 import {
   formatMinStayLabel,
-  formatListingPrice,
+  getFormattedListingPrice,
+  getRentalTypeBadgeLabel,
   listingRentalType,
-  rentalTypeBadgeLabel,
 } from "@/lib/rental-types";
 import { formatListingAvailabilityText } from "@/lib/listing-availability-status";
 import { formatViewCount, getDisplayViewCount } from "@/lib/listing-views";
 import {
-  listingPrimaryCta,
   ownerListingCompletenessItems,
   ownerListingCompletenessPercent,
 } from "@/lib/owner-dashboard";
+import {
+  buildOwnerListingRowModel,
+} from "@/lib/owner-listings-page";
+import { ownerListingPrimaryAction } from "@/lib/owner-listing-ui-status";
 
 const statusIcons: Partial<Record<import("@/lib/dashboard-listings").OwnerListingStatusKey, typeof Clock>> = {
   draft: Clock,
@@ -50,67 +55,99 @@ type Props = {
   listing: ListingWithImages;
   effectiveStatus: ListingDisplayStatus;
   isFree: boolean;
+  onDeleted?: (listingId: string) => void;
 };
 
-function formatCardDate(iso: string | null | undefined): string | null {
+function formatCardDate(
+  iso: string | null | undefined,
+  locale: string
+): string | null {
   if (!iso) return null;
-  return new Date(iso).toLocaleDateString("el-GR", {
+  const dateLocale = locale.startsWith("el") ? "el-GR" : "en-US";
+  return new Date(iso).toLocaleDateString(dateLocale, {
     day: "numeric",
     month: "short",
     year: "numeric",
   });
 }
 
-function formatModePrice(listing: ListingWithImages): string {
-  const price = formatListingPrice(listing);
+function formatModePrice(
+  listing: ListingWithImages,
+  tCommon: ReturnType<typeof useTranslations<"Common">>
+): string {
+  const price = getFormattedListingPrice(listing, tCommon);
   if (!price.amount || price.amount <= 0) return "—";
   return price.display;
 }
 
+type OwnerListDateT = (
+  key: "publishedOn" | "expiredOn" | "submittedOn" | "updatedOn",
+  values: { date: string }
+) => string;
+
 function listingDateLabel(
   listing: ListingWithImages,
   effectiveStatus: ListingDisplayStatus,
-  ownerKey: string
+  ownerKey: string,
+  locale: string,
+  t: OwnerListDateT
 ): string | null {
   if (ownerKey === "published" && listing.published_at) {
-    const d = formatCardDate(listing.published_at);
-    return d ? `Δημοσιεύτηκε ${d}` : null;
+    const d = formatCardDate(listing.published_at, locale);
+    return d ? t("publishedOn", { date: d }) : null;
   }
   if (effectiveStatus === "expired" && listing.expires_at) {
-    const d = formatCardDate(listing.expires_at);
-    return d ? `Έληξε ${d}` : null;
+    const d = formatCardDate(listing.expires_at, locale);
+    return d ? t("expiredOn", { date: d }) : null;
   }
   if (ownerKey === "review") {
-    const d = formatCardDate(listing.updated_at);
-    return d ? `Υποβλήθηκε ${d}` : null;
+    const d = formatCardDate(listing.updated_at, locale);
+    return d ? t("submittedOn", { date: d }) : null;
   }
-  const d = formatCardDate(listing.updated_at ?? listing.created_at);
-  return d ? `Ενημερώθηκε ${d}` : null;
+  const d = formatCardDate(listing.updated_at ?? listing.created_at, locale);
+  return d ? t("updatedOn", { date: d }) : null;
 }
 
 export function DashboardListingCard({
   listing,
   effectiveStatus,
   isFree,
+  onDeleted,
 }: Props) {
+  const locale = useLocale();
+  const tCta = useTranslations("Owner.cta");
+  const tListing = useTranslations("Listing");
+  const tCommon = useTranslations("Common");
+  const tList = useTranslations("Owner.list");
+  const tUi = useTranslations("Owner.uiStatus");
+  const tCompleteness = useTranslations("Owner.completeness");
   const [menuOpen, setMenuOpen] = useState(false);
   const [copied, setCopied] = useState(false);
 
   const ownerStatus = getOwnerListingStatus(listing, effectiveStatus);
   const StatusIcon = statusIcons[ownerStatus.key] ?? AlertCircle;
   const images = listing.listing_images ?? [];
-  const cover = images.find((i) => i.media_type !== "video")?.url;
+  const cover = pickListingCoverPhotoUrl(listing);
   const photoCount = images.filter((i) => i.media_type !== "video").length;
   const canViewPublic = effectiveStatus === "approved";
   const rentalType = listingRentalType(listing);
   const isShortTerm = rentalType === "short_term";
-  const primaryCta = listingPrimaryCta(listing, effectiveStatus);
+  const row = buildOwnerListingRowModel(listing, effectiveStatus);
+  const primaryCta = ownerListingPrimaryAction(row);
   const completenessItems = ownerListingCompletenessItems(listing, photoCount);
   const completenessPercent = ownerListingCompletenessPercent(listing, photoCount);
   const displayViews = getDisplayViewCount(listing);
-  const dateLabel = listingDateLabel(listing, effectiveStatus, ownerStatus.key);
+  const dateLabel = listingDateLabel(
+    listing,
+    effectiveStatus,
+    ownerStatus.key,
+    locale,
+    tList
+  );
   const minStay = formatMinStayLabel(listing);
-  const availabilityText = formatListingAvailabilityText(listing);
+  const availabilityText = formatListingAvailabilityText(listing, (key, values) =>
+    tListing(key, values)
+  );
 
   const editHref = `/dashboard/listings/${listing.id}/edit`;
   const availabilityHref = `${editHref}#availability-calendar`;
@@ -139,8 +176,8 @@ export function DashboardListingCard({
   }
 
   const modeAction = isShortTerm
-    ? { label: "Ημερολόγιο διαθεσιμότητας", href: availabilityHref }
-    : { label: "Διαχείριση μηνιαίας διαθεσιμότητας", href: editHref };
+    ? { label: tList("availabilityCalendar"), href: availabilityHref }
+    : { label: tList("manageMonthlyAvailability"), href: editHref };
 
   return (
     <div className="overflow-hidden rounded-2xl border border-border bg-white shadow-soft">
@@ -158,12 +195,12 @@ export function DashboardListingCard({
               />
             ) : (
               <div className="flex h-full min-h-[120px] w-full items-center justify-center">
-                <span className="text-xs text-muted">Χωρίς φωτογραφία</span>
+                <span className="text-xs text-muted">{tList("noPhoto")}</span>
               </div>
             )}
             <div className="absolute top-2 left-2 flex flex-wrap gap-1">
               <span className="rounded-md bg-charcoal/90 px-2 py-0.5 text-[10px] font-semibold tracking-wide text-white uppercase">
-                {rentalTypeBadgeLabel(rentalType)}
+                {getRentalTypeBadgeLabel(rentalType, tListing)}
               </span>
             </div>
           </div>
@@ -179,13 +216,13 @@ export function DashboardListingCard({
               </p>
 
               <p className="mt-2 font-display text-lg font-semibold text-charcoal">
-                {formatModePrice(listing)}
+                {formatModePrice(listing, tCommon)}
               </p>
               <p className="mt-0.5 text-xs text-muted">
                 {isShortTerm
                   ? minStay
-                    ? `Ελάχιστη διαμονή: ${minStay}`
-                    : "Ημερολόγιο διαθεσιμότητας"
+                    ? tList("minStay", { value: minStay })
+                    : tList("availabilityCalendar")
                   : availabilityText}
               </p>
               <Link
@@ -202,7 +239,7 @@ export function DashboardListingCard({
                 type="button"
                 onClick={() => setMenuOpen((o) => !o)}
                 className="flex h-8 w-8 items-center justify-center rounded-lg text-charcoal/60 hover:bg-sand hover:text-charcoal"
-                aria-label="Ενέργειες"
+                aria-label={tList("actions")}
               >
                 <MoreHorizontal className="h-4 w-4" />
               </button>
@@ -211,30 +248,30 @@ export function DashboardListingCard({
                   <button
                     type="button"
                     className="fixed inset-0 z-10"
-                    aria-label="Κλείσιμο μενού"
+                    aria-label={tList("closeMenu")}
                     onClick={() => setMenuOpen(false)}
                   />
                   <div className="absolute right-0 z-20 mt-1 min-w-[200px] rounded-xl border border-border bg-white p-1.5 shadow-card">
                     <MenuLink href={editHref} onClick={() => setMenuOpen(false)}>
-                      Επεξεργασία
+                      {tList("edit")}
                     </MenuLink>
                     <MenuLink href={availabilityHref} onClick={() => setMenuOpen(false)}>
-                      Διαθεσιμότητα
+                      {tList("availability")}
                     </MenuLink>
                     <MenuLink href={pricingHref} onClick={() => setMenuOpen(false)}>
-                      Τιμές
+                      {tList("pricing")}
                     </MenuLink>
                     {(effectiveStatus === "pending" || effectiveStatus === "approved") && (
                       <MenuLink href={photosHref} onClick={() => setMenuOpen(false)}>
-                        Φωτογραφίες
+                        {tList("photos")}
                       </MenuLink>
                     )}
                     <MenuLink href={`/dashboard/listings/${listing.id}/view`} onClick={() => setMenuOpen(false)}>
-                      Προβολή
+                      {tList("view")}
                     </MenuLink>
                     {canViewPublic && (
                       <MenuLink href={previewHref} onClick={() => setMenuOpen(false)}>
-                        Δημόσια σελίδα
+                        {tList("publicPage")}
                       </MenuLink>
                     )}
                     {canViewPublic && (
@@ -244,17 +281,17 @@ export function DashboardListingCard({
                         className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-charcoal hover:bg-sand"
                       >
                         <Link2 className="h-3.5 w-3.5 text-muted" />
-                        {copied ? "Αντιγράφηκε!" : "Αντιγραφή link"}
+                        {copied ? tList("copied") : tList("copyLink")}
                       </button>
                     )}
                     {effectiveStatus === "expired" && (
                       <MenuLink href={reactivateHref} onClick={() => setMenuOpen(false)}>
-                        Ανανέωση
+                        {tList("renew")}
                       </MenuLink>
                     )}
                     <div className="my-1 border-t border-border" />
                     <div className="px-3 py-1">
-                      <DeleteListingButton listingId={listing.id} />
+                      <DeleteListingButton listingId={listing.id} onDeleted={onDeleted} />
                     </div>
                   </div>
                 </>
@@ -274,35 +311,37 @@ export function DashboardListingCard({
               )}
             >
               <StatusIcon className="h-3 w-3" />
-              {ownerStatus.label}
+              {tUi(getOwnerListingUiLabelKey(ownerStatus.key))}
             </span>
             {dateLabel && <span>{dateLabel}</span>}
             {effectiveStatus === "approved" && (
               <span className="flex items-center gap-1">
                 <BarChart3 className="h-3 w-3" />
-                {formatViewCount(displayViews)}{" "}
-                {displayViews === 1 ? "επίσκεψη" : "επισκέψεις"}
+                {tList("viewsCount", {
+                  formatted: formatViewCount(displayViews),
+                  count: displayViews,
+                })}
               </span>
             )}
           </div>
 
           <div className="mt-auto flex flex-wrap items-center gap-3 border-t border-border pt-3">
             <Button href={primaryCta.href} size="sm">
-              {primaryCta.label}
+              {tCta(primaryCta.labelKey)}
             </Button>
             <Link
               href={`/dashboard/listings/${listing.id}/view`}
               className="flex items-center gap-1 text-xs text-charcoal/60 hover:text-gold"
             >
               <Eye className="h-3 w-3" />
-              Προβολή
+              {tList("view")}
             </Link>
             {canViewPublic && (
               <Link
                 href={previewHref}
                 className="flex items-center gap-1 text-xs text-charcoal/60 hover:text-gold"
               >
-                Δημόσια
+                {tList("public")}
               </Link>
             )}
           </div>
@@ -311,7 +350,7 @@ export function DashboardListingCard({
         {/* RIGHT — completeness */}
         <div className="border-t border-border p-4 lg:w-[220px] lg:shrink-0 lg:border-t-0 lg:border-l lg:p-5">
           <div className="flex items-center justify-between gap-2">
-            <p className="text-xs font-medium text-charcoal">Πληρότητα</p>
+            <p className="text-xs font-medium text-charcoal">{tList("completeness")}</p>
             <span className="text-sm font-semibold text-gold">{completenessPercent}%</span>
           </div>
           <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-sand">
@@ -321,7 +360,7 @@ export function DashboardListingCard({
             />
           </div>
           <p className="mt-2 text-[11px] text-muted">
-            Η αγγελία είναι {completenessPercent}% έτοιμη
+            {tList("completenessReady", { percent: completenessPercent })}
           </p>
           <ul className="mt-3 space-y-1.5">
             {completenessItems.map((item) => (
@@ -332,7 +371,7 @@ export function DashboardListingCard({
                   <Circle className="h-3.5 w-3.5 shrink-0 text-muted/50" />
                 )}
                 <span className={item.done ? "text-charcoal" : "text-muted"}>
-                  {item.label}
+                  {tCompleteness(item.id as "photos" | "location" | "price" | "availability" | "verification" | "registry")}
                 </span>
               </li>
             ))}

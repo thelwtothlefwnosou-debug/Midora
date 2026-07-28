@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { Euro, Lock, Unlock, Calendar, X } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { AvailabilityCalendarPanel } from "@/components/availability/AvailabilityCalendarGrid";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { ShortTermPricingSettings } from "@/components/dashboard/ShortTermPricingSettings";
@@ -28,13 +29,14 @@ type Props = {
   priceRules: ListingPriceRule[];
 };
 
-const AVAILABILITY_QUICK = [
-  { label: "Κλείσε αυτό το Σαββατοκύριακο", getRange: () => getUpcomingWeekendRange() },
-  { label: "Κλείσε 7 ημέρες", getRange: () => getRangeFromToday(7) },
-  { label: "Κλείσε 14 ημέρες", getRange: () => getRangeFromToday(14) },
+const QUICK_ACTION_KEYS = [
+  { id: "closeWeekend", getRange: () => getUpcomingWeekendRange() },
+  { id: "close7", getRange: () => getRangeFromToday(7) },
+  { id: "close14", getRange: () => getRangeFromToday(14) },
 ] as const;
 
 export function ShortTermCalendarHub({ listing, periods, priceRules }: Props) {
+  const t = useTranslations("Workspace.calendar");
   const basePrice = listing.price_per_night ?? 0;
   const [month, setMonth] = useState(() => new Date());
   const [selectionStart, setSelectionStart] = useState<string | null>(null);
@@ -103,7 +105,7 @@ export function ShortTermCalendarHub({ listing, periods, priceRules }: Props) {
     );
     if (blocked) {
       const label = formatUnavailablePeriodRange(blocked.start_date, blocked.end_date);
-      if (!confirm(`Να γίνουν ξανά διαθέσιμες οι ημερομηνίες ${label};`)) return;
+      if (!confirm(t("confirmReopen", { label }))) return;
       availability.handleDelete(blocked.id, { skipConfirm: true });
       clearSelection();
       return;
@@ -145,32 +147,22 @@ export function ShortTermCalendarHub({ listing, periods, priceRules }: Props) {
     <GlassCard id="availability-calendar" className="mb-6 p-4 sm:p-5 ring-1 ring-gold/10">
       {pending && (
         <p className="mb-4 rounded-lg border border-gold/25 bg-gold/5 px-3 py-2 text-xs font-medium text-charcoal">
-          Αποθήκευση…
+          {t("saving")}
         </p>
       )}
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h2 className="font-display text-base font-semibold text-charcoal">
-            Ημερολόγιο τιμών και διαθεσιμότητας
-          </h2>
-          <p className="mt-2 max-w-2xl text-sm leading-relaxed text-muted">
-            Κάθε μέρα δείχνει την τιμή ανά βράδυ. Επίλεξε ημερομηνίες για να αλλάξεις τιμή ή να
-            τις κλείσεις.
-          </p>
+          <h2 className="font-display text-base font-semibold text-charcoal">{t("title")}</h2>
+          <p className="mt-2 max-w-2xl text-sm leading-relaxed text-muted">{t("subtitle")}</p>
           {basePrice > 0 ? (
             <p className="mt-2 text-sm text-charcoal">
-              Βασική τιμή:{" "}
-              <span className="font-semibold">€{basePrice.toLocaleString("el-GR")}</span> / βράδυ
+              {t("basePrice", { price: basePrice.toLocaleString("el-GR") })}
             </p>
           ) : (
-            <p className="mt-2 text-sm text-amber-700">
-              Ορίσε βασική τιμή στις ρυθμίσεις δεξιά για να εμφανίζονται οι τιμές.
-            </p>
+            <p className="mt-2 text-sm text-amber-700">{t("setBasePriceHint")}</p>
           )}
           {pricing.rules.length === 0 && basePrice > 0 && (
-            <p className="mt-1 text-xs text-muted">
-              Όλες οι διαθέσιμες ημέρες χρησιμοποιούν τη βασική τιμή.
-            </p>
+            <p className="mt-1 text-xs text-muted">{t("allDaysBase")}</p>
           )}
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -182,7 +174,7 @@ export function ShortTermCalendarHub({ listing, periods, priceRules }: Props) {
             }}
             className="inline-flex items-center gap-1.5 rounded-xl border border-border px-3 py-2 text-xs font-medium text-charcoal hover:bg-sand xl:hidden"
           >
-            Τιμές & κανόνες
+            {t("pricesRules")}
           </button>
           <button
             type="button"
@@ -190,7 +182,7 @@ export function ShortTermCalendarHub({ listing, periods, priceRules }: Props) {
             className="inline-flex items-center gap-1.5 rounded-xl border border-border px-3 py-2 text-xs font-medium text-charcoal hover:bg-sand"
           >
             <Calendar className="h-3.5 w-3.5" />
-            Σήμερα
+            {t("today")}
           </button>
         </div>
       </div>
@@ -215,7 +207,7 @@ export function ShortTermCalendarHub({ listing, periods, priceRules }: Props) {
           />
 
           {selectionLabel && (
-            <p className="mt-4 text-xs text-muted">Επιλογή: {selectionLabel}</p>
+            <p className="mt-4 text-xs text-muted">{t("selection", { label: selectionLabel })}</p>
           )}
 
           <div className="mt-5">
@@ -243,7 +235,7 @@ export function ShortTermCalendarHub({ listing, periods, priceRules }: Props) {
                 panelTab === "selection" ? "bg-white text-charcoal shadow-sm" : "text-muted"
               }`}
             >
-              Επιλογή
+              {t("tabSelection")}
             </button>
             <button
               type="button"
@@ -252,7 +244,7 @@ export function ShortTermCalendarHub({ listing, periods, priceRules }: Props) {
                 panelTab === "settings" ? "bg-white text-charcoal shadow-sm" : "text-muted"
               }`}
             >
-              Τιμές & κανόνες
+              {t("pricesRules")}
             </button>
           </div>
 
@@ -260,14 +252,14 @@ export function ShortTermCalendarHub({ listing, periods, priceRules }: Props) {
             <>
               <div className="rounded-2xl border border-border bg-white p-4 shadow-soft">
                 <p className="text-xs font-medium tracking-wide text-muted uppercase">
-                  {selectionStart ? "Επεξεργασία επιλογής" : "Επίλεξε ημερομηνίες"}
+                  {selectionStart ? t("editSelection") : t("pickDates")}
                 </p>
 
                 {selectionStart ? (
                   <div className="mt-3 space-y-3">
                     <label className="flex min-h-11 items-center gap-2 rounded-xl border border-border bg-sand/30 px-3 py-2">
                       <Euro className="h-4 w-4 text-gold" />
-                      <span className="text-xs text-muted">€ / βράδυ</span>
+                      <span className="text-xs text-muted">{t("perNight")}</span>
                       <input
                         type="number"
                         min={1}
@@ -284,7 +276,7 @@ export function ShortTermCalendarHub({ listing, periods, priceRules }: Props) {
                       disabled={pending}
                       className="w-full rounded-xl bg-gold py-2.5 text-sm font-semibold text-white hover:bg-gold-dark disabled:opacity-50"
                     >
-                      {pending ? "Αποθήκευση…" : "Εφαρμογή τιμής"}
+                      {pending ? t("saving") : t("applyPrice")}
                     </button>
                     {hasCustomInSelection && (
                       <button
@@ -299,7 +291,7 @@ export function ShortTermCalendarHub({ listing, periods, priceRules }: Props) {
                         disabled={pending}
                         className="w-full rounded-xl border border-border py-2 text-sm text-teal hover:bg-teal/5 disabled:opacity-50"
                       >
-                        Επαναφορά βασικής τιμής
+                        {t("resetBase")}
                       </button>
                     )}
                     <button
@@ -309,20 +301,18 @@ export function ShortTermCalendarHub({ listing, periods, priceRules }: Props) {
                       className="flex w-full min-h-11 items-center justify-center gap-2 rounded-xl bg-charcoal py-2.5 text-sm font-semibold text-white disabled:opacity-50"
                     >
                       <Lock className="h-4 w-4" />
-                      Κλείσιμο ημερομηνιών
+                      {t("blockDates")}
                     </button>
                     <button
                       type="button"
                       onClick={clearSelection}
                       className="w-full rounded-xl border border-border py-2 text-sm text-muted hover:bg-sand"
                     >
-                      Καθαρισμός επιλογής
+                      {t("clearSelection")}
                     </button>
                   </div>
                 ) : (
-                  <p className="mt-3 text-sm text-muted">
-                    Πάτησε μία ή περισσότερες ημερομηνίες στο ημερολόγιο.
-                  </p>
+                  <p className="mt-3 text-sm text-muted">{t("pickHint")}</p>
                 )}
 
                 {indicativePreview && (
@@ -334,7 +324,7 @@ export function ShortTermCalendarHub({ listing, periods, priceRules }: Props) {
 
               <div className="rounded-2xl border border-border bg-sand/30 p-4">
                 <p className="text-xs font-medium tracking-wide text-muted uppercase">
-                  Γρήγορες ενέργειες
+                  {t("quickActions")}
                 </p>
                 <div className="mt-3 flex flex-col gap-2">
                   <button
@@ -343,23 +333,23 @@ export function ShortTermCalendarHub({ listing, periods, priceRules }: Props) {
                     onClick={applyWeekendPrice}
                     className="rounded-xl border border-border bg-white px-3 py-2.5 text-left text-xs font-medium text-charcoal hover:border-gold/30 disabled:opacity-50"
                   >
-                    Επιλογή Σαββατοκύριακου
+                    {t("selectWeekend")}
                   </button>
-                  {AVAILABILITY_QUICK.map((action) => (
+                  {QUICK_ACTION_KEYS.map((action) => (
                     <button
-                      key={action.label}
+                      key={action.id}
                       type="button"
                       disabled={pending}
                       onClick={() => availability.applyQuickRange(action.getRange)}
                       className="rounded-xl border border-border bg-white px-3 py-2.5 text-left text-xs font-medium text-charcoal hover:border-gold/30 disabled:opacity-50"
                     >
-                      {action.label}
+                      {t(action.id)}
                     </button>
                   ))}
                 </div>
                 <p className="mt-3 flex items-start gap-2 text-[11px] leading-relaxed text-muted">
                   <Unlock className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-                  Πάτησε χρυσή ημερομηνία για να την ανοίξεις ξανά.
+                  {t("reopenHint")}
                 </p>
               </div>
 
@@ -370,7 +360,7 @@ export function ShortTermCalendarHub({ listing, periods, priceRules }: Props) {
               {pricing.rules.length > 0 && (
                 <div className="rounded-2xl border border-border bg-sand/30 p-4">
                   <p className="text-[10px] font-medium uppercase tracking-wide text-muted">
-                    Ειδικές περίοδοι ({pricing.rules.length})
+                    {t("specialPeriods", { count: pricing.rules.length })}
                   </p>
                   <ul className="mt-2 max-h-40 space-y-1.5 overflow-y-auto">
                     {pricing.rules.map((rule) => (
@@ -401,7 +391,7 @@ export function ShortTermCalendarHub({ listing, periods, priceRules }: Props) {
           <div className="mb-3 flex items-center justify-between gap-3">
             <div>
               <p className="text-xs font-medium tracking-wide text-muted uppercase">
-                Επεξεργασία επιλογής
+                {t("editSelection")}
               </p>
               {selectionLabel && (
                 <p className="mt-1 text-sm font-medium text-charcoal">{selectionLabel}</p>
@@ -411,7 +401,7 @@ export function ShortTermCalendarHub({ listing, periods, priceRules }: Props) {
               type="button"
               onClick={clearSelection}
               className="flex h-9 w-9 items-center justify-center rounded-full border border-border text-muted"
-              aria-label="Κλείσιμο"
+              aria-label={t("close")}
             >
               <X className="h-4 w-4" />
             </button>
@@ -420,7 +410,7 @@ export function ShortTermCalendarHub({ listing, periods, priceRules }: Props) {
           <div className="space-y-3">
             <label className="flex min-h-11 items-center gap-2 rounded-xl border border-border bg-sand/30 px-3 py-2">
               <Euro className="h-4 w-4 text-gold" />
-              <span className="text-xs text-muted">€ / βράδυ</span>
+              <span className="text-xs text-muted">{t("perNight")}</span>
               <input
                 type="number"
                 min={1}
@@ -440,7 +430,7 @@ export function ShortTermCalendarHub({ listing, periods, priceRules }: Props) {
               disabled={pending}
               className="w-full rounded-xl bg-gold py-3 text-sm font-semibold text-white hover:bg-gold-dark disabled:opacity-50"
             >
-              {pending ? "Αποθήκευση…" : "Εφαρμογή τιμής"}
+              {pending ? t("saving") : t("applyPrice")}
             </button>
             {hasCustomInSelection && (
               <button
@@ -451,7 +441,7 @@ export function ShortTermCalendarHub({ listing, periods, priceRules }: Props) {
                 disabled={pending}
                 className="w-full rounded-xl border border-border py-2.5 text-sm text-teal disabled:opacity-50"
               >
-                Επαναφορά βασικής τιμής
+                {t("resetBase")}
               </button>
             )}
             <button
@@ -461,7 +451,7 @@ export function ShortTermCalendarHub({ listing, periods, priceRules }: Props) {
               className="flex w-full min-h-11 items-center justify-center gap-2 rounded-xl bg-charcoal py-2.5 text-sm font-semibold text-white disabled:opacity-50"
             >
               <Lock className="h-4 w-4" />
-              Κλείσιμο ημερομηνιών
+              {t("blockDates")}
             </button>
           </div>
         </div>
@@ -470,12 +460,12 @@ export function ShortTermCalendarHub({ listing, periods, priceRules }: Props) {
       {mobileSettingsOpen && (
         <div className="fixed inset-0 z-[125] flex flex-col bg-white xl:hidden">
           <div className="flex items-center justify-between border-b border-border px-4 py-3">
-            <p className="font-display text-base font-semibold text-charcoal">Τιμές & κανόνες</p>
+            <p className="font-display text-base font-semibold text-charcoal">{t("pricesRules")}</p>
             <button
               type="button"
               onClick={() => setMobileSettingsOpen(false)}
               className="flex h-10 w-10 items-center justify-center rounded-full border border-border"
-              aria-label="Κλείσιμο"
+              aria-label={t("close")}
             >
               <X className="h-4 w-4" />
             </button>

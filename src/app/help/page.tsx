@@ -1,48 +1,69 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { getTranslations } from "next-intl/server";
 import {
   PublicPageLayout,
   StaticHero,
   FaqAccordion,
 } from "@/components/layout/PublicPageLayout";
-import { getHelpPageFaqGroups } from "@/lib/assistant/faq-index";
 
-export const metadata: Metadata = {
-  title: "Βοήθεια",
-  description:
-    "Βοήθεια για αναζήτηση, αγγελίες, αιτήματα, ιδιοκτήτες, φωτογραφίες, διαθεσιμότητα και λογαριασμό στο Midora.",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("Help");
+  return {
+    title: t("metaTitle"),
+    description: t("metaDescription"),
+  };
+}
 
-export default function HelpPage() {
-  const helpCategories = getHelpPageFaqGroups();
+export default async function HelpPage() {
+  const t = await getTranslations("Help");
+  const topIds = t.raw("topIds") as string[];
+  const topItems = t.raw("topItems") as Record<string, { q: string; a: string }>;
+
+  const faqs = topIds
+    .map((id) => topItems[id])
+    .filter(Boolean)
+    .map((item) => ({ question: item.q, answer: item.a }));
 
   return (
     <PublicPageLayout narrow>
       <StaticHero
-        eyebrow="Βοήθεια"
-        title="Πώς μπορούμε να σε βοηθήσουμε;"
-        subtitle="Σύντομες απαντήσεις για αναζήτηση, αγγελίες, αιτήματα, ιδιοκτήτες, ασφάλεια και τεχνικά θέματα στο Midora."
+        eyebrow={t("eyebrow")}
+        title={t("title")}
+        subtitle={t("subtitle")}
       />
 
       <div className="space-y-10 pb-4">
-        {helpCategories.map((category) => (
-          <section key={category.title}>
-            <h2 className="font-display text-lg font-semibold text-charcoal">
-              {category.title}
-            </h2>
-            <FaqAccordion items={category.faqs} />
-          </section>
-        ))}
+        <section>
+          <h2 className="font-display text-lg font-semibold text-charcoal">
+            {t("topTitle")}
+          </h2>
+          <FaqAccordion items={faqs} />
+        </section>
+
+        <section id="report" className="scroll-mt-24 rounded-[1.25rem] bg-[#f7f2ea]/70 px-5 py-5 sm:px-6">
+          <h2 className="font-display text-lg font-semibold text-charcoal">
+            {t("reportTitle")}
+          </h2>
+          <p className="mt-2 text-sm leading-relaxed text-muted">{t("reportBody")}</p>
+        </section>
+
+        <section id="safety" className="scroll-mt-24 rounded-[1.25rem] bg-white px-5 py-5 ring-1 ring-border/70 sm:px-6">
+          <h2 className="font-display text-lg font-semibold text-charcoal">
+            {t("safetyTitle")}
+          </h2>
+          <p className="mt-2 text-sm leading-relaxed text-muted">{t("safetyBody")}</p>
+        </section>
       </div>
 
       <p className="border-t border-border pt-8 text-center text-sm text-muted">
-        Δεν βρήκες απάντηση;{" "}
+        {t("noAnswer")}{" "}
         <Link href="/contact" className="text-gold hover:underline">
-          Επικοινώνησε μαζί μας
+          {t("contactLink")}
         </Link>
         {" · "}
         <Link href="/faq" className="text-gold hover:underline">
-          Συχνές ερωτήσεις
+          {t("faqLink")}
         </Link>
       </p>
     </PublicPageLayout>

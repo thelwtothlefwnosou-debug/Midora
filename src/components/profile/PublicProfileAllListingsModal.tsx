@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { X } from "lucide-react";
+import { useTranslations } from "next-intl";
 import type { PublicProfileListingItem } from "@/lib/profile-public-queries";
 import { PublicProfileListingCard } from "@/components/profile/PublicProfileListingCard";
 import { listingRentalType } from "@/lib/rental-types";
@@ -32,6 +33,7 @@ export function PublicProfileAllListingsModal({
   durationMonths,
   rentalTypeFilter,
 }: Props) {
+  const t = useTranslations("Profile.public");
   const [tab, setTab] = useState<Tab>("all");
 
   const allListings = useMemo(
@@ -47,9 +49,9 @@ export function PublicProfileAllListingsModal({
   if (!open) return null;
 
   const tabs: { id: Tab; label: string }[] = [
-    { id: "all", label: "Όλα" },
-    { id: "short_term", label: "Βραχυχρόνια" },
-    { id: "monthly", label: "Μηνιαία" },
+    { id: "all", label: t("tabAll") },
+    { id: "short_term", label: t("tabShortTerm") },
+    { id: "monthly", label: t("tabMonthly") },
   ];
 
   return (
@@ -57,13 +59,13 @@ export function PublicProfileAllListingsModal({
       <div className="flex max-h-[92vh] w-full max-w-5xl flex-col overflow-hidden rounded-t-2xl bg-white shadow-xl sm:rounded-2xl">
         <div className="flex items-center justify-between border-b border-border px-5 py-4">
           <h2 className="font-display text-lg font-semibold text-charcoal">
-            Όλα τα ακίνητα του/της {displayName}
+            {t("allListingsTitle", { name: displayName })}
           </h2>
           <button
             type="button"
             onClick={() => onOpenChange(false)}
             className="flex h-9 w-9 items-center justify-center rounded-full border border-border text-charcoal"
-            aria-label="Κλείσιμο"
+            aria-label={t("close")}
           >
             <X className="h-4 w-4" />
           </button>
@@ -89,7 +91,7 @@ export function PublicProfileAllListingsModal({
 
         <div className="overflow-y-auto px-5 py-5">
           {filtered.length === 0 ? (
-            <p className="py-8 text-center text-sm text-muted">Δεν υπάρχουν ακίνητα σε αυτή την κατηγορία.</p>
+            <p className="py-8 text-center text-sm text-muted">{t("allListingsEmpty")}</p>
           ) : (
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {filtered.map((listing) => (

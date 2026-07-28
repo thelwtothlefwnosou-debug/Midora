@@ -2,9 +2,10 @@
 
 import { useState, useTransition } from "react";
 import { DoorOpen } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { saveListingArrivalSettings } from "@/lib/listing-photo-rooms";
-import { ARRIVAL_LABELS } from "@/lib/house-rules";
+import { ARRIVAL_LABELS, getArrivalLabel } from "@/lib/house-rules";
 import type { ArrivalMethod, ListingWithImages } from "@/lib/types";
 
 const inputClass =
@@ -18,6 +19,8 @@ export function ListingArrivalEditor({ listing }: Props) {
   const [pending, startTransition] = useTransition();
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const t = useTranslations("Workspace.arrivalEditor");
+  const tRules = useTranslations("Listing.houseRules");
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -30,7 +33,7 @@ export function ListingArrivalEditor({ listing }: Props) {
         setError(result.error);
         return;
       }
-      setMessage("Οι ώρες άφιξης αποθηκεύτηκαν.");
+      setMessage(t("saved"));
     });
   }
 
@@ -40,17 +43,17 @@ export function ListingArrivalEditor({ listing }: Props) {
         <DoorOpen className="mt-0.5 h-5 w-5 shrink-0 text-gold" />
         <div>
           <h2 className="font-display text-lg font-semibold text-charcoal">
-            Άφιξη και αναχώρηση
+            {t("title")}
           </h2>
           <p className="mt-2 max-w-2xl text-sm text-muted">
-            Οι επισκέπτες βλέπουν αυτές τις πληροφορίες στη δημόσια αγγελία πριν στείλουν αίτημα.
+            {t("subtitle")}
           </p>
         </div>
       </div>
 
       <form onSubmit={handleSubmit} className="mt-6 grid gap-4 sm:grid-cols-2">
         <label>
-          <span className="text-xs text-muted uppercase">Check-in από</span>
+          <span className="text-xs text-muted uppercase">{t("checkInFrom")}</span>
           <input
             name="check_in_from"
             type="time"
@@ -59,7 +62,7 @@ export function ListingArrivalEditor({ listing }: Props) {
           />
         </label>
         <label>
-          <span className="text-xs text-muted uppercase">Check-in έως</span>
+          <span className="text-xs text-muted uppercase">{t("checkInTo")}</span>
           <input
             name="check_in_to"
             type="time"
@@ -68,7 +71,7 @@ export function ListingArrivalEditor({ listing }: Props) {
           />
         </label>
         <label>
-          <span className="text-xs text-muted uppercase">Check-out έως</span>
+          <span className="text-xs text-muted uppercase">{t("checkOutUntil")}</span>
           <input
             name="check_out_until"
             type="time"
@@ -77,20 +80,18 @@ export function ListingArrivalEditor({ listing }: Props) {
           />
         </label>
         <label>
-          <span className="text-xs text-muted uppercase">Τρόπος άφιξης</span>
+          <span className="text-xs text-muted uppercase">{t("arrivalMethod")}</span>
           <select
             name="arrival_method"
             defaultValue={listing.arrival_method ?? ""}
             className={inputClass}
           >
-            <option value="">— Επίλεξε —</option>
-            {(Object.entries(ARRIVAL_LABELS) as [ArrivalMethod, string][]).map(
-              ([value, label]) => (
-                <option key={value} value={value}>
-                  {label}
-                </option>
-              )
-            )}
+            <option value="">{t("selectPlaceholder")}</option>
+            {(Object.keys(ARRIVAL_LABELS) as ArrivalMethod[]).map((value) => (
+              <option key={value} value={value}>
+                {getArrivalLabel(value, tRules)}
+              </option>
+            ))}
           </select>
         </label>
 
@@ -100,7 +101,7 @@ export function ListingArrivalEditor({ listing }: Props) {
             disabled={pending}
             className="min-h-11 rounded-xl bg-charcoal px-5 py-2.5 text-sm font-semibold text-white disabled:opacity-40"
           >
-            {pending ? "Αποθήκευση…" : "Αποθήκευση άφιξης"}
+            {pending ? t("saving") : t("save")}
           </button>
         </div>
       </form>

@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { MapPin } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { useFloatingDropdown } from "@/hooks/useFloatingDropdown";
 import {
   MIN_LOCATION_QUERY_LENGTH,
@@ -50,6 +51,7 @@ export function PropertyAddressAutocomplete({
   inputClassName,
   disabled,
 }: Props) {
+  const t = useTranslations("Wizard.location");
   const [open, setOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(0);
   const [suggestions, setSuggestions] = useState<PropertySearchSuggestion[]>([]);
@@ -195,7 +197,7 @@ export function PropertyAddressAutocomplete({
                       <span className="block text-xs text-muted">{secondary}</span>
                       {isLocation && (
                         <span className="mt-0.5 block text-[10px] text-muted/80">
-                          Πόλη / περιοχή
+                          {t("addressCityAreaLabel")}
                         </span>
                       )}
                     </span>
@@ -212,7 +214,7 @@ export function PropertyAddressAutocomplete({
     <div ref={wrapperRef} className="relative">
       <label className="block">
         <span className="text-xs font-medium uppercase tracking-wide text-muted">
-          Αναζήτησε τη διεύθυνση του ακινήτου
+          {t("addressSearchLabel")}
         </span>
         <input
           type="text"
@@ -221,7 +223,7 @@ export function PropertyAddressAutocomplete({
           spellCheck={false}
           disabled={disabled}
           value={value}
-          placeholder="π.χ. Πτολεμαΐδα, Πατησίων 120"
+          placeholder={t("addressPlaceholder")}
           onChange={(e) => {
             onChange(e.target.value);
             setOpen(true);
@@ -232,11 +234,11 @@ export function PropertyAddressAutocomplete({
         />
       </label>
       {loading && value.trim().length >= MIN_LOCATION_QUERY_LENGTH && (
-        <p className="mt-1 text-[11px] text-muted">Αναζήτηση...</p>
+        <p className="mt-1 text-[11px] text-muted">{t("addressSearching")}</p>
       )}
       {open && value.trim().length > 0 && value.trim().length < MIN_LOCATION_QUERY_LENGTH && (
         <p className="mt-1 text-[11px] text-muted">
-          Πληκτρολόγησε τουλάχιστον {MIN_LOCATION_QUERY_LENGTH} χαρακτήρες
+          {t("addressMinChars", { count: MIN_LOCATION_QUERY_LENGTH })}
         </p>
       )}
       {dropdown}

@@ -3,10 +3,11 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useRef, useState, useEffect } from "react";
+import { useTranslations } from "next-intl";
 import { Bell, ChevronDown, ExternalLink, Plus } from "lucide-react";
 import type { OwnerNotification } from "@/lib/owner-dashboard";
 import type { Profile } from "@/lib/types";
-import { dashboardBreadcrumb, type AccountNavId } from "@/components/account/account-nav";
+import { dashboardBreadcrumbKey, type AccountNavId } from "@/components/account/account-nav";
 import { ProfileAvatar } from "@/components/profile/ProfileAvatar";
 import { signOut } from "@/lib/actions";
 import { OWNER_LISTING_NEW_PATH } from "@/lib/owner-flow";
@@ -19,13 +20,6 @@ import {
   markNotificationsRead,
 } from "@/lib/preview-v80-notifications";
 import { cn } from "@/lib/utils";
-
-const PROFILE_LINKS = [
-  { href: "/dashboard/profile", label: "Προφίλ" },
-  { href: "/dashboard/verification", label: "Επαλήθευση" },
-  { href: "/dashboard/settings?tab=notifications", label: "Ειδοποιήσεις" },
-  { href: "/dashboard/settings?tab=security", label: "Ασφάλεια και απόρρητο" },
-];
 
 export function DashboardHeader({
   profile,
@@ -40,6 +34,9 @@ export function DashboardHeader({
   avatarUrl?: string | null;
   notifications: OwnerNotification[];
 }) {
+  const tAccount = useTranslations("AccountNav");
+  const tHeader = useTranslations("Owner.dashboardHeader");
+  const tNotif = useTranslations("Owner.notifications");
   const pathname = usePathname();
   const inListingWorkspace = isOwnerListingWorkspacePath(pathname ?? "");
   const [menuOpen, setMenuOpen] = useState(false);
@@ -47,6 +44,13 @@ export function DashboardHeader({
   const [readIds, setReadIds] = useState<Set<string>>(() => new Set());
   const menuRef = useRef<HTMLDivElement>(null);
   const bellRef = useRef<HTMLDivElement>(null);
+
+  const profileLinks = [
+    { href: "/dashboard/profile", label: tHeader("profileLink") },
+    { href: "/dashboard/verification", label: tHeader("verificationLink") },
+    { href: "/dashboard/settings?tab=notifications", label: tHeader("notificationsLink") },
+    { href: "/dashboard/settings?tab=security", label: tHeader("securityLink") },
+  ];
 
   useEffect(() => {
     if (isPreviewV80) setReadIds(getReadNotificationIds());
@@ -56,7 +60,7 @@ export function DashboardHeader({
     ? notifications.map((n) => ({ ...n, read: n.read || readIds.has(n.id) }))
     : notifications;
   const unread = displayNotifications.filter((n) => !n.read).length;
-  const breadcrumb = dashboardBreadcrumb(pathname, active);
+  const breadcrumb = tAccount(dashboardBreadcrumbKey(pathname, active));
 
   function openBell() {
     setBellOpen((v) => {
@@ -92,7 +96,7 @@ export function DashboardHeader({
               href={OWNER_LISTINGS_LIST_PATH}
               className="hidden truncate text-sm text-muted transition-colors hover:text-charcoal sm:inline"
             >
-              Οι αγγελίες μου
+              {tHeader("myListings")}
             </OwnerListingsNavLink>
           ) : (
             <span className="hidden truncate text-sm text-muted sm:inline">{breadcrumb}</span>
@@ -105,7 +109,7 @@ export function DashboardHeader({
             className="hidden items-center gap-1 rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-charcoal/70 hover:bg-sand sm:inline-flex"
           >
             <ExternalLink className="h-3.5 w-3.5" />
-            Προβολή site
+            {tHeader("viewSite")}
           </Link>
 
           <div className="relative" ref={bellRef}>
@@ -113,7 +117,7 @@ export function DashboardHeader({
               type="button"
               onClick={openBell}
               className="relative flex h-9 w-9 items-center justify-center rounded-lg border border-border hover:bg-sand"
-              aria-label="Ειδοποιήσεις"
+              aria-label={tHeader("notifications")}
             >
               <Bell className="h-4 w-4 text-charcoal/70" />
               {unread > 0 && (
@@ -126,12 +130,14 @@ export function DashboardHeader({
             {bellOpen && (
               <div className="absolute right-0 z-50 mt-2 w-[min(100vw-2rem,360px)] overflow-hidden rounded-2xl border border-border bg-white shadow-float">
                 <div className="border-b border-border px-4 py-3">
-                  <p className="font-display text-sm font-semibold text-charcoal">Ειδοποιήσεις</p>
+                  <p className="font-display text-sm font-semibold text-charcoal">
+                    {tHeader("notifications")}
+                  </p>
                 </div>
                 <ul className="max-h-80 overflow-y-auto">
                   {displayNotifications.length === 0 ? (
                     <li className="px-4 py-8 text-center text-sm text-muted">
-                      Δεν έχεις νέες ειδοποιήσεις.
+                      {tHeader("emptyNotifications")}
                     </li>
                   ) : (
                     displayNotifications.slice(0, 8).map((n) => (
@@ -144,8 +150,16 @@ export function DashboardHeader({
                             !n.read && "bg-gold/5"
                           )}
                         >
-                          <p className="text-sm font-medium text-charcoal">{n.title}</p>
-                          <p className="mt-0.5 line-clamp-2 text-xs text-muted">{n.body}</p>
+                          <p className="text-sm font-medium text-charcoal">
+                            {tNotif(n.titleKey, n.titleValues)}
+                          </p>
+                          <p className="mt-0.5 line-clamp-2 text-xs text-muted">
+                            {n.bodyFallback
+                              ? n.bodyFallback
+                              : n.bodyKey
+                                ? tNotif(n.bodyKey, n.bodyValues)
+                                : null}
+                          </p>
                         </Link>
                       </li>
                     ))
@@ -160,7 +174,7 @@ export function DashboardHeader({
             className="inline-flex items-center gap-1 rounded-lg bg-charcoal px-3 py-1.5 text-xs font-semibold text-white hover:bg-charcoal/90"
           >
             <Plus className="h-3.5 w-3.5" />
-            <span className="hidden sm:inline">Νέα αγγελία</span>
+            <span className="hidden sm:inline">{tHeader("newListing")}</span>
           </Link>
 
           <div className="relative" ref={menuRef}>
@@ -176,11 +190,11 @@ export function DashboardHeader({
               <div className="absolute right-0 z-50 mt-2 w-56 overflow-hidden rounded-xl border border-border bg-white py-1 shadow-float">
                 <div className="border-b border-border px-3 py-2">
                   <p className="truncate text-sm font-medium text-charcoal">
-                    {profile.full_name || "Χρήστης"}
+                    {profile.full_name || tHeader("userFallback")}
                   </p>
                   <p className="truncate text-xs text-muted">{email}</p>
                 </div>
-                {PROFILE_LINKS.map((link) => (
+                {profileLinks.map((link) => (
                   <Link
                     key={link.href}
                     href={link.href}
@@ -196,7 +210,7 @@ export function DashboardHeader({
                     className="block px-3 py-2 text-sm text-charcoal hover:bg-sand"
                     onClick={() => setMenuOpen(false)}
                   >
-                    Διαχείριση
+                    {tAccount("admin")}
                   </Link>
                 )}
                 <form action={signOut} className="border-t border-border">
@@ -204,7 +218,7 @@ export function DashboardHeader({
                     type="submit"
                     className="block w-full px-3 py-2 text-left text-sm text-charcoal hover:bg-sand"
                   >
-                    Αποσύνδεση
+                    {tHeader("signOut")}
                   </button>
                 </form>
               </div>

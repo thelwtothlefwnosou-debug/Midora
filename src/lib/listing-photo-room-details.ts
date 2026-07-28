@@ -1,13 +1,12 @@
 import type { ListingSleepingArrangement } from "@/lib/types";
 import type { PhotoRoomDef } from "@/lib/photo-rooms-catalog";
-
-const BEDROOM_KEY_PATTERN = /^bedroom_(\d+)$/;
+import { pickLocale } from "@/lib/locale-fallbacks";
 
 export function roomBedSummary(
   room: PhotoRoomDef,
   arrangements: ListingSleepingArrangement[]
 ): string | null {
-  const match = room.key.match(BEDROOM_KEY_PATTERN);
+  const match = room.key.match(/^bedroom_(\d+)$/);
   if (!match) return null;
 
   const index = parseInt(match[1], 10) - 1;
@@ -26,24 +25,25 @@ export function roomBedSummary(
 
 export function roomPublicDetail(
   room: PhotoRoomDef,
-  arrangements: ListingSleepingArrangement[]
+  arrangements: ListingSleepingArrangement[],
+  locale?: string
 ): string {
   const bed = roomBedSummary(room, arrangements);
   if (bed) return bed;
 
   switch (room.key) {
     case "kitchen":
-      return "Πλήρως εξοπλισμένη";
+      return pickLocale(locale, "Πλήρως εξοπλισμένη", "Fully equipped");
     case "living_room":
-      return "Καθιστικό";
+      return pickLocale(locale, "Καθιστικό", "Living area");
     case "bathroom_1":
     case "bathroom_2":
     case "bathroom_3":
-      return "Μπάνιο";
+      return pickLocale(locale, "Μπάνιο", "Bathroom");
     case "balcony":
     case "garden":
     case "outdoor":
-      return "Εξωτερικός χώρος";
+      return pickLocale(locale, "Εξωτερικός χώρος", "Outdoor area");
     default:
       return "";
   }

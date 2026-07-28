@@ -2,6 +2,7 @@
 
 import { useActionState } from "react";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { ListingForm } from "@/components/listings/ListingForm";
 import { ListingBedroomsEditor } from "@/components/dashboard/ListingBedroomsEditor";
@@ -39,6 +40,7 @@ export function EditListingForm({
   externalLinks,
   amenities,
 }: Props) {
+  const t = useTranslations("Workspace.editForm");
   const [state, formAction, pending] = useActionState(
     async (_prev: { error?: string; saved?: boolean } | null, formData: FormData) => {
       const result = await updateListing(listing.id, formData);
@@ -58,17 +60,15 @@ export function EditListingForm({
     <div>
       <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h2 className="font-display text-lg font-semibold text-charcoal">Επεξεργασία αγγελίας</h2>
-          <p className="mt-1 text-sm text-muted">
-            Οι αλλαγές σε βασικά στοιχεία, περιγραφή και τοποθεσία μπορεί να χρειάζονται επανέλεγχο.
-          </p>
+          <h2 className="font-display text-lg font-semibold text-charcoal">{t("title")}</h2>
+          <p className="mt-1 text-sm text-muted">{t("subtitle")}</p>
         </div>
         <DeleteListingButton listingId={listing.id} />
       </div>
 
       {state?.saved && (
         <p className="mb-4 rounded-xl border border-teal/30 bg-teal/10 px-4 py-3 text-sm text-teal">
-          Οι αλλαγές αποθηκεύτηκαν.
+          {t("saved")}
         </p>
       )}
       {state?.error && (
@@ -110,7 +110,7 @@ export function EditListingForm({
           action={formAction}
           pending={pending}
           error={state?.error}
-          submitLabel={pending ? "Αποθήκευση…" : "Αποθήκευση αλλαγών"}
+          submitLabel={pending ? t("saving") : t("saveChanges")}
         />
       </GlassCard>
 
@@ -119,13 +119,13 @@ export function EditListingForm({
           href={`/dashboard/listings/${listing.id}/photos`}
           className="font-medium text-gold-dark hover:underline"
         >
-          Διαχείριση φωτογραφιών →
+          {t("managePhotos")}
         </Link>
         <Link
           href={`/dashboard/listings/${listing.id}/availability`}
           className="font-medium text-gold-dark hover:underline"
         >
-          Διαθεσιμότητα →
+          {t("availability")}
         </Link>
       </p>
     </div>

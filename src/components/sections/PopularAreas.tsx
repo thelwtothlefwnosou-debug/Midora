@@ -1,130 +1,73 @@
 import Link from "next/link";
-
-import { MapPin } from "lucide-react";
-
+import { getTranslations } from "next-intl/server";
+import { ArrowUpRight } from "lucide-react";
 import { POPULAR_AREAS } from "@/lib/copy";
-
 import { HomeSectionHeader } from "@/components/sections/HomeSectionHeader";
 
-
-
-function DestinationCard({ city, label }: { city: string; label: string }) {
-
-  return (
-
-    <Link
-
-      href={`/listings?city=${encodeURIComponent(city)}`}
-
-      className="home-card home-card-lift group relative flex h-full min-h-[6.5rem] flex-col justify-end overflow-hidden px-4 py-4 sm:min-h-[7rem]"
-
-    >
-
-      <span
-
-        className="pointer-events-none absolute inset-0 opacity-100"
-
-        aria-hidden
-
-        style={{
-
-          backgroundImage:
-
-            "radial-gradient(circle at 85% 20%, rgba(166,124,82,0.08), transparent 42%), linear-gradient(135deg, rgba(245,240,232,0.65) 0%, rgba(255,255,255,0.95) 55%)",
-
-        }}
-
-      />
-
-      <span
-
-        className="pointer-events-none absolute -right-3 -bottom-3 h-16 w-16 rounded-full border border-gold/10 bg-gold/[0.04]"
-
-        aria-hidden
-
-      />
-
-      <span className="relative flex items-start gap-3">
-
-        <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-border bg-white/80 transition-colors group-hover:border-gold/25 group-hover:bg-white">
-
-          <MapPin className="h-4 w-4 text-gold/85" />
-
-        </span>
-
-        <span className="min-w-0 pt-0.5">
-
-          <span className="block text-sm font-semibold text-charcoal">{label}</span>
-
-          <span className="mt-1 block text-[11px] text-muted/85 transition-colors group-hover:text-gold-dark">
-
-            Δες αγγελίες
-
-          </span>
-
-        </span>
-
-      </span>
-
-    </Link>
-
-  );
-
-}
-
-
-
-export function PopularAreas() {
-
-  const firstRow = POPULAR_AREAS.slice(0, 4);
-
-  const secondRow = POPULAR_AREAS.slice(4);
-
-
+export async function PopularAreas() {
+  const t = await getTranslations("Home");
+  const featured = POPULAR_AREAS.filter((a) => "featured" in a && a.featured);
+  const rest = POPULAR_AREAS.filter((a) => !("featured" in a && a.featured));
 
   return (
-
-    <section className="home-section home-bg-cream border-t border-border">
-
+    <section id="areas" className="home-section home-section--editorial home-bg-cream scroll-mt-24">
       <div className="mx-auto max-w-7xl px-4 sm:px-6">
+        <HomeSectionHeader title={t("areasTitle")} subtitle={t("areasSubtitle")} />
 
-        <HomeSectionHeader
-
-          title="Δημοφιλείς προορισμοί"
-
-          subtitle="Ξεκίνα την αναζήτησή σου από δημοφιλείς πόλεις, νησιά και περιοχές."
-
-        />
-
-
-
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-
-          {firstRow.map((area) => (
-
-            <DestinationCard key={area.city} city={area.city} label={area.label} />
-
+        <div className="grid gap-4 sm:gap-5 lg:grid-cols-2">
+          {featured.map((area) => (
+            <Link
+              key={area.city}
+              href={`/listings?city=${encodeURIComponent(area.city)}`}
+              className="home-city-featured group relative flex min-h-[11.5rem] flex-col justify-end overflow-hidden rounded-[1.5rem] bg-[#f4efe7] px-6 py-6 sm:min-h-[13rem] sm:px-8 sm:py-8"
+            >
+              <span
+                className="pointer-events-none absolute inset-0 opacity-90"
+                aria-hidden
+                style={{
+                  backgroundImage:
+                    "radial-gradient(ellipse at 88% 18%, rgba(166,124,82,0.14), transparent 46%), linear-gradient(145deg, rgba(255,255,255,0.55) 0%, rgba(244,239,231,0.2) 55%)",
+                }}
+              />
+              <span className="relative flex items-end justify-between gap-4">
+                <span className="min-w-0">
+                  <span className="block font-display text-3xl font-semibold tracking-tight text-charcoal sm:text-4xl">
+                    {t(area.labelKey)}
+                  </span>
+                  <span className="mt-2 block max-w-sm text-sm leading-relaxed text-muted sm:text-[0.9375rem]">
+                    {t(area.blurbKey)}
+                  </span>
+                </span>
+                <span className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white/80 text-charcoal shadow-soft transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5 group-hover:text-gold-dark">
+                  <ArrowUpRight className="h-5 w-5" strokeWidth={1.75} />
+                </span>
+              </span>
+            </Link>
           ))}
-
         </div>
 
-
-
-        <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:mx-auto lg:max-w-[calc(75%-0.375rem)] lg:grid-cols-3">
-
-          {secondRow.map((area) => (
-
-            <DestinationCard key={area.city} city={area.city} label={area.label} />
-
+        <ul className="mt-4 grid grid-cols-1 gap-3 sm:mt-5 sm:grid-cols-2 sm:gap-4 lg:grid-cols-4">
+          {rest.map((area) => (
+            <li key={area.city}>
+              <Link
+                href={`/listings?city=${encodeURIComponent(area.city)}`}
+                className="home-city-tile group flex h-full min-h-[6.5rem] flex-col justify-between rounded-[1.25rem] bg-white/80 px-5 py-4 ring-1 ring-border/70 transition-all hover:-translate-y-0.5 hover:bg-white hover:shadow-[0_14px_32px_-18px_rgba(26,26,26,0.22)] hover:ring-gold/25"
+              >
+                <span className="flex items-start justify-between gap-3">
+                  <span className="font-display text-xl font-semibold tracking-tight text-charcoal">
+                    {t(area.labelKey)}
+                  </span>
+                  <ArrowUpRight
+                    className="mt-1 h-4 w-4 shrink-0 text-muted/45 transition-all group-hover:translate-x-0.5 group-hover:-translate-y-0.5 group-hover:text-gold"
+                    strokeWidth={1.75}
+                  />
+                </span>
+                <span className="mt-3 text-sm leading-snug text-muted">{t(area.blurbKey)}</span>
+              </Link>
+            </li>
           ))}
-
-        </div>
-
+        </ul>
       </div>
-
     </section>
-
   );
-
 }
-

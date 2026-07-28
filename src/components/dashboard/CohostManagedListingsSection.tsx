@@ -1,7 +1,8 @@
 import Link from "next/link";
 import Image from "next/image";
+import { getLocale, getTranslations } from "next-intl/server";
 import { Home } from "lucide-react";
-import { COHOST_PERMISSION_LEVEL_LABELS } from "@/lib/listing-cohost-permissions";
+import { getCohostPermissionLabel } from "@/lib/listing-cohost-permissions";
 import { getCohostManagedListings } from "@/lib/listing-cohosts-db";
 import { pickListingCoverPhotoUrl } from "@/lib/listing-media";
 import { getListingPublicId } from "@/lib/utils";
@@ -27,16 +28,17 @@ export async function CohostManagedListingsSection({
 }: Props) {
   const items = itemsProp ?? (await getCohostManagedListings(userId));
   if (!items.length) return null;
+  const locale = await getLocale();
+  const t = await getTranslations("Workspace.cohostManaged");
+  const tPerm = await getTranslations("Workspace.cohostsPanel");
 
   return (
     <section className={prominent ? "mb-8" : "mt-10"}>
       <h2 className="font-display text-lg font-semibold text-charcoal">
-        Αγγελίες που διαχειρίζομαι
+        {t("heading")}
       </h2>
       <p className="mt-1 text-sm text-muted">
-        {prominent
-          ? "Εδώ εμφανίζονται τα ακίνητα όπου είσαι συνοικοδεσπότης — πάτα μία για να δεις την αγγελία."
-          : "Ακίνητα όπου είσαι συνοικοδεσπότης με ενεργή πρόσκληση."}
+        {prominent ? t("subtitleProminent") : t("subtitleDefault")}
       </p>
       <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {items.map(({ cohost, listing, ownerProfile }) => {
@@ -47,7 +49,9 @@ export async function CohostManagedListingsSection({
           ]
             .filter(Boolean)
             .join(", ");
-          const ownerName = ownerProfile ? profileDisplayName(ownerProfile) : "Ιδιοκτήτης";
+          const ownerName = ownerProfile
+            ? profileDisplayName(ownerProfile, locale)
+            : t("ownerFallback");
 
           return (
             <Link
@@ -67,13 +71,13 @@ export async function CohostManagedListingsSection({
               <div className="p-4">
                 <p className="line-clamp-2 font-medium text-charcoal">{listing.title}</p>
                 <p className="mt-1 text-sm text-muted">{location}</p>
-                <p className="mt-2 text-xs text-muted">Ιδιοκτήτης: {ownerName}</p>
+                <p className="mt-2 text-xs text-muted">{t("ownerPrefix", { name: ownerName })}</p>
                 <div className="mt-2 flex flex-wrap gap-2">
                   <span className="rounded-full bg-charcoal/8 px-2 py-0.5 text-xs font-medium text-charcoal">
-                    Συνοικοδεσπότης
+                    {t("badge")}
                   </span>
                   <span className="rounded-full bg-sand px-2 py-0.5 text-xs text-muted">
-                    {COHOST_PERMISSION_LEVEL_LABELS[cohost.permission_level]}
+                    {getCohostPermissionLabel(cohost.permission_level, tPerm)}
                   </span>
                 </div>
               </div>

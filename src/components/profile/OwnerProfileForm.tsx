@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useActionState, useEffect, useRef, useState } from "react";
 import { BadgeCheck } from "lucide-react";
+import { useTranslations } from "next-intl";
 import type { Profile } from "@/lib/types";
 import {
   COMMUNICATION_LANGUAGE_OPTIONS,
@@ -42,6 +43,7 @@ export function OwnerProfileForm({
   emailVerified = false,
   showPublicPhoto,
 }: Props) {
+  const t = useTranslations("Owner.profileForm");
   const formRef = useRef<HTMLFormElement>(null);
   const [dirty, setDirty] = useState(false);
   const [saveUi, setSaveUi] = useState<SaveUiState>("idle");
@@ -103,10 +105,10 @@ export function OwnerProfileForm({
   }
 
   const stickyMessage = (() => {
-    if (saveUi === "saving") return "Αποθήκευση…";
-    if (saveUi === "saved" && !dirty) return "Οι αλλαγές αποθηκεύτηκαν";
-    if (saveUi === "error") return "Δεν ήταν δυνατή η αποθήκευση";
-    if (dirty) return "Έχεις μη αποθηκευμένες αλλαγές";
+    if (saveUi === "saving") return t("saving");
+    if (saveUi === "saved" && !dirty) return t("saved");
+    if (saveUi === "error") return t("saveError");
+    if (dirty) return t("unsavedChanges");
     return "";
   })();
 
@@ -124,15 +126,13 @@ export function OwnerProfileForm({
       className="space-y-6"
     >
       <section className="rounded-2xl border border-border bg-white p-6 shadow-soft">
-        <h2 className="font-display text-lg font-semibold text-charcoal">Δημόσιο προφίλ</h2>
-        <p className="mt-1 text-sm text-muted">
-          Αυτά τα στοιχεία μπορεί να εμφανίζονται στους ενδιαφερόμενους.
-        </p>
+        <h2 className="font-display text-lg font-semibold text-charcoal">{t("publicProfileTitle")}</h2>
+        <p className="mt-1 text-sm text-muted">{t("publicProfileSubtitle")}</p>
 
         <div className="mt-5 space-y-5">
           <div>
             <label htmlFor="display_name" className="text-xs font-medium text-muted uppercase">
-              Εμφανιζόμενο όνομα
+              {t("displayName")}
             </label>
             <input
               id="display_name"
@@ -142,20 +142,20 @@ export function OwnerProfileForm({
                 setDisplayName(e.target.value);
                 markDirty();
               }}
-              placeholder={profile.full_name ?? "Όνομα που θα βλέπουν οι επισκέπτες"}
+              placeholder={profile.full_name ?? t("displayNamePlaceholder")}
               className={fieldClassName()}
             />
           </div>
 
           <fieldset>
             <legend className="text-xs font-medium text-muted uppercase">
-              Τύπος αγγελιοδότη
+              {t("advertiserType")}
             </legend>
             <div className="mt-2 flex flex-wrap gap-3">
               {(
                 [
-                  { value: "individual", label: "Ιδιώτης" },
-                  { value: "professional", label: "Επαγγελματίας" },
+                  { value: "individual", label: t("individual") },
+                  { value: "professional", label: t("professional") },
                 ] as const
               ).map((opt) => (
                 <label
@@ -186,8 +186,8 @@ export function OwnerProfileForm({
 
           <div>
             <label htmlFor="bio" className="text-xs font-medium text-muted uppercase">
-              Σύντομη περιγραφή
-              <span className="ml-1 font-normal normal-case text-muted/80">(προαιρετικό)</span>
+              {t("bio")}
+              <span className="ml-1 font-normal normal-case text-muted/80">{t("optional")}</span>
             </label>
             <textarea
               id="bio"
@@ -199,7 +199,7 @@ export function OwnerProfileForm({
                 setBio(e.target.value);
                 markDirty();
               }}
-              placeholder="Γράψε λίγα λόγια για εσένα ή για τον τρόπο με τον οποίο διαχειρίζεσαι τα ακίνητά σου."
+              placeholder={t("bioPlaceholder")}
               className={cn(fieldClassName(), "min-h-[100px] resize-y")}
             />
             <p className="mt-1 text-right text-xs text-muted">
@@ -209,7 +209,7 @@ export function OwnerProfileForm({
 
           <fieldset>
             <legend className="text-xs font-medium text-muted uppercase">
-              Γλώσσες επικοινωνίας
+              {t("languages")}
             </legend>
             <div className="mt-2 flex flex-wrap gap-2">
               {COMMUNICATION_LANGUAGE_OPTIONS.map((lang) => (
@@ -238,8 +238,8 @@ export function OwnerProfileForm({
 
           <div>
             <label htmlFor="public_slug" className="text-xs font-medium text-muted uppercase">
-              Δημόσιο URL προφίλ
-              <span className="ml-1 font-normal normal-case text-muted/80">(προαιρετικό)</span>
+              {t("publicUrl")}
+              <span className="ml-1 font-normal normal-case text-muted/80">{t("optional")}</span>
             </label>
             <div className="mt-1.5 flex items-center gap-2">
               <span className="shrink-0 text-sm text-muted">/users/</span>
@@ -260,7 +260,7 @@ export function OwnerProfileForm({
               />
             </div>
             <p className="mt-1 text-xs text-muted">
-              Αν το αφήσεις κενό, δημιουργείται αυτόματα από το εμφανιζόμενο όνομα.
+              {t("publicUrlHint")}
             </p>
             {previewPublicHref && publicProfileEnabled ? (
               <Link
@@ -268,13 +268,13 @@ export function OwnerProfileForm({
                 target="_blank"
                 className="mt-2 inline-block text-sm font-medium text-gold hover:underline"
               >
-                Προεπισκόπηση δημόσιου προφίλ
+                {t("previewPublicProfile")}
               </Link>
             ) : null}
           </div>
 
           <fieldset className="space-y-3">
-            <legend className="text-xs font-medium text-muted uppercase">Ρυθμίσεις ορατότητας</legend>
+            <legend className="text-xs font-medium text-muted uppercase">{t("visibilitySettings")}</legend>
             <input
               type="hidden"
               name="public_profile_enabled"
@@ -292,11 +292,9 @@ export function OwnerProfileForm({
               />
               <span>
                 <span className="block text-sm font-medium text-charcoal">
-                  Επιτρέπεται στους επισκέπτες να ανοίγουν το δημόσιο προφίλ μου
+                  {t("allowPublicProfile")}
                 </span>
-                <span className="mt-0.5 block text-xs text-muted">
-                  Εμφανίζεται όταν έχεις δημοσιευμένες αγγελίες.
-                </span>
+                <span className="mt-0.5 block text-xs text-muted">{t("allowPublicProfileHint")}</span>
               </span>
             </label>
 
@@ -315,7 +313,7 @@ export function OwnerProfileForm({
                 }}
                 className="mt-0.5 accent-gold"
               />
-              <span className="text-sm text-charcoal">Εμφάνιση δημοσιευμένων αγγελιών στο προφίλ</span>
+              <span className="text-sm text-charcoal">{t("showOwnedListings")}</span>
             </label>
 
             <input
@@ -334,7 +332,7 @@ export function OwnerProfileForm({
                 className="mt-0.5 accent-gold"
               />
               <span className="text-sm text-charcoal">
-                Εμφάνιση ακινήτων που συνδιαχειρίζομαι ως συνοικοδεσπότης
+                {t("showCohostedListings")}
               </span>
             </label>
           </fieldset>
@@ -355,16 +353,14 @@ export function OwnerProfileForm({
 
       <section className="rounded-2xl border border-border bg-white p-6 shadow-soft">
         <h2 className="font-display text-lg font-semibold text-charcoal">
-          Στοιχεία επικοινωνίας
+          {t("contactDetailsTitle")}
         </h2>
-        <p className="mt-1 text-sm text-muted">
-          Χρησιμοποιούνται για τη διαχείριση του λογαριασμού σου.
-        </p>
+        <p className="mt-1 text-sm text-muted">{t("contactDetailsSubtitle")}</p>
 
         <div className="mt-5 space-y-5">
           <div>
             <label htmlFor="full_name" className="text-xs font-medium text-muted uppercase">
-              {advertiserType === "professional" ? "Ονοματεπώνυμο υπεύθυνου" : "Ονοματεπώνυμο"}
+              {advertiserType === "professional" ? t("responsibleFullName") : t("fullName")}
             </label>
             <input
               id="full_name"
@@ -383,7 +379,7 @@ export function OwnerProfileForm({
             <>
               <div>
                 <label htmlFor="business_name" className="text-xs font-medium text-muted uppercase">
-                  Επωνυμία επιχείρησης
+                  {t("businessName")}
                 </label>
                 <input
                   id="business_name"
@@ -398,7 +394,7 @@ export function OwnerProfileForm({
               </div>
               <div>
                 <label htmlFor="business_title" className="text-xs font-medium text-muted uppercase">
-                  Επαγγελματικός τίτλος
+                  {t("businessTitle")}
                 </label>
                 <input
                   id="business_title"
@@ -408,7 +404,7 @@ export function OwnerProfileForm({
                     setBusinessTitle(e.target.value);
                     markDirty();
                   }}
-                  placeholder="π.χ. Διαχειριστής ακινήτων"
+                  placeholder={t("businessTitlePlaceholder")}
                   className={fieldClassName()}
                 />
               </div>
@@ -421,7 +417,7 @@ export function OwnerProfileForm({
           </div>
 
           <div>
-            <label className="text-xs font-medium text-muted uppercase">Τηλέφωνο</label>
+            <label className="text-xs font-medium text-muted uppercase">{t("phone")}</label>
             <div className="mt-1.5 flex flex-wrap items-center gap-2">
               <input
                 value={profile.phone || "—"}
@@ -431,7 +427,7 @@ export function OwnerProfileForm({
               {phoneVerified && (
                 <span className="inline-flex items-center gap-1 rounded-full bg-teal/10 px-2.5 py-1 text-xs font-medium text-teal">
                   <BadgeCheck className="h-3 w-3" />
-                  Επιβεβαιωμένο
+                  {t("verified")}
                 </span>
               )}
             </div>
@@ -439,13 +435,13 @@ export function OwnerProfileForm({
               href="/dashboard/settings/contact"
               className="mt-2 inline-block text-sm font-medium text-gold hover:underline"
             >
-              Διαχείριση τηλεφώνου και SMS
+              {t("managePhone")}
             </Link>
           </div>
 
           <div>
             <label htmlFor="preferred_contact_method" className="text-xs font-medium text-muted uppercase">
-              Προτιμώμενος τρόπος επικοινωνίας
+              {t("preferredContact")}
             </label>
             <select
               id="preferred_contact_method"
@@ -455,7 +451,11 @@ export function OwnerProfileForm({
             >
               {PREFERRED_CONTACT_OPTIONS.map((opt) => (
                 <option key={opt.value} value={opt.value}>
-                  {opt.label}
+                  {opt.value === "message"
+                    ? t("preferredContactMessage")
+                    : opt.value === "phone"
+                      ? t("preferredContactPhone")
+                      : t("preferredContactEmail")}
                 </option>
               ))}
             </select>
@@ -463,23 +463,22 @@ export function OwnerProfileForm({
         </div>
 
         <p className="mt-5 rounded-xl border border-border bg-sand/30 px-4 py-3 text-sm text-muted">
-          Το email και το τηλέφωνό σου δεν εμφανίζονται δημόσια στις αγγελίες. Η επικοινωνία
-          ξεκινά μέσω αιτήματος ή μηνύματος Midora.
+          {t("privacyNote")}
         </p>
       </section>
 
       {saveUi === "error" && (
         <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
-          <p className="font-medium">Δεν ήταν δυνατή η αποθήκευση</p>
+          <p className="font-medium">{t("saveError")}</p>
           {state?.error && <p className="mt-1 text-red-500/90">{state.error}</p>}
           <button type="submit" className="mt-2 font-medium text-red-700 underline">
-            Δοκίμασε ξανά
+            {t("retry")}
           </button>
         </div>
       )}
 
       {saveUi === "saved" && !dirty && (
-        <p className="text-sm text-teal">Οι αλλαγές αποθηκεύτηκαν</p>
+        <p className="text-sm text-teal">{t("saved")}</p>
       )}
 
       <div
@@ -506,7 +505,7 @@ export function OwnerProfileForm({
             disabled={pending}
             className="min-h-11 rounded-xl bg-gold px-6 text-sm font-semibold text-white hover:bg-gold-dark disabled:opacity-60"
           >
-            {pending ? "Αποθήκευση…" : "Αποθήκευση αλλαγών"}
+            {pending ? t("saving") : t("saveChanges")}
           </button>
         </div>
       </div>

@@ -16,6 +16,7 @@ import {
 import type { ListingUnavailablePeriod } from "@/lib/unavailable-periods";
 import { SearchFieldPopover } from "@/components/search/SearchFieldPopover";
 import { cn } from "@/lib/utils";
+import { useLocale, useTranslations } from "next-intl";
 
 export type DateRangeValue = {
   start: string;
@@ -72,12 +73,12 @@ export function InterestDateRangePicker({
   value,
   onApply,
   periods = [],
-  title = "Διάλεξε ημερομηνίες ενδιαφέροντος",
-  subtitle = "Επίλεξε άφιξη και αναχώρηση",
-  mobileTitle = "Ημερομηνίες ενδιαφέροντος",
+  title,
+  subtitle,
+  mobileTitle,
   showLegend = false,
-  applyLabel = "Εφαρμογή ημερομηνιών",
-  mobileApplyLabel = "Εφαρμογή",
+  applyLabel,
+  mobileApplyLabel,
   minimumStayNights,
   listingId,
   focusField = "start",
@@ -89,9 +90,17 @@ export function InterestDateRangePicker({
   presentation = "modal",
   anchorRef,
   ignoreRefs,
-  clearLabel = "Καθαρισμός",
+  clearLabel,
   unavailableDayStyle = "default",
 }: Props) {
+  const t = useTranslations("Listing.datePicker");
+  const locale = useLocale();
+  const resolvedTitle = title ?? t("title");
+  const resolvedSubtitle = subtitle ?? t("subtitle");
+  const resolvedMobileTitle = mobileTitle ?? t("mobileTitle");
+  const resolvedApplyLabel = applyLabel ?? t("apply");
+  const resolvedMobileApplyLabel = mobileApplyLabel ?? t("mobileApply");
+  const resolvedClearLabel = clearLabel ?? t("clear");
   const titleId = useId();
   const isMobile = useIsMobile();
   const [month, setMonth] = useState(() => new Date());
@@ -160,13 +169,11 @@ export function InterestDateRangePicker({
       selectionEnd !== (value?.end ?? null);
 
     if (dirty && (selectionStart || selectionEnd)) {
-      const discard = window.confirm(
-        "Υπάρχουν μη εφαρμοσμένες ημερομηνίες. Θέλεις να κλείσεις χωρίς αποθήκευση;"
-      );
+      const discard = window.confirm(t("unsavedClose"));
       if (!discard) return;
     }
     onOpenChange(false);
-  }, [onOpenChange, presentation, selectionEnd, selectionStart, value?.end, value?.start]);
+  }, [onOpenChange, presentation, selectionEnd, selectionStart, t, value?.end, value?.start]);
 
   useEffect(() => {
     if (!open) return;
@@ -236,8 +243,7 @@ export function InterestDateRangePicker({
     selectionEnd &&
     !meetsMinStay ? (
       <p className="text-sm text-amber-800">
-        Η αγγελία δέχεται ελάχιστη διαμονή {minStay} νυχτών. Επίλεξε περίοδο τουλάχιστον{" "}
-        {minStay} νυχτών.
+        {t("minStaySelect", { count: minStay })}
       </p>
     ) : null;
 
@@ -248,7 +254,7 @@ export function InterestDateRangePicker({
     hoverDate &&
     isBeforeMinimumStayEnd(selectionStart, hoverDate, minStay) ? (
       <p className="mb-3 text-sm text-amber-800/90">
-        Η ελάχιστη διαμονή για αυτή την αγγελία είναι {minStay} νύχτες.
+        {t("minStayNights", { count: minStay })}
       </p>
     ) : null;
 
@@ -257,8 +263,8 @@ export function InterestDateRangePicker({
       return (
         <p className="text-sm text-muted">
           {focusField === "end" && selectionStart
-            ? "Επίλεξε ημερομηνία αναχώρησης"
-            : "Επίλεξε ημερομηνία άφιξης και αναχώρησης"}
+            ? t("pickCheckout")
+            : t("pickBoth")}
         </p>
       );
     }
@@ -266,15 +272,15 @@ export function InterestDateRangePicker({
     return (
       <div className="space-y-0.5 text-sm">
         <p className="text-charcoal">
-          <span className="text-muted">Από:</span>{" "}
-          <span className="font-medium">{formatDateKeyDisplay(selectionStart)}</span>
+          <span className="text-muted">{t("from")}:</span>{" "}
+          <span className="font-medium">{formatDateKeyDisplay(selectionStart, locale)}</span>
         </p>
         <p className="text-charcoal">
-          <span className="text-muted">Έως:</span>{" "}
-          <span className="font-medium">{formatDateKeyDisplay(selectionEnd)}</span>
+          <span className="text-muted">{t("to")}:</span>{" "}
+          <span className="font-medium">{formatDateKeyDisplay(selectionEnd, locale)}</span>
         </p>
         <p className="font-medium text-gold-dark">
-          {nights} {nights === 1 ? "νύχτα" : "νύχτες"}
+          {t("nightsCount", { count: nights })}
         </p>
       </div>
     );
@@ -312,7 +318,7 @@ export function InterestDateRangePicker({
           onClick={handleClear}
           className="rounded-lg px-3 py-2 text-sm font-medium text-charcoal underline-offset-2 transition-colors hover:bg-charcoal/5 hover:underline"
         >
-          {clearLabel}
+          {resolvedClearLabel}
         </button>
       </div>
     ) : (
@@ -327,7 +333,7 @@ export function InterestDateRangePicker({
             onClick={handleClear}
             className="min-h-10 flex-1 rounded-xl border border-border px-4 text-sm font-medium text-charcoal transition-colors hover:bg-charcoal/5 sm:flex-none"
           >
-            {clearLabel}
+            {resolvedClearLabel}
           </button>
           {!autoApplyOnComplete && (
             <button
@@ -336,7 +342,7 @@ export function InterestDateRangePicker({
               disabled={!canApply}
               className="min-h-10 flex-1 rounded-xl bg-gold px-5 text-sm font-semibold text-white transition-colors hover:bg-gold-dark disabled:cursor-not-allowed disabled:opacity-45 sm:flex-none"
             >
-              {isMobile ? mobileApplyLabel : applyLabel}
+              {isMobile ? resolvedMobileApplyLabel : resolvedApplyLabel}
             </button>
           )}
         </div>
@@ -353,8 +359,8 @@ export function InterestDateRangePicker({
         anchorRef={anchorRef}
         ignoreRefs={ignoreRefs}
         placement="below-center"
-        title={title || undefined}
-        labelledBy={title ? titleId : undefined}
+        title={resolvedTitle || undefined}
+        labelledBy={resolvedTitle ? titleId : undefined}
         preferredWidth={820}
         panelClassName="max-w-[min(820px,calc(100vw-48px))]"
         scrim
@@ -373,7 +379,7 @@ export function InterestDateRangePicker({
         <div className="fixed inset-0 z-[200] flex items-end justify-center md:items-center md:p-6">
           <motion.button
             type="button"
-            aria-label="Κλείσιμο"
+            aria-label={t("close")}
             className="absolute inset-0 bg-charcoal/45 backdrop-blur-[2px]"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -404,17 +410,17 @@ export function InterestDateRangePicker({
                     id={titleId}
                     className="font-display text-lg font-semibold text-charcoal sm:text-xl"
                   >
-                    {isMobile ? mobileTitle : title}
+                    {isMobile ? resolvedMobileTitle : resolvedTitle}
                   </h2>
                   {!isMobile && (
-                    <p className="mt-1 text-sm text-muted">{subtitle}</p>
+                    <p className="mt-1 text-sm text-muted">{resolvedSubtitle}</p>
                   )}
                 </div>
                 <button
                   type="button"
                   onClick={handleRequestClose}
                   className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-border bg-white text-charcoal transition-colors hover:border-gold/35 hover:bg-gold/8"
-                  aria-label="Κλείσιμο"
+                  aria-label={t("close")}
                 >
                   <X className="h-5 w-5" />
                 </button>
@@ -436,9 +442,9 @@ export function InterestDateRangePicker({
   );
 }
 
-function formatTriggerDate(dateKey: string | undefined): string {
-  if (!dateKey) return "Προσθήκη";
-  return formatDateKeyDisplay(dateKey);
+function formatTriggerDate(dateKey: string | undefined, addLabel = "Add", locale?: string): string {
+  if (!dateKey) return addLabel;
+  return formatDateKeyDisplay(dateKey, locale);
 }
 
 type TriggerProps = {
@@ -454,12 +460,15 @@ export function DateRangeTriggerButton({
   onClick,
   className,
   compact = false,
-  placeholder = "Προσθήκη ημερομηνιών",
+  placeholder,
 }: TriggerProps) {
+  const t = useTranslations("Listing.datePicker");
+  const locale = useLocale();
+  const resolvedPlaceholder = placeholder ?? t("addDates");
   const label =
     value?.start && value?.end
-      ? `${formatTriggerDate(value.start)} – ${formatTriggerDate(value.end)}`
-      : placeholder;
+      ? `${formatTriggerDate(value.start, t("add"), locale)} – ${formatTriggerDate(value.end, t("add"), locale)}`
+      : resolvedPlaceholder;
 
   return (
     <button

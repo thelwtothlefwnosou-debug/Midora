@@ -15,11 +15,16 @@ export function isLeadsTableMissingError(error: {
   );
 }
 
+export const LEAD_ERROR_KEYS = {
+  tableMissing: "leadsNotActive",
+  submitFailed: "leadSubmitFailed",
+} as const;
+
 export function mapLeadError(error: { message?: string; code?: string }): string {
   if (isLeadsTableMissingError(error)) {
-    return "Η λειτουργία ενδιαφέροντος δεν είναι ενεργή ακόμα. Επικοινώνησε με τον ιδιοκτήτη μέσω τηλεφώνου ή WhatsApp.";
+    return LEAD_ERROR_KEYS.tableMissing;
   }
-  return error.message ?? "Δεν ήταν δυνατή η αποστολή. Δοκίμασε ξανά.";
+  return error.message ?? LEAD_ERROR_KEYS.submitFailed;
 }
 
 export async function getAccessibleLeads(

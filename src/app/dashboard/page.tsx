@@ -1,3 +1,4 @@
+import { getTranslations } from "next-intl/server";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { AccountShell } from "@/components/account/AccountShell";
 import { OwnerHomeOverview } from "@/components/dashboard/OwnerHomeOverview";
@@ -18,6 +19,7 @@ export default async function DashboardPage({
 }) {
   const params = await searchParams;
   const { profile, email } = await requireDashboardContext("/dashboard");
+  const t = await getTranslations("Owner.homePage");
 
   let rows: ReturnType<typeof buildOwnerListingRowModel>[] = [];
   let overview = buildOwnerListingsOverview([], 0);
@@ -44,27 +46,27 @@ export default async function DashboardPage({
     console.error("[dashboard] owner home data failed:", err);
   }
 
-  const firstName = profile.full_name?.split(" ")[0] ?? "φίλε";
+  const firstName = profile.full_name?.split(" ")[0] ?? t("defaultName");
 
   return (
     <AccountShell
       profile={profile}
       email={email}
       active="overview"
-      title={`Καλησπέρα, ${firstName}`}
-      subtitle="Δες τι συμβαίνει με τα ακίνητά σου."
+      title={t("greeting", { name: firstName })}
+      subtitle={t("subtitle")}
     >
       {params.submitted && (
         <GlassCard className="mb-6 border-teal/30 bg-teal/10 p-4">
           <p className="text-sm text-teal">
-            Η αγγελία υποβλήθηκε για έλεγχο. Θα ενημερωθείς όταν ολοκληρωθεί η διαδικασία.
+            {t("submittedBanner")}
           </p>
         </GlassCard>
       )}
 
       {params.updated && (
         <GlassCard className="mb-6 border-teal/30 bg-teal/10 p-4">
-          <p className="text-sm text-teal">Οι αλλαγές αποθηκεύτηκαν.</p>
+          <p className="text-sm text-teal">{t("changesSaved")}</p>
         </GlassCard>
       )}
 

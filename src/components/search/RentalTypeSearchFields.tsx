@@ -2,8 +2,9 @@
 
 import { useId, useState } from "react";
 import { Calendar, CalendarRange, Clock, Home, Users } from "lucide-react";
+import { useLocale, useTranslations } from "next-intl";
 import type { RentalType } from "@/lib/rental-types";
-import { MID_TERM_DURATION_OPTIONS } from "@/lib/search-interest-dates";
+import { MID_TERM_DURATION_OPTIONS, midTermDurationLabel } from "@/lib/search-interest-dates";
 import { PROPERTY_TYPES } from "@/lib/types";
 import { compareDateKeys } from "@/lib/dates-athens";
 import { minSearchMonthValue } from "@/lib/search-date-validation";
@@ -18,6 +19,7 @@ import {
 } from "@/components/availability/InterestDateRangePicker";
 import { formatDateKeyDisplay } from "@/lib/availability-calendar";
 import { SearchInteractiveTile, HeroSearchField } from "@/components/search/SearchInteractiveTile";
+import { MonthInput } from "@/components/ui/MonthInput";
 import { cn } from "@/lib/utils";
 
 const tileValueClass =
@@ -155,6 +157,8 @@ function ShortTermDateFields({
   searchValues?: Props["searchValues"];
   onSearchFieldChange?: Props["onSearchFieldChange"];
 }) {
+  const t = useTranslations("Search");
+  const tPropertyTypes = useTranslations("PropertyTypes");
   const isSearch = variant === "search";
   const compact = variant === "compact" || isSearch;
   const fieldClass = isSearch
@@ -225,7 +229,7 @@ function ShortTermDateFields({
         <input type="hidden" name="interestFrom" value={activeRange?.start ?? ""} />
         <input type="hidden" name="interestTo" value={activeRange?.end ?? ""} />
         <SearchInlineField
-          label="Ημερομηνίες"
+          label={t("dates")}
           segmented
           showDivider
           className="min-w-0 flex-1 sm:min-w-[9.5rem]"
@@ -240,7 +244,7 @@ function ShortTermDateFields({
           >
             {activeRange?.start && activeRange?.end
               ? `${formatField(activeRange.start)} – ${formatField(activeRange.end)}`
-              : "Επίλεξε άφιξη και αναχώρηση"}
+              : t("selectDates")}
           </button>
         </SearchInlineField>
         <InterestDateRangePicker
@@ -269,9 +273,9 @@ function ShortTermDateFields({
         >
           <HeroTileContent
             icon={Calendar}
-            label="Από"
+            label={t("from")}
             value={formatField(range?.start)}
-            placeholder="Προσθήκη"
+            placeholder={t("add")}
           />
         </SearchInteractiveTile>
 
@@ -281,19 +285,19 @@ function ShortTermDateFields({
         >
           <HeroTileContent
             icon={CalendarRange}
-            label="Έως"
+            label={t("to")}
             value={formatField(range?.end)}
-            placeholder="Προσθήκη"
+            placeholder={t("add")}
           />
         </SearchInteractiveTile>
 
-        <HeroSearchField icon={Users} label="Άτομα" fieldId={guestsId}>
+        <HeroSearchField icon={Users} label={t("guests")} fieldId={guestsId}>
           <input
             id={guestsId}
             type="number"
             name="guests"
             min={1}
-            placeholder="π.χ. 2"
+            placeholder={t("guestsPlaceholder")}
             defaultValue={defaults?.guests}
             className={heroInputClass}
           />
@@ -301,7 +305,7 @@ function ShortTermDateFields({
 
         <HeroSearchField
           icon={Home}
-          label="Τύπος ακινήτου"
+          label={t("propertyType")}
           fieldId={propertyTypeId}
           openPicker
         >
@@ -311,10 +315,10 @@ function ShortTermDateFields({
             defaultValue={defaults?.propertyType ?? ""}
             className={cn(heroInputClass, "cursor-pointer")}
           >
-            <option value="">Όλα</option>
-            {PROPERTY_TYPES.map((t) => (
-              <option key={t.value} value={t.value}>
-                {t.label}
+            <option value="">{t("allTypes")}</option>
+            {PROPERTY_TYPES.map((pt) => (
+              <option key={pt.value} value={pt.value}>
+                {tPropertyTypes(pt.value)}
               </option>
             ))}
           </select>
@@ -339,22 +343,22 @@ function ShortTermDateFields({
     <>
       <input type="hidden" name="interestFrom" value={range?.start ?? ""} />
       <input type="hidden" name="interestTo" value={range?.end ?? ""} />
-      <SearchField icon={Calendar} label="Από">
+      <SearchField icon={Calendar} label={t("from")}>
         <button
           type="button"
           onClick={() => openPicker("start")}
           className={cn(fieldClass, "text-left", !range?.start && "text-muted/55")}
         >
-          {formatField(range?.start) ?? "Προσθήκη"}
+          {formatField(range?.start) ?? t("add")}
         </button>
       </SearchField>
-      <SearchField icon={CalendarRange} label="Έως">
+      <SearchField icon={CalendarRange} label={t("to")}>
         <button
           type="button"
           onClick={() => openPicker("end")}
           className={cn(fieldClass, "text-left", !range?.end && "text-muted/55")}
         >
-          {formatField(range?.end) ?? "Προσθήκη"}
+          {formatField(range?.end) ?? t("add")}
         </button>
       </SearchField>
       <InterestDateRangePicker
@@ -380,6 +384,7 @@ function MonthlyDateFields({
   searchValues?: Props["searchValues"];
   onSearchFieldChange?: Props["onSearchFieldChange"];
 }) {
+  const t = useTranslations("Search");
   const isSearch = variant === "search";
   const compact = variant === "compact" || isSearch;
   const startMonthId = useId();
@@ -399,13 +404,12 @@ function MonthlyDateFields({
   if (isSearch) {
     return (
       <SearchInlineField
-        label="Μήνας έναρξης"
+        label={t("startMonth")}
         segmented
         showDivider
         className="min-w-0 flex-1 sm:min-w-[8.5rem]"
       >
-        <input
-          type="month"
+        <MonthInput
           name="startMonth"
           value={safeMonth ?? ""}
           min={minMonth}
@@ -421,13 +425,12 @@ function MonthlyDateFields({
   return (
     <HeroSearchField
       icon={Calendar}
-      label="Μήνας έναρξης"
+      label={t("startMonth")}
       fieldId={startMonthId}
       openPicker
     >
-      <input
+      <MonthInput
         id={startMonthId}
-        type="month"
         name="startMonth"
         defaultValue={safeMonth}
         min={minMonth}
@@ -445,6 +448,8 @@ export function RentalTypeSearchFields({
   searchValues,
   onSearchFieldChange,
 }: Props) {
+  const t = useTranslations("Search");
+  const locale = useLocale();
   const isSearch = variant === "search";
   const compact = variant === "compact";
   const guestsId = useId();
@@ -457,7 +462,7 @@ export function RentalTypeSearchFields({
 
   const guestsField = isSearch ? (
     <SearchInlineField
-      label="Επισκέπτες"
+      label={rentalType === "monthly" ? t("guests") : t("visitors")}
       segmented
       showDivider
       className="min-w-0 shrink-0 sm:min-w-[6.5rem] sm:max-w-[8.5rem]"
@@ -476,18 +481,24 @@ export function RentalTypeSearchFields({
           className={cn(fieldClass, "max-w-[3rem] [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none")}
         />
         {(searchValues?.guests ?? defaults?.guests) && (
-          <span className="listings-search-segment__value text-charcoal/70">άτομα</span>
+          <span className="listings-search-segment__value text-charcoal/70">
+            {t("peopleUnit")}
+          </span>
         )}
       </div>
     </SearchInlineField>
   ) : (
-    <HeroSearchField icon={Users} label="Άτομα" fieldId={guestsId}>
+    <HeroSearchField
+      icon={Users}
+      label={rentalType === "monthly" ? t("guests") : t("visitors")}
+      fieldId={guestsId}
+    >
       <input
         id={guestsId}
         type="number"
         name="guests"
         min={1}
-        placeholder="π.χ. 2"
+        placeholder={t("guestsPlaceholder")}
         defaultValue={defaults?.guests}
         className={heroInputClass}
       />
@@ -496,7 +507,7 @@ export function RentalTypeSearchFields({
 
   const durationField = isSearch ? (
     <SearchInlineField
-      label="Διάρκεια"
+      label={t("duration")}
       segmented
       showDivider
       className="min-w-0 flex-1 sm:min-w-[8rem]"
@@ -511,13 +522,13 @@ export function RentalTypeSearchFields({
       >
         {MID_TERM_DURATION_OPTIONS.map((o) => (
           <option key={o.value} value={o.value}>
-            {o.label}
+            {midTermDurationLabel(o.value, locale)}
           </option>
         ))}
       </select>
     </SearchInlineField>
   ) : (
-    <HeroSearchField icon={Clock} label="Διάρκεια" fieldId={durationId} openPicker>
+    <HeroSearchField icon={Clock} label={t("duration")} fieldId={durationId} openPicker>
       <select
         id={durationId}
         name="durationMonths"
@@ -526,7 +537,7 @@ export function RentalTypeSearchFields({
       >
         {MID_TERM_DURATION_OPTIONS.map((o) => (
           <option key={o.value} value={o.value}>
-            {o.label}
+            {midTermDurationLabel(o.value, locale)}
           </option>
         ))}
       </select>
@@ -591,6 +602,8 @@ function PropertyTypeField({
   variant: "hero" | "compact";
   defaultValue?: string;
 }) {
+  const t = useTranslations("Search");
+  const tPropertyTypes = useTranslations("PropertyTypes");
   const compact = variant === "compact";
   const propertyTypeId = useId();
   const fieldClass = compact
@@ -599,16 +612,16 @@ function PropertyTypeField({
 
   if (compact) {
     return (
-      <SearchField icon={Home} label="Τύπος ακινήτου">
+      <SearchField icon={Home} label={t("propertyType")}>
         <select
           name="propertyType"
           defaultValue={defaultValue ?? ""}
           className={cn(fieldClass, "cursor-pointer")}
         >
-          <option value="">Όλα</option>
-          {PROPERTY_TYPES.map((t) => (
-            <option key={t.value} value={t.value}>
-              {t.label}
+          <option value="">{t("allTypes")}</option>
+          {PROPERTY_TYPES.map((pt) => (
+            <option key={pt.value} value={pt.value}>
+              {tPropertyTypes(pt.value)}
             </option>
           ))}
         </select>
@@ -619,7 +632,7 @@ function PropertyTypeField({
   return (
     <HeroSearchField
       icon={Home}
-      label="Τύπος ακινήτου"
+      label={t("propertyType")}
       fieldId={propertyTypeId}
       openPicker
     >
@@ -629,10 +642,10 @@ function PropertyTypeField({
         defaultValue={defaultValue ?? ""}
         className={cn(fieldClass, "cursor-pointer")}
       >
-        <option value="">Όλα</option>
-        {PROPERTY_TYPES.map((t) => (
-          <option key={t.value} value={t.value}>
-            {t.label}
+        <option value="">{t("allTypes")}</option>
+        {PROPERTY_TYPES.map((pt) => (
+          <option key={pt.value} value={pt.value}>
+            {tPropertyTypes(pt.value)}
           </option>
         ))}
       </select>

@@ -1,8 +1,11 @@
 import type { Metadata } from "next";
 import { Playfair_Display, Inter, Cormorant_Garamond } from "next/font/google";
 import { Suspense } from "react";
+import { NextIntlClientProvider } from "next-intl";
+import { getLocale, getMessages, getTranslations } from "next-intl/server";
 import { HelpAssistantProvider } from "@/components/assistant/HelpAssistantContext";
 import { MidoraHelpWidget } from "@/components/ai/MidoraHelpWidget";
+import { HtmlLangSync } from "@/components/layout/HtmlLangSync";
 import { ToastHost } from "@/components/ui/ToastHost";
 import { PendingFavoriteSync } from "@/components/favorites/PendingFavoriteSync";
 import { WebsiteJsonLd } from "@/components/seo/WebsiteJsonLd";
@@ -31,53 +34,65 @@ const cormorantBrand = Cormorant_Garamond({
   display: "swap",
 });
 
-export const metadata: Metadata = {
-  metadataBase: new URL(siteUrl),
-  title: {
-    default: "Midora — Αγγελίες ακινήτων στην Ελλάδα",
-    template: "%s | Midora",
-  },
-  description:
-    "Αγγελίες για βραχυχρόνια και μηνιαία/μεσοπρόθεσμη μίσθωση — όλη η Ελλάδα.",
-  keywords: ["ενοίκιο", "Ελλάδα", "διαμονή", "αγγελίες", "μίσθωση"],
-  openGraph: {
-    type: "website",
-    locale: "el_GR",
-    siteName: "Midora",
-    title: "Midora — Αγγελίες ακινήτων",
-    description:
-      "Αναζήτησε ή ανέβασε αγγελία για βραχυχρόνια και μηνιαία/μεσοπρόθεσμη μίσθωση στην Ελλάδα.",
-    url: siteUrl,
-  },
-  twitter: {
-    card: "summary_large_image",
-    title: "Midora — Αγγελίες ακινήτων",
-    description:
-      "Αναζήτησε ή ανέβασε αγγελία για βραχυχρόνια και μηνιαία/μεσοπρόθεσμη μίσθωση στην Ελλάδα.",
-  },
-  robots: {
-    index: true,
-    follow: true,
-  },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const locale = await getLocale();
+  const t = await getTranslations("Site");
+  const keywords = t("keywords")
+    .split(",")
+    .map((k) => k.trim())
+    .filter(Boolean);
 
-export default function RootLayout({
+  return {
+    metadataBase: new URL(siteUrl),
+    title: {
+      default: t("titleDefault"),
+      template: "%s | Midora",
+    },
+    description: t("description"),
+    keywords,
+    openGraph: {
+      type: "website",
+      locale: locale === "el" ? "el_GR" : "en_US",
+      siteName: "Midora",
+      title: t("ogTitle"),
+      description: t("ogDescription"),
+      url: siteUrl,
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: t("ogTitle"),
+      description: t("ogDescription"),
+    },
+    robots: {
+      index: true,
+      follow: true,
+    },
+  };
+}
+
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const locale = await getLocale();
+  const messages = await getMessages();
+
   return (
-    <html lang="el" className={`${playfair.variable} ${inter.variable} ${cormorantBrand.variable} h-full`}>
+    <html lang={locale} className={`${playfair.variable} ${inter.variable} ${cormorantBrand.variable} h-full`}>
       <body className="min-h-full overflow-x-hidden bg-white antialiased text-charcoal">
-        <WebsiteJsonLd />
-        <HelpAssistantProvider>
-          {children}
-          <ToastHost />
-          <PendingFavoriteSync />
-          <Suspense fallback={null}>
-            <MidoraHelpWidget />
-          </Suspense>
-        </HelpAssistantProvider>
+        <NextIntlClientProvider locale={locale} messages={messages}>
+          <HtmlLangSync />
+          <WebsiteJsonLd />
+          <HelpAssistantProvider>
+            {children}
+            <ToastHost />
+            <PendingFavoriteSync />
+            <Suspense fallback={null}>
+              <MidoraHelpWidget />
+            </Suspense>
+          </HelpAssistantProvider>
+        </NextIntlClientProvider>
       </body>
     </html>
   );

@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { actionError, authActionError } from "@/lib/action-error-i18n";
 import {
   BILLS_AMENITY_KEYS,
   FURNISHED_AMENITY_KEYS,
@@ -17,12 +18,12 @@ function isMissingTable(error: { code?: string } | null): boolean {
 
 async function requireListingOwner(listingId: string) {
   const supabase = await createClient();
-  if (!supabase) return { error: "Η υπηρεσία δεν είναι διαθέσιμη." } as const;
+  if (!supabase) return { error: await actionError("serviceUnavailable") } as const;
 
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) return { error: "Πρέπει να συνδεθείς." } as const;
+  if (!user) return { error: await authActionError("mustSignIn") } as const;
 
   const { data: listing } = await supabase
     .from("listings")
@@ -31,7 +32,7 @@ async function requireListingOwner(listingId: string) {
     .eq("user_id", user.id)
     .maybeSingle();
 
-  if (!listing) return { error: "Η αγγελία δεν βρέθηκε." } as const;
+  if (!listing) return { error: await actionError("listingNotFound") } as const;
   return { supabase, listing } as const;
 }
 
@@ -60,9 +61,11 @@ function listingBooleanPatch(keys: Set<string>) {
 }
 
 function revalidateListingPaths(listingId: string, slug?: string | null) {
-  revalidatePath(`/dashboard/listings/${listingId}/edit`);
+  // Do not revalidate create-wizard or dashboard list — remounts left Next stuck.
   revalidatePath(`/listings/${listingId}`);
   if (slug) revalidatePath(`/listings/${slug}`);
+  // Workspace edit only (not /dashboard/listings/new).
+  revalidatePath(`/dashboard/listings/${listingId}`);
 }
 
 export async function getOwnerListingAmenities(
@@ -127,7 +130,7 @@ export async function saveOwnerListingAmenities(listingId: string, keys: string[
 
   if (deleteError && !isMissingTable(deleteError)) {
     console.error("[listing-amenities] delete", deleteError.message);
-    return { error: "Δεν ήταν δυνατή η αποθήκευση των παροχών." };
+    return { error: await actionError("amenitiesSaveFailed") };
   }
 
   if (cleaned.length > 0) {
@@ -143,7 +146,7 @@ export async function saveOwnerListingAmenities(listingId: string, keys: string[
 
     if (insertError && !isMissingTable(insertError)) {
       console.error("[listing-amenities] insert", insertError.message);
-      return { error: "Δεν ήταν δυνατή η αποθήκευση των παροχών." };
+      return { error: await actionError("amenitiesSaveFailed") };
     }
   }
 

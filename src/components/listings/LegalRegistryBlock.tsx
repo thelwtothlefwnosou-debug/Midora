@@ -1,8 +1,10 @@
+"use client";
+
+import { useTranslations } from "next-intl";
 import type { ListingWithImages } from "@/lib/types";
 import {
-  AMA_DISCLAIMER,
   formatAmaDisplay,
-  legalRegistryRegisteredBadge,
+  getLegalRegistryRegisteredBadge,
   needsPublicRegistryDisplay,
 } from "@/lib/rental-types";
 import { cn } from "@/lib/utils";
@@ -14,10 +16,12 @@ export function LegalRegistryBlock({
   listing: ListingWithImages;
   className?: string;
 }) {
+  const t = useTranslations("Listing");
+
   if (!needsPublicRegistryDisplay(listing)) return null;
 
   const display = formatAmaDisplay(listing);
-  const badge = legalRegistryRegisteredBadge(listing);
+  const badge = getLegalRegistryRegisteredBadge(listing, t);
 
   if (!display && !badge) return null;
 
@@ -29,7 +33,7 @@ export function LegalRegistryBlock({
       )}
     >
       <p className="text-xs font-semibold tracking-wide text-teal uppercase">
-        Στοιχεία βραχυχρόνιας μίσθωσης
+        {t("registrySection.title")}
       </p>
       {badge && (
         <span className="mt-2 inline-block rounded-full bg-teal/15 px-2.5 py-0.5 text-xs font-medium text-teal">
@@ -39,7 +43,7 @@ export function LegalRegistryBlock({
       {display && (
         <p className="mt-2 font-display text-lg font-semibold text-charcoal">{display}</p>
       )}
-      <p className="mt-2 text-xs leading-relaxed text-muted">{AMA_DISCLAIMER}</p>
+      <p className="mt-2 text-xs leading-relaxed text-muted">{t("registrySection.disclaimer")}</p>
     </div>
   );
 }

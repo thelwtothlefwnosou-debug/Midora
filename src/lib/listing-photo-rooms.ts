@@ -1,5 +1,6 @@
 "use server";
 
+import { actionError, authActionError, mustSignInError } from "@/lib/action-error-i18n";
 import { revalidatePath } from "next/cache";
 import {
   MAX_LISTING_PHOTOS,
@@ -25,12 +26,12 @@ function isSchemaColumnError(error: { code?: string; message?: string } | null):
 
 async function requireListingOwner(listingId: string) {
   const supabase = await createClient();
-  if (!supabase) return { error: "Η υπηρεσία δεν είναι διαθέσιμη." } as const;
+  if (!supabase) return { error: await actionError("serviceUnavailable") } as const;
 
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) return { error: "Πρέπει να συνδεθείς." } as const;
+  if (!user) return await mustSignInError();
 
   const { data: listing } = await supabase
     .from("listings")
@@ -39,7 +40,7 @@ async function requireListingOwner(listingId: string) {
     .eq("user_id", user.id)
     .maybeSingle();
 
-  if (!listing) return { error: "Η αγγελία δεν βρέθηκε." } as const;
+  if (!listing) return { error: await actionError("listingNotFound") } as const;
   return { supabase, user } as const;
 }
 
@@ -60,7 +61,7 @@ export async function assignListingImageRoom(
   if ("error" in auth) return { error: auth.error };
 
   if (roomKey && !isPhotoRoomKey(roomKey)) {
-    return { error: "Μη έγκυρος χώρος." };
+    return { error: await actionError("invalidRoom") };
   }
 
   const { error } = await auth.supabase
@@ -72,10 +73,10 @@ export async function assignListingImageRoom(
   if (error) {
     if (isSchemaColumnError(error)) {
       return {
-        error: "Η βάση δεν έχει ακόμα ενημερωθεί για περιήγηση ανά χώρο. Τρέξε migrations.",
+        error: await actionError("roomMigrationRequired"),
       };
     }
-    return { error: "Δεν ήταν δυνατή η μετακίνηση της φωτογραφίας." };
+    return { error: await actionError("photoMoveFailed") };
   }
 
   revalidatePhotoPaths(listingId);
@@ -91,7 +92,7 @@ export async function bulkAssignListingImagesRoom(
   if ("error" in auth) return { error: auth.error };
 
   if (roomKey && !isPhotoRoomKey(roomKey)) {
-    return { error: "Μη έγκυρος χώρος." };
+    return { error: await actionError("invalidRoom") };
   }
 
   for (const imageId of imageIds) {
@@ -104,10 +105,10 @@ export async function bulkAssignListingImagesRoom(
     if (error) {
       if (isSchemaColumnError(error)) {
         return {
-          error: "Η βάση δεν έχει ακόμα ενημερωθεί για περιήγηση ανά χώρο. Τρέξε migrations.",
+          error: await actionError("roomMigrationRequired"),
         };
       }
-      return { error: "Δεν ήταν δυνατή η ανάθεση χώρου." };
+      return { error: await actionError("roomAssignFailed") };
     }
   }
 
@@ -133,9 +134,9 @@ export async function updateListingImageCaption(
 
   if (error) {
     if (isSchemaColumnError(error)) {
-      return { error: "Η βάση δεν υποστηρίζει ακόμα λεζάντες. Τρέξε migrations." };
+      return { error: await actionError("captionMigrationRequired") };
     }
-    return { error: "Δεν ήταν δυνατή η αποθήκευση της λεζάννας." };
+    return { error: await actionError("captionSaveFailed") };
   }
 
   revalidatePhotoPaths(listingId);
@@ -151,14 +152,14 @@ export async function uploadListingRoomPhotos(
   if ("error" in auth) return { error: auth.error };
 
   if (!isPhotoRoomKey(roomKey)) {
-    return { error: "Επίλεξε έγκυρο χώρο πριν ανεβάσεις φωτογραφίες." };
+    return { error: await actionError("validRoomBeforeUpload") };
   }
 
   const photoFiles = formData.getAll("photos") as File[];
   const validPhotos = photoFiles.filter((f) => f.size > 0 && f.type.startsWith("image/"));
 
   if (validPhotos.length === 0) {
-    return { error: "Επίλεξε τουλάχιστον μία φωτογραφία." };
+    return { error: await actionError("selectAtLeastOnePhoto") };
   }
 
   const { data: existingMedia } = await auth.supabase
@@ -170,7 +171,7 @@ export async function uploadListingRoomPhotos(
   const remaining = MAX_LISTING_PHOTOS - existingCount;
 
   if (remaining <= 0) {
-    return { error: `Μέγιστο ${MAX_LISTING_PHOTOS} αρχεία ανά αγγελία.` };
+    return { error: await actionError("maxFilesPerListing", { count: MAX_LISTING_PHOTOS }) };
   }
 
   const photosToUpload = validPhotos.slice(0, remaining);
@@ -234,17 +235,17 @@ export async function uploadListingVideo(listingId: string, formData: FormData) 
   const videoFile = formData.get("video") as File | null;
   const videoDuration = parseInt(String(formData.get("video_duration") ?? ""), 10);
 
-  if (!videoFile?.size) return { error: "Επίλεξε βίντεο." };
-  if (!videoFile.type.startsWith("video/")) return { error: "Μη έγκυρο αρχείο βίντεο." };
+  if (!videoFile?.size) return { error: await actionError("selectVideo") };
+  if (!videoFile.type.startsWith("video/")) return { error: await actionError("invalidVideoFile") };
   if (videoFile.size > MAX_VIDEO_SIZE_BYTES) {
-    return { error: "Το βίντεο είναι πολύ μεγάλο (max 50MB)." };
+    return { error: await actionError("videoTooLarge") };
   }
   if (
     !Number.isFinite(videoDuration) ||
     videoDuration <= 0 ||
     videoDuration > MAX_VIDEO_DURATION_SECONDS
   ) {
-    return { error: `Το βίντεο πρέπει να είναι έως ${MAX_VIDEO_DURATION_SECONDS} δευτερόλεπτα.` };
+    return { error: await actionError("videoMaxDuration", { seconds: MAX_VIDEO_DURATION_SECONDS }) };
   }
 
   const { data: existingMedia } = await auth.supabase
@@ -256,10 +257,10 @@ export async function uploadListingVideo(listingId: string, formData: FormData) 
   const existingVideos = existingMedia?.filter((m) => m.media_type === "video").length ?? 0;
 
   if (existingVideos >= MAX_LISTING_VIDEOS) {
-    return { error: "Μπορείς μόνο 1 βίντεο ανά αγγελία." };
+    return { error: await actionError("oneVideoOnly") };
   }
   if (existingCount >= MAX_LISTING_PHOTOS) {
-    return { error: `Μέγιστο ${MAX_LISTING_PHOTOS} αρχεία.` };
+    return { error: await actionError("maxFilesPerListing", { count: MAX_LISTING_PHOTOS }) };
   }
 
   const ext = videoFile.name.split(".").pop() ?? "mp4";

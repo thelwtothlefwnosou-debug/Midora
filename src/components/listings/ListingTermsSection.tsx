@@ -1,8 +1,8 @@
 "use client";
 
 import { useListingRentalMode } from "@/components/listings/ListingRentalModeContext";
+import { useTranslations } from "next-intl";
 import type { ListingWithImages } from "@/lib/types";
-import { COPY } from "@/lib/copy";
 import {
   formatPublicMinStayForMode,
   publicMinStayHeading,
@@ -11,6 +11,8 @@ import {
 
 export function ListingTermsSection({ listing }: { listing: ListingWithImages }) {
   const { mode } = useListingRentalMode();
+  const t = useTranslations("Listing");
+  const tCommon = useTranslations("Common");
 
   const items: string[] = [];
 
@@ -19,18 +21,18 @@ export function ListingTermsSection({ listing }: { listing: ListingWithImages })
       `${publicMinStayHeading(mode)}: ${formatPublicMinStayForMode(listing, mode)}`
     );
     if (listing.included_guests != null) {
-      items.push(`Άτομα που περιλαμβάνονται στην τιμή: ${listing.included_guests}`);
+      items.push(t("includedGuestsInPrice", { count: listing.included_guests }));
     }
     if (listing.extra_guest_fee_per_night != null) {
       items.push(
-        `Χρέωση επιπλέον ατόμου: €${listing.extra_guest_fee_per_night.toLocaleString("el-GR")} / βράδυ`
+        t("extraGuestFeePerNight", {
+          amount: listing.extra_guest_fee_per_night.toLocaleString(undefined),
+        })
       );
     }
+    items.push(listing.pets_allowed ? t("petsAllowed") : t("petsNotAllowed"));
     items.push(
-      listing.pets_allowed ? "Κατοικίδια επιτρέπονται" : "Κατοικίδια δεν επιτρέπονται"
-    );
-    items.push(
-      listing.cleaning_included ? COPY.cleaningIncluded : COPY.cleaningNotIncluded
+      listing.cleaning_included ? tCommon("cleaningIncluded") : tCommon("cleaningNotIncluded")
     );
   } else {
     items.push(
@@ -38,16 +40,14 @@ export function ListingTermsSection({ listing }: { listing: ListingWithImages })
     );
     items.push(
       resolveMonthlyIncludesBills(listing)
-        ? COPY.utilitiesIncluded
-        : COPY.utilitiesNotIncluded
+        ? tCommon("utilitiesIncluded")
+        : tCommon("utilitiesNotIncluded")
     );
+    items.push(listing.pets_allowed ? t("petsAllowed") : t("petsNotAllowed"));
     items.push(
-      listing.pets_allowed ? "Κατοικίδια επιτρέπονται" : "Κατοικίδια δεν επιτρέπονται"
+      listing.cleaning_included ? tCommon("cleaningIncluded") : tCommon("cleaningNotIncluded")
     );
-    items.push(
-      listing.cleaning_included ? COPY.cleaningIncluded : COPY.cleaningNotIncluded
-    );
-    items.push(listing.furnished ? "Επιπλωμένο" : "Αμίπλωτο");
+    items.push(listing.furnished ? t("furnished") : t("unfurnished"));
     if (listing.monthly_terms?.trim()) {
       items.push(listing.monthly_terms.trim());
     }
@@ -55,11 +55,8 @@ export function ListingTermsSection({ listing }: { listing: ListingWithImages })
 
   return (
     <section className="listing-section">
-      <h2 className="listing-section-title">Όροι & πληροφορίες διαμονής</h2>
-      <p className="listing-meta mt-3">
-        Σαφή στοιχεία πριν στείλεις ενδιαφέρον. Η τελική συμφωνία γίνεται με τον
-        ιδιοκτήτη.
-      </p>
+      <h2 className="listing-section-title">{t("termsTitle")}</h2>
+      <p className="listing-meta mt-3">{t("termsIntro")}</p>
       <ul className="listing-card mt-5 space-y-2 p-5 text-sm text-charcoal/85">
         {items.map((item) => (
           <li key={item} className="flex gap-2">

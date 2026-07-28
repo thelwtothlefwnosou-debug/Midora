@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { getTranslations } from "next-intl/server";
 import {
   searchGreekLocations,
   resolveLocation,
@@ -62,8 +63,9 @@ export async function GET(request: Request) {
       resolved,
     });
   } catch {
+    const t = await getTranslations("Errors");
     return NextResponse.json(
-      { error: "Δεν ήταν δυνατή η φόρτωση περιοχών. Δοκίμασε ξανά σε λίγο." },
+      { error: t("locationsSearchFailed") },
       { status: 500 }
     );
   }

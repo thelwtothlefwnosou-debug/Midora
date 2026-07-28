@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 import { Button } from "@/components/ui/Button";
 import {
   PublicPageLayout,
@@ -24,17 +25,19 @@ export function generateStaticParams() {
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const t = await getTranslations("Marketing.cityRentals");
   const { city: slug } = await params;
   const city = getCityLanding(slug);
-  if (!city) return { title: "Μηνιαίες ενοικιάσεις" };
+  if (!city) return { title: t("metaTitle") };
 
   return {
-    title: `Μηνιαίες ενοικιάσεις ${city.nameIn}`,
+    title: t("metaTitleCity", { city: city.nameIn }),
     description: city.intro,
   };
 }
 
 export default async function CityRentalsPage({ params }: Props) {
+  const t = await getTranslations("Marketing.cityRentals");
   const { city: slug } = await params;
   const city = getCityLanding(slug);
   if (!city) notFound();
@@ -46,19 +49,19 @@ export default async function CityRentalsPage({ params }: Props) {
   return (
     <PublicPageLayout>
       <StaticHero
-        eyebrow="Μηνιαίες ενοικιάσεις"
-        title={`Μηνιαίες ενοικιάσεις ${city.nameIn}`}
+        eyebrow={t("eyebrow")}
+        title={t("titleCity", { city: city.nameIn })}
         subtitle={city.intro}
       >
         <Button href={citySearchHref(city.searchCity)} size="lg">
-          Δες διαθέσιμα ακίνητα
+          {t("ctaBrowse")}
         </Button>
         <Button href="/how-it-works" variant="outline" size="lg">
-          Πώς λειτουργεί
+          {t("howItWorks")}
         </Button>
       </StaticHero>
 
-      <StaticSection title="Για ποιους είναι">
+      <StaticSection title={t("audienceTitle")}>
         <ul className="list-disc space-y-2 pl-5">
           {city.audience.map((item) => (
             <li key={item}>{item}</li>
@@ -66,14 +69,12 @@ export default async function CityRentalsPage({ params }: Props) {
         </ul>
       </StaticSection>
 
-      <StaticSection title="Συχνές ερωτήσεις">
+      <StaticSection title={t("faqTitle")}>
         <FaqAccordion items={city.faq} />
       </StaticSection>
 
-      <StaticSection title="Άλλες πόλεις" className="border-t border-border">
-        <p className="text-sm text-muted">
-          Εξερεύνησε μηνιαίες ενοικιάσεις και σε άλλες πόλεις:
-        </p>
+      <StaticSection title={t("otherCitiesTitle")} className="border-t border-border">
+        <p className="text-sm text-muted">{t("otherCitiesIntro")}</p>
         <div className="mt-4 flex flex-wrap gap-2">
           {otherCities.map((other) => (
             <Link

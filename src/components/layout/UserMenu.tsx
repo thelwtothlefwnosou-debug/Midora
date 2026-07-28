@@ -3,6 +3,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
+import { useLocale, useTranslations } from "next-intl";
 import {
   LayoutDashboard,
   Home,
@@ -15,6 +16,7 @@ import {
   ChevronDown,
   Shield,
   User as UserIcon,
+  type LucideIcon,
 } from "lucide-react";
 import type { User } from "@supabase/supabase-js";
 import { createClient, isSupabaseConfigured } from "@/lib/supabase/client";
@@ -25,20 +27,37 @@ import { cn } from "@/lib/utils";
 import { OWNER_LISTING_NEW_PATH } from "@/lib/owner-flow";
 import { BugReportMenuItem } from "@/components/feedback/BugReportMenuItem";
 
-const MENU_LINKS = [
-  { href: "/dashboard", label: "Επισκόπηση", icon: LayoutDashboard },
-  { href: "/dashboard/profile", label: "Το προφίλ μου", icon: UserIcon },
-  { href: "/dashboard/listings", label: "Οι αγγελίες μου", icon: Home },
-  { href: OWNER_LISTING_NEW_PATH, label: "Νέα αγγελία", icon: Plus },
-  { href: "/dashboard/requests", label: "Ενδιαφέροντα", icon: Inbox },
-  { href: "/dashboard/messages", label: "Μηνύματα", icon: MessageSquare },
-  { href: "/dashboard/favorites", label: "Αγαπημένα", icon: Heart },
-  { href: "/dashboard/settings", label: "Ρυθμίσεις", icon: Settings },
+type MenuLink = {
+  href: string;
+  labelKey:
+    | "overview"
+    | "profile"
+    | "listings"
+    | "newListing"
+    | "requests"
+    | "messages"
+    | "favorites"
+    | "settings";
+  icon: LucideIcon;
+};
+
+const MENU_LINKS: MenuLink[] = [
+  { href: "/dashboard", labelKey: "overview", icon: LayoutDashboard },
+  { href: "/dashboard/profile", labelKey: "profile", icon: UserIcon },
+  { href: "/dashboard/listings", labelKey: "listings", icon: Home },
+  { href: OWNER_LISTING_NEW_PATH, labelKey: "newListing", icon: Plus },
+  { href: "/dashboard/requests", labelKey: "requests", icon: Inbox },
+  { href: "/dashboard/messages", labelKey: "messages", icon: MessageSquare },
+  { href: "/dashboard/favorites", labelKey: "favorites", icon: Heart },
+  { href: "/dashboard/settings", labelKey: "settings", icon: Settings },
 ];
 
 const MENU_WIDTH = 288;
 
 export function UserMenu({ user, compact = false }: { user: User; compact?: boolean }) {
+  const tAccount = useTranslations("AccountNav");
+  const tDash = useTranslations("Dashboard");
+  const locale = useLocale();
   const authNameInput = {
     email: user.email,
     userMetadata: user.user_metadata,
@@ -47,7 +66,9 @@ export function UserMenu({ user, compact = false }: { user: User; compact?: bool
 
   const [open, setOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
-  const [fullName, setFullName] = useState(() => resolveMenuDisplayName({ auth: authNameInput }));
+  const [fullName, setFullName] = useState(() =>
+    resolveMenuDisplayName({ auth: authNameInput, locale })
+  );
   const [isAdmin, setIsAdmin] = useState(false);
   const [menuStyle, setMenuStyle] = useState<React.CSSProperties>({ visibility: "hidden" });
   const ref = useRef<HTMLDivElement>(null);
@@ -72,11 +93,12 @@ export function UserMenu({ user, compact = false }: { user: User; compact?: bool
             profileFullName: data?.full_name,
             profileDisplayName: data?.display_name,
             auth: authNameInput,
+            locale,
           })
         );
         if (data?.role === "admin") setIsAdmin(true);
       });
-  }, [user.email, user.id, user.identities, user.user_metadata]);
+  }, [user.email, user.id, user.identities, user.user_metadata, locale]);
 
   useLayoutEffect(() => {
     if (!open || !buttonRef.current) {
@@ -159,7 +181,7 @@ export function UserMenu({ user, compact = false }: { user: User; compact?: bool
             role="menuitem"
           >
             <link.icon className="h-4 w-4 text-gold" />
-            {link.label}
+            {tAccount(link.labelKey)}
           </Link>
         ))}
         {isAdmin && (
@@ -170,7 +192,7 @@ export function UserMenu({ user, compact = false }: { user: User; compact?: bool
             role="menuitem"
           >
             <Shield className="h-4 w-4 text-gold" />
-            Admin panel
+            {tAccount("admin")}
           </Link>
         )}
         <div className="px-4 py-2">
@@ -186,7 +208,7 @@ export function UserMenu({ user, compact = false }: { user: User; compact?: bool
             role="menuitem"
           >
             <LogOut className="h-4 w-4" />
-            Αποσύνδεση
+            {tDash("signOut")}
           </button>
         </form>
       </div>

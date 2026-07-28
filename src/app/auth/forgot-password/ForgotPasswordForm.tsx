@@ -2,12 +2,16 @@
 
 import { useActionState } from "react";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { ArrowLeft, Mail } from "lucide-react";
 import { requestPasswordReset } from "@/lib/actions";
+import { resolveAuthError } from "@/components/auth/auth-errors";
 import { Button } from "@/components/ui/Button";
 import { GlassCard } from "@/components/ui/GlassCard";
 
 export function ForgotPasswordForm() {
+  const t = useTranslations("Auth.forgotPassword");
+  const tErrors = useTranslations("Auth.errors");
   const [state, formAction, pending] = useActionState(
     async (_prev: { error?: string; success?: boolean } | null, formData: FormData) => {
       return (await requestPasswordReset(formData)) ?? null;
@@ -19,12 +23,10 @@ export function ForgotPasswordForm() {
     return (
       <GlassCard glow className="w-full max-w-md p-8 text-center">
         <Mail className="mx-auto h-10 w-10 text-gold" />
-        <h1 className="mt-4 font-display text-2xl font-bold text-charcoal">Έλεγξε το email σου</h1>
-        <p className="mt-3 text-sm text-muted">
-          Αν υπάρχει λογαριασμός με αυτό το email, θα λάβεις σύνδεσμο για νέο κωδικό.
-        </p>
+        <h1 className="mt-4 font-display text-2xl font-bold text-charcoal">{t("checkEmailTitle")}</h1>
+        <p className="mt-3 text-sm text-muted">{t("checkEmailBody")}</p>
         <Link href="/login" className="mt-6 inline-block text-sm text-gold hover:underline">
-          Πίσω στη σύνδεση
+          {t("backToSignIn")}
         </Link>
       </GlassCard>
     );
@@ -37,13 +39,11 @@ export function ForgotPasswordForm() {
         className="mb-6 inline-flex items-center gap-2 text-sm text-muted hover:text-gold"
       >
         <ArrowLeft className="h-4 w-4" />
-        Πίσω
+        {t("back")}
       </Link>
 
-      <h1 className="font-display text-2xl font-bold text-charcoal">Ξέχασες τον κωδικό;</h1>
-      <p className="mt-2 text-sm text-muted">
-        Βάλε το email σου και θα σου στείλουμε σύνδεσμο επαναφοράς.
-      </p>
+      <h1 className="font-display text-2xl font-bold text-charcoal">{t("title")}</h1>
+      <p className="mt-2 text-sm text-muted">{t("subtitle")}</p>
 
       <form action={formAction} className="mt-8 space-y-4">
         <div>
@@ -55,9 +55,11 @@ export function ForgotPasswordForm() {
             className="mt-1 w-full rounded-xl border border-border bg-sand/50 px-4 py-3 text-charcoal outline-none focus:border-gold/50"
           />
         </div>
-        {state?.error && <p className="text-sm text-red-400">{state.error}</p>}
+        {state?.error && (
+          <p className="text-sm text-red-400">{resolveAuthError(tErrors, state.error)}</p>
+        )}
         <Button type="submit" size="lg" className="w-full">
-          {pending ? "Αποστολή..." : "Αποστολή συνδέσμου"}
+          {pending ? t("sending") : t("sendLink")}
         </Button>
       </form>
     </GlassCard>

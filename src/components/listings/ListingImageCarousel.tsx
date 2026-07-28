@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { ChevronLeft, ChevronRight, ImageOff } from "lucide-react";
+import { useTranslations } from "next-intl";
 import {
   LISTING_PLACEHOLDER_LABEL,
   resolveListingImageUrl,
@@ -58,6 +59,7 @@ export function ListingImageCarousel({
   onIndexChange,
   hidePlaceholderLabel = false,
 }: Props) {
+  const t = useTranslations("Listings.card");
   const photoUrls = images
     .filter((img) => img.media_type !== "video" && img.url?.trim())
     .map((img) => resolveListingImageUrl(img.url))
@@ -129,7 +131,7 @@ export function ListingImageCarousel({
               "left-2",
               !canPrev && "cursor-default opacity-40 hover:scale-100"
             )}
-            aria-label="Προηγούμενη φωτογραφία"
+            aria-label={t("previousPhotoAria")}
           >
             <ChevronLeft className="h-4 w-4 stroke-[2.5px]" />
           </button>
@@ -142,7 +144,7 @@ export function ListingImageCarousel({
               "right-2",
               !canNext && "cursor-default opacity-40 hover:scale-100"
             )}
-            aria-label="Επόμενη φωτογραφία"
+            aria-label={t("nextPhotoAria")}
           >
             <ChevronRight className="h-4 w-4 stroke-[2.5px]" />
           </button>

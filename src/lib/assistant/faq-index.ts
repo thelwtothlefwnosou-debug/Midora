@@ -1,6 +1,7 @@
 import { FAQ_COHOSTS } from "@/lib/assistant/faq-cohosts";
 import { FAQ_EXTERNAL_LINKS } from "@/lib/assistant/faq-external-links";
 import { FAQ_INQUIRIES } from "@/lib/assistant/faq-inquiries";
+import { FAQ_LEGAL_AADE } from "@/lib/assistant/faq-legal-aade";
 import { FAQ_OWNER_DASHBOARD } from "@/lib/assistant/faq-owner-dashboard";
 import { FAQ_OWNER_LISTING } from "@/lib/assistant/faq-owner-listing";
 import { FAQ_PHOTOS_AMENITIES } from "@/lib/assistant/faq-photos-amenities";
@@ -20,6 +21,7 @@ import {
 import type { AssistantContext, AssistantPageType } from "@/lib/assistant/support-context";
 
 export const MIDORA_FAQ_ITEMS: FaqItem[] = [
+  ...FAQ_LEGAL_AADE,
   ...FAQ_SEARCH,
   ...FAQ_PUBLIC_LISTING,
   ...FAQ_INQUIRIES,

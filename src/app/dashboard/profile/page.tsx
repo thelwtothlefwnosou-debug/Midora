@@ -1,3 +1,4 @@
+import { getTranslations } from "next-intl/server";
 import { AccountShell } from "@/components/account/AccountShell";
 import { OwnerProfilePageContent } from "@/components/profile/OwnerProfilePageContent";
 import { requireDashboardContext } from "@/lib/dashboard-context";
@@ -7,6 +8,7 @@ import { createClient } from "@/lib/supabase/server";
 
 export default async function OwnerProfilePage() {
   const { profile, email } = await requireDashboardContext("/dashboard/profile");
+  const t = await getTranslations("Owner.profilePage");
   const supabase = await createClient();
   const authUser = (await supabase?.auth.getUser())?.data.user;
   const emailVerified = Boolean(authUser?.email_confirmed_at);
@@ -19,8 +21,8 @@ export default async function OwnerProfilePage() {
       profile={profile}
       email={email}
       active="profile"
-      title="Το προφίλ μου"
-      subtitle="Διαχειρίσου τα στοιχεία που εμφανίζονται στους ενδιαφερόμενους."
+      title={t("title")}
+      subtitle={t("subtitle")}
     >
       <div className="mx-auto max-w-[1080px]">
         <OwnerProfilePageContent

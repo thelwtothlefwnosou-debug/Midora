@@ -8,14 +8,12 @@ import {
   Hash,
   ChevronRight,
 } from "lucide-react";
+import { useTranslations } from "next-intl";
+import { AadeGuideHelperCard } from "@/components/aade/AadeGuideHelperCard";
 import { LEGAL_REGISTRY_OPTIONS } from "@/lib/rental-types";
 import {
-  AADE_DISCLAIMER_NOTE,
-  AADE_GUIDE_STEPS,
   AADE_SHORT_TERM_REGISTRY_URL,
-  getRegistryHelperText,
   normalizeRegistryNumber,
-  REGISTRY_FILLED_STATUS_LABEL,
 } from "@/lib/registry-compliance";
 import { isValidRegistryNumber } from "@/lib/listing-wizard-validation";
 import type { LegalRegistryType } from "@/lib/types";
@@ -35,6 +33,7 @@ export function ShortTermRegistryComplianceCard({
   onNumberChange,
   inputClassName,
 }: Props) {
+  const t = useTranslations("Wizard.registry");
   const [showInput, setShowInput] = useState(() =>
     Boolean(normalizeRegistryNumber(amaNumber))
   );
@@ -48,6 +47,20 @@ export function ShortTermRegistryComplianceCard({
     setShowInput(true);
   }
 
+  function typeOptionLabel(value: string) {
+    if (value === "ama") return t("typeAma");
+    if (value === "esl") return t("typeEsl");
+    if (value === "mag") return t("typeMag");
+    return value;
+  }
+
+  function helperTextForType(value: LegalRegistryType) {
+    if (value === "ama") return t("helperAma");
+    if (value === "esl") return t("helperEsl");
+    if (value === "mag") return t("helperMag");
+    return "";
+  }
+
   return (
     <div className="overflow-hidden rounded-2xl border border-gold/25 bg-white shadow-sm">
       <div className="border-b border-gold/15 bg-gradient-to-br from-gold/8 via-white to-ivory/80 px-5 py-5 sm:px-6">
@@ -57,40 +70,15 @@ export function ShortTermRegistryComplianceCard({
           </div>
           <div>
             <h3 className="font-display text-base font-semibold text-charcoal sm:text-lg">
-              Αριθμός καταχώρισης βραχυχρόνιας μίσθωσης
+              {t("title")}
             </h3>
-            <p className="mt-1 text-sm leading-relaxed text-muted">
-              Για βραχυχρόνια διαμονή, συμπλήρωσε τον αριθμό καταχώρισης που αντιστοιχεί
-              στο ακίνητό σου.
-            </p>
+            <p className="mt-1 text-sm leading-relaxed text-muted">{t("subtitle")}</p>
           </div>
         </div>
       </div>
 
       <div className="space-y-4 p-5 sm:p-6">
-        <div className="rounded-xl border border-border bg-sand/30 p-4">
-          <p className="text-sm font-semibold text-charcoal">Οδηγίες βήμα-βήμα</p>
-          <ol className="mt-3 space-y-2.5">
-            {AADE_GUIDE_STEPS.map((step, index) => (
-              <li key={step} className="flex gap-3 text-sm leading-relaxed text-muted">
-                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-gold/20 text-xs font-bold text-gold-dark">
-                  {index + 1}
-                </span>
-                <span className="pt-0.5">{step}</span>
-              </li>
-            ))}
-          </ol>
-          <p className="mt-3 text-[11px] leading-relaxed text-muted">{AADE_DISCLAIMER_NOTE}</p>
-          <a
-            href={AADE_SHORT_TERM_REGISTRY_URL}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="mt-3 inline-flex items-center gap-1.5 text-xs font-semibold text-gold-dark hover:underline"
-          >
-            Επίσημη σελίδα ΑΑΔΕ
-            <ExternalLink className="h-3.5 w-3.5" />
-          </a>
-        </div>
+        <AadeGuideHelperCard variant="short_term" defaultTab="short_term" />
 
         {!showInput && !isValid && (
           <div className="grid gap-3 sm:grid-cols-2">
@@ -102,14 +90,12 @@ export function ShortTermRegistryComplianceCard({
               <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-gold/15 text-gold-dark">
                 <Hash className="h-4 w-4" />
               </div>
-              <span className="mt-3 font-semibold text-charcoal">
-                Έχω ήδη αριθμό καταχώρισης
-              </span>
+              <span className="mt-3 font-semibold text-charcoal">{t("haveNumber")}</span>
               <span className="mt-2 text-xs leading-relaxed text-muted">
-                Συμπλήρωσε ΑΜΑ, ΕΣΛ ή ΜΑΓ για το ακίνητο.
+                {t("haveNumberHint")}
               </span>
               <span className="mt-4 inline-flex items-center gap-1 text-xs font-semibold text-gold-dark">
-                Προσθήκη αριθμού
+                {t("addNumber")}
                 <ChevronRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
               </span>
             </button>
@@ -122,15 +108,12 @@ export function ShortTermRegistryComplianceCard({
               <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-gold/15 text-gold-dark">
                 <ExternalLink className="h-4 w-4" />
               </div>
-              <span className="mt-3 font-semibold text-charcoal">
-                Χρειάζομαι αριθμό καταχώρισης
-              </span>
+              <span className="mt-3 font-semibold text-charcoal">{t("needNumber")}</span>
               <span className="mt-2 text-xs leading-relaxed text-muted">
-                Άνοιξε την επίσημη υπηρεσία της ΑΑΔΕ, ολοκλήρωσε τη διαδικασία και
-                επέστρεψε εδώ για να συμπληρώσεις τον αριθμό σου.
+                {t("needNumberHint")}
               </span>
               <span className="mt-4 inline-flex items-center gap-1 text-xs font-semibold text-gold-dark">
-                Άνοιξε την υπηρεσία της ΑΑΔΕ
+                {t("openAade")}
                 <ExternalLink className="h-3 w-3" />
               </span>
             </button>
@@ -141,7 +124,7 @@ export function ShortTermRegistryComplianceCard({
           <div className="space-y-4 rounded-xl border border-border bg-ivory/50 p-4">
             <label className="block">
               <span className="text-xs font-medium uppercase tracking-wide text-muted">
-                Τύπος αριθμού καταχώρισης *
+                {t("typeLabel")}
               </span>
               <select
                 value={legalRegistryType}
@@ -150,7 +133,7 @@ export function ShortTermRegistryComplianceCard({
               >
                 {LEGAL_REGISTRY_OPTIONS.filter((o) => o.value !== "none").map((o) => (
                   <option key={o.value} value={o.value}>
-                    {o.label}
+                    {typeOptionLabel(o.value)}
                   </option>
                 ))}
               </select>
@@ -158,7 +141,7 @@ export function ShortTermRegistryComplianceCard({
 
             <label className="block">
               <span className="text-xs font-medium uppercase tracking-wide text-muted">
-                Αριθμός καταχώρισης *
+                {t("numberLabel")}
               </span>
               <input
                 value={amaNumber}
@@ -168,15 +151,13 @@ export function ShortTermRegistryComplianceCard({
                 autoComplete="off"
               />
               <span className="mt-1.5 block text-[11px] leading-relaxed text-muted">
-                {getRegistryHelperText(type)}
+                {helperTextForType(type)}
               </span>
             </label>
 
             {!isValid && normalized.length > 0 && (
               <p className="text-xs text-amber-700">
-                {type === "ama"
-                  ? "Ο ΑΜΑ πρέπει να είναι ακριβώς 11 ψηφία."
-                  : "Συμπλήρωσε έγκυρο αριθμό καταχώρισης."}
+                {type === "ama" ? t("amaInvalid") : t("numberInvalid")}
               </p>
             )}
 
@@ -186,7 +167,7 @@ export function ShortTermRegistryComplianceCard({
                 onClick={() => setShowInput(false)}
                 className="text-xs font-medium text-muted hover:text-charcoal"
               >
-                ← Επιστροφή στις επιλογές
+                {t("backToOptions")}
               </button>
             )}
           </div>
@@ -197,15 +178,10 @@ export function ShortTermRegistryComplianceCard({
             <div className="flex items-start gap-3">
               <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-teal" />
               <div>
-                <p className="text-sm font-semibold text-charcoal">
-                  Αριθμός καταχώρισης προστέθηκε
-                </p>
-                <p className="mt-1 text-xs leading-relaxed text-muted">
-                  Ο αριθμός θα ελεγχθεί ως προς τα βασικά στοιχεία της αγγελίας πριν από
-                  τη δημοσίευση.
-                </p>
+                <p className="text-sm font-semibold text-charcoal">{t("addedTitle")}</p>
+                <p className="mt-1 text-xs leading-relaxed text-muted">{t("addedBody")}</p>
                 <p className="mt-2 text-[11px] font-medium text-teal">
-                  Κατάσταση: {REGISTRY_FILLED_STATUS_LABEL}
+                  {t("statusLabel", { status: t("statusFilled") })}
                 </p>
               </div>
             </div>

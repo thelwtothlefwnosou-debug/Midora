@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import type { OwnerListingsOverview } from "@/lib/owner-listings-page";
 import { formatAnalyticsMetric } from "@/lib/owner-listing-analytics";
 import { cn } from "@/lib/utils";
@@ -47,6 +48,7 @@ function StatCard({
 }
 
 export function DashboardListingsOverviewMetrics({ overview }: Props) {
+  const t = useTranslations("Owner.overviewMetrics");
   const viewsLabel =
     overview.viewsLast30Days != null
       ? formatAnalyticsMetric(overview.viewsLast30Days)
@@ -54,19 +56,19 @@ export function DashboardListingsOverviewMetrics({ overview }: Props) {
 
   return (
     <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-      <StatCard label="Ενεργές αγγελίες" value={String(overview.activeCount)} />
+      <StatCard label={t("activeListings")} value={String(overview.activeCount)} />
       <StatCard
-        label="Προβολές (σύνολο ενεργών)"
+        label={t("viewsTotalActive")}
         value={viewsLabel}
       />
       <StatCard
-        label="Νέα αιτήματα"
+        label={t("newRequests")}
         value={String(overview.newInquiries)}
         href={overview.newInquiries > 0 ? "/dashboard/requests" : undefined}
         highlight={overview.newInquiries > 0}
       />
       <StatCard
-        label="Χρειάζονται ενέργεια"
+        label={t("needsAction")}
         value={String(overview.needsActionCount)}
         highlight={overview.needsActionCount > 0}
       />

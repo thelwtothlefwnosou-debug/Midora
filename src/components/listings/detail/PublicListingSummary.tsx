@@ -5,11 +5,12 @@ import {
   buildPublicPropertySummaryLine,
 } from "@/lib/listing-public-labels";
 import type { ListingPublicDetail } from "@/lib/types";
+import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 
 type Props = {
   listing: ListingPublicDetail;
-  rentalLabel?: "Βραχυχρόνια" | "Μηνιαία / Μεσοπρόθεσμη";
+  rentalLabel?: string;
   modeSwitcher?: React.ReactNode;
   className?: string;
 };
@@ -21,8 +22,14 @@ export function PublicListingSummary({
   modeSwitcher,
   className,
 }: Props) {
-  const summaryLine = buildPublicPropertySummaryLine(listing);
-  const metadataLine = buildPublicListingMetadataLine(listing);
+  const tLabels = useTranslations("Listing.labels");
+  const tPropertyTypes = useTranslations("PropertyTypes");
+  const summaryLine = buildPublicPropertySummaryLine(
+    listing,
+    tLabels,
+    tPropertyTypes
+  );
+  const metadataLine = buildPublicListingMetadataLine(listing, tLabels);
 
   return (
     <section className={cn("mt-6 lg:mt-8", className)}>
