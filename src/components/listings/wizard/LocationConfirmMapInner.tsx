@@ -8,9 +8,18 @@ import { MAP_TILE_ATTRIBUTION, MAP_TILE_URL } from "@/lib/map-tiles";
 
 const pinIcon = L.divIcon({
   className: "",
-  html: `<div style="width:28px;height:28px;background:#b8860b;border:3px solid white;border-radius:50% 50% 50% 0;transform:rotate(-45deg);box-shadow:0 2px 8px rgba(0,0,0,.25)"></div>`,
-  iconSize: [28, 28],
-  iconAnchor: [14, 28],
+  html: `
+    <div style="position:relative;width:42px;height:42px;display:flex;align-items:center;justify-content:center;">
+      <div style="width:42px;height:42px;border-radius:9999px;background:#1f1f1f;display:flex;align-items:center;justify-content:center;box-shadow:0 8px 18px rgba(0,0,0,.24);border:2px solid rgba(255,255,255,.92);">
+        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <path d="M4 11.5L12 5l8 6.5" stroke="#fff" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M7 10.5V19h10v-8.5" stroke="#fff" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M10 19v-4h4v4" stroke="#fff" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+    </div>`,
+  iconSize: [42, 42],
+  iconAnchor: [21, 21],
 });
 
 type Props = {

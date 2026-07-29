@@ -3159,21 +3159,30 @@
     "tabsAria": "Διαχείριση αγγελίας",
     "tabs": {
       "overview": "Επισκόπηση",
-      "edit": "Αγγελία",
+      "edit": "Καταχώριση",
       "trust": "Αξιοπιστία",
       "photos": "Φωτογραφίες",
       "availability": "Διαθεσιμότητα",
       "inquiries": "Αιτήματα",
       "analytics": "Στατιστικά",
       "publish": "Δημοσίευση",
-      "cohosts": "Συνοικοδεσπότες"
+      "cohosts": "Συνοικοδεσπότες",
+      "pricing": "Τιμές",
+      "calendarPricing": "Ημερολόγιο & τιμές"
     },
     "header": {
       "allListings": "Όλες οι αγγελίες",
       "until": "έως {date}",
       "edit": "Επεξεργασία",
       "helpLabel": "Βοήθεια για αυτή την αγγελία",
-      "helpSeed": "Πώς ανεβάζω φωτογραφίες;"
+      "helpSeed": "Πώς ανεβάζω φωτογραφίες;",
+      "preview": "Προεπισκόπηση",
+      "viewListing": "Δες αγγελία",
+      "seeFixes": "Δες τι χρειάζεται διόρθωση",
+      "moreActions": "Περισσότερες ενέργειες",
+      "untitled": "Χωρίς τίτλο",
+      "completionPercent": "Συμπλήρωση {percent}%",
+      "missingCount": "{count, plural, one {Λείπει # στοιχείο} other {Λείπουν # στοιχεία}}"
     },
     "overview": {
       "recommendation": "Σύσταση",
@@ -3213,7 +3222,23 @@
       "fixListing": "Διόρθωσε την αγγελία",
       "seePublishStatus": "Δες κατάσταση δημοσίευσης",
       "renewListing": "Ανανέωση αγγελίας",
-      "manageCalendar": "Διαχείριση ημερολογίου"
+      "manageCalendar": "Διαχείριση ημερολογίου",
+      "completionScore": "Συμπλήρωση {percent}%",
+      "missingItems": "{count, plural, one {Λείπει # στοιχείο} other {Λείπουν # στοιχεία}}",
+      "managePhotos": "Διαχείριση φωτογραφιών",
+      "manageAvailability": "Διαχείριση διαθεσιμότητας",
+      "managePricing": "Διαχείριση τιμών",
+      "viewRequests": "Δες αιτήματα",
+      "healthTitle": "Κατάσταση αγγελίας",
+      "healthBody": "Τι είναι έτοιμο και τι λείπει ακόμα.",
+      "healthPublish": "Δημοσίευση",
+      "healthPhotos": "Φωτογραφίες",
+      "healthBasics": "Τίτλος & περιγραφή",
+      "healthPrice": "Τιμή",
+      "healthAvailability": "Διαθεσιμότητα",
+      "healthDone": "Έτοιμο",
+      "healthMissing": "Λείπει",
+      "manageCalendarPricing": "Ημερολόγιο & τιμές"
     },
     "publish": {
       "statusPublished": "Η αγγελία εμφανίζεται δημόσια.",
@@ -3244,8 +3269,8 @@
     },
     "calendar": {
       "saving": "Αποθήκευση…",
-      "title": "Ημερολόγιο τιμών και διαθεσιμότητας",
-      "subtitle": "Κάθε μέρα δείχνει την τιμή ανά βράδυ. Επίλεξε ημερομηνίες για να αλλάξεις τιμή ή να τις κλείσεις.",
+      "title": "Ημερολόγιο & τιμές",
+      "subtitle": "Διαχειρίσου τη διαθεσιμότητα και την τιμή ανά βράδυ από το ημερολόγιο.",
       "basePrice": "Βασική τιμή: €{price} / βράδυ",
       "setBasePriceHint": "Ορίσε βασική τιμή στις ρυθμίσεις δεξιά για να εμφανίζονται οι τιμές.",
       "allDaysBase": "Όλες οι διαθέσιμες ημέρες χρησιμοποιούν τη βασική τιμή.",
@@ -3295,7 +3320,8 @@
       "missing": "Λείπει: {label}",
       "edit": "Επεξεργασία",
       "pricing": "Τιμές και διαθεσιμότητα",
-      "photos": "Φωτογραφίες"
+      "photos": "Φωτογραφίες",
+      "continueCompletion": "Συνέχισε τη συμπλήρωση"
     },
     "availabilityEditor": {
       "titleDefault": "Διαθεσιμότητα",
@@ -3526,7 +3552,20 @@
       "managePhotos": "Διαχείριση φωτογραφιών →",
       "availability": "Διαθεσιμότητα →",
       "saving": "Αποθήκευση…",
-      "saveChanges": "Αποθήκευση αλλαγών"
+      "saveChanges": "Αποθήκευση αλλαγών",
+      "sectionBasics": "Βασικά στοιχεία",
+      "sectionBasicsBody": "Τίτλος, περιγραφή και βασικές πληροφορίες.",
+      "sectionLocation": "Τοποθεσία",
+      "sectionLocationBody": "Περιοχή, διεύθυνση και σημείο στον χάρτη.",
+      "sectionSleeping": "Υπνοδωμάτια",
+      "sectionSleepingBody": "Διαρρύθμιση ύπνου και κρεβάτια.",
+      "sectionAmenities": "Παροχές",
+      "sectionAmenitiesBody": "Επιλεγμένες παροχές της αγγελίας.",
+      "sectionLinks": "Εξωτερικοί σύνδεσμοι",
+      "sectionLinksBody": "Airbnb, Booking και άλλοι σύνδεσμοι αξιοπιστίας.",
+      "pricing": "Τιμές",
+      "dangerTitle": "Ζώνη κινδύνου",
+      "dangerBody": "Η διαγραφή είναι οριστική και δεν αναιρείται."
     },
     "completenessItems": {
       "basics": "Βασικά στοιχεία",
@@ -3541,6 +3580,128 @@
       "declarations": "Υποχρεωτικές δηλώσεις",
       "amenities": "Παροχές",
       "house_rules": "Όροι διαμονής"
+    },
+    "continueCompletion": {
+      "title": "Η αγγελία χρειάζεται συμπλήρωση",
+      "body": "Συνέχισε από το σημείο που σταμάτησες για να μπορέσεις να την υποβάλεις.",
+      "needsFixesTitle": "Η αγγελία θέλει διόρθωση",
+      "needsFixesBody": "Απαιτούνται αλλαγές πριν μπορέσει να δημοσιευτεί.",
+      "continueCta": "Συνέχισε τη συμπλήρωση",
+      "fixCta": "Διόρθωσε την αγγελία",
+      "seeMissing": "Δες τι λείπει",
+      "missingCount": "{count, plural, one {Λείπει # στοιχείο} other {Λείπουν # στοιχεία}}"
+    },
+    "videoUpload": {
+      "listingVideo": "Βίντεο αγγελίας",
+      "titleOptional": "Βίντεο αγγελίας (προαιρετικό)",
+      "hint": "Έως {seconds} δευτερόλεπτα. Εμφανίζεται στη δημόσια σελίδα.",
+      "uploadVideo": "Επίλεξε βίντεο",
+      "uploading": "Ανέβασμα…",
+      "saveVideo": "Αποθήκευση βίντεο",
+      "invalidFile": "Επίλεξε έγκυρο αρχείο βίντεο.",
+      "maxDuration": "Το βίντεο δεν μπορεί να ξεπερνά τα {seconds} δευτερόλεπτα."
+    },
+    "dailyPriceTable": {
+      "title": "Ημερήσιες τιμές",
+      "subtitle": "Επόμενες {days} ημέρες",
+      "colDate": "Ημερομηνία",
+      "colStatus": "Κατάσταση",
+      "colPrice": "Τιμή",
+      "today": "Σήμερα",
+      "available": "Διαθέσιμο",
+      "unavailable": "Μη διαθέσιμο"
+    },
+    "specialPeriodForm": {
+      "title": "Ειδική περίοδος",
+      "namePlaceholder": "Όνομα περιόδου (π.χ. Πάσχα)",
+      "pricePlaceholder": "Τιμή / βράδυ (€)",
+      "minNightsPlaceholder": "Ελάχιστες νύχτες",
+      "blockedPeriod": "Μπλοκάρισμα περιόδου (μη διαθέσιμο)",
+      "added": "Η περίοδος προστέθηκε.",
+      "saving": "Αποθήκευση…",
+      "addPeriod": "Προσθήκη περιόδου"
+    },
+    "pricingSettings": {
+      "title": "Βασικές ρυθμίσεις τιμών",
+      "subtitle": "Ισχύουν ως προεπιλογή όταν δεν υπάρχει ειδική τιμή ημέρας.",
+      "basePrice": "Βασική τιμή / βράδυ",
+      "weekendPrice": "Τιμή Σαββατοκύριακου",
+      "weekendPricePlaceholder": "Ίδια με βασική",
+      "specialOverride": "Οι ειδικές περίοδοι υπερισχύουν.",
+      "minStay": "Ελάχιστη διαμονή (νύχτες)",
+      "cleaningFee": "Καθαριότητα",
+      "optional": "(προαιρετικό)",
+      "cleaningFeePlaceholder": "π.χ. 40",
+      "cleaningFeeHint": "Εμφανίζεται ως ενημερωτικό ποσό· δεν γίνεται πληρωμή στη Midora.",
+      "discountsTitle": "Εκπτώσεις",
+      "weeklyDiscount": "Εβδομαδιαία %",
+      "weeklyDiscountPlaceholder": "π.χ. 10",
+      "monthlyDiscount": "Μηνιαία %",
+      "monthlyDiscountPlaceholder": "π.χ. 20",
+      "discountHint": "Ποσοστό έκπτωσης πάνω στη βασική τιμή.",
+      "discountConditions": "Οι εκπτώσεις ισχύουν μόνο όταν πληρούνται οι προϋποθέσεις διαμονής.",
+      "saved": "Οι ρυθμίσεις αποθηκεύτηκαν.",
+      "saving": "Αποθήκευση…",
+      "saveSettings": "Αποθήκευση ρυθμίσεων"
+    },
+    "deletePhoto": {
+      "confirm": "Να διαγραφεί αυτό το μέσο;",
+      "aria": "Διαγραφή"
+    },
+    "preview": {
+      "backToManage": "Πίσω στη διαχείριση",
+      "viewListing": "Δες αγγελία",
+      "desktop": "Desktop",
+      "mobile": "Mobile",
+      "openPublicLink": "Άνοιγμα δημόσιου συνδέσμου",
+      "loading": "Φόρτωση…",
+      "mobilePreviewTitle": "Προεπισκόπηση mobile"
+    },
+    "bedroomsEditor": {
+      "title": "Υπνοδωμάτια & κρεβάτια",
+      "subtitle": "Περιέγραψε πού κοιμούνται οι επισκέπτες.",
+      "suggestionMaster": "Κύριο υπνοδωμάτιο",
+      "suggestionSecond": "2ο υπνοδωμάτιο",
+      "suggestionThird": "3ο υπνοδωμάτιο",
+      "suggestionLiving": "Σαλόνι",
+      "roomFallback": "Δωμάτιο {index}",
+      "savedRooms": "Τα υπνοδωμάτια αποθηκεύτηκαν.",
+      "removedRooms": "Τα υπνοδωμάτια αφαιρέθηκαν.",
+      "empty": "Δεν έχεις προσθέσει ακόμα υπνοδωμάτια.",
+      "room": "Υπνοδωμάτιο",
+      "removeRoom": "Αφαίρεση υπνοδωματίου",
+      "roomName": "Όνομα χώρου",
+      "roomNamePlaceholder": "π.χ. Κύριο υπνοδωμάτιο",
+      "bedType": "Τύπος κρεβατιού",
+      "dimensions": "Διαστάσεις",
+      "dimensionsPlaceholder": "π.χ. 160×200",
+      "roomPhoto": "Φωτογραφία χώρου",
+      "noPhoto": "Καμία",
+      "addRoom": "Προσθήκη υπνοδωματίου",
+      "save": "Αποθήκευση",
+      "saving": "Αποθήκευση…",
+      "uploadHint": "Μπορείς να συνδέσεις φωτογραφία από τη διαχείριση φωτογραφιών."
+    },
+    "arrivalEditor": {
+      "title": "Άφιξη & αναχώρηση",
+      "subtitle": "Ώρες και τρόπος άφιξης για τους επισκέπτες.",
+      "checkInFrom": "Check-in από",
+      "checkInTo": "Check-in έως",
+      "checkOutUntil": "Check-out έως",
+      "arrivalMethod": "Τρόπος άφιξης",
+      "selectPlaceholder": "Επίλεξε…",
+      "saving": "Αποθήκευση…",
+      "save": "Αποθήκευση",
+      "saved": "Οι ρυθμίσεις άφιξης αποθηκεύτηκαν."
+    },
+    "monthlyPricing": {
+      "title": "Μηνιαίες τιμές",
+      "subtitle": "Όρισε τη μηνιαία τιμή και την τιμή ανά αριθμό ατόμων.",
+      "previewTitle": "Παραδείγματα",
+      "previewRow": "{people} άτομα → €{price} / μήνα",
+      "save": "Αποθήκευση τιμών",
+      "saving": "Αποθήκευση…",
+      "saved": "Οι τιμές αποθηκεύτηκαν."
     }
   },
   "Owner": {
@@ -3915,7 +4076,7 @@
     "inquiriesTab": {
       "title": "Αιτήματα",
       "subtitle": "Ενδιαφέροντα για «{title}».",
-      "emptyTitle": "Χωρίς αιτήματα",
+      "emptyTitle": "Δεν υπάρχουν ακόμα αιτήματα για αυτή την αγγελία.",
       "emptyText": "Δεν υπάρχουν ακόμη αιτήματα ενδιαφέροντος για αυτό το ακίνητο."
     },
     "payPage": {

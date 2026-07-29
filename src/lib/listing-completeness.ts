@@ -14,6 +14,22 @@ export type CompletenessItem = {
   required: boolean;
 };
 
+/**
+ * Short-term min stay is complete when nights are set OR any non-empty label
+ * (including «Κατόπιν συνεννόησης»). Must match wizard validation.
+ */
+export function isShortTermMinStayComplete(
+  listing: Pick<ListingWithImages, "minimum_stay_nights" | "min_stay_label">
+): boolean {
+  if (
+    listing.minimum_stay_nights != null &&
+    Number(listing.minimum_stay_nights) >= 1
+  ) {
+    return true;
+  }
+  return Boolean(listing.min_stay_label?.trim());
+}
+
 export function shortTermCompletenessItems(
   listing: ListingWithImages,
   photoCount: number,
@@ -55,10 +71,7 @@ export function shortTermCompletenessItems(
     {
       id: "min_stay",
       label: "min_stay",
-      done: Boolean(
-        listing.minimum_stay_nights ||
-          listing.min_stay_label?.includes("νύχτ")
-      ),
+      done: isShortTermMinStayComplete(listing),
       required: true,
     },
     {

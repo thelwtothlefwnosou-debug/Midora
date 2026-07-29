@@ -6,6 +6,7 @@ export type ListingWorkspaceTabId =
   | "trust"
   | "photos"
   | "availability"
+  | "pricing"
   | "inquiries"
   | "analytics"
   | "publish"
@@ -31,19 +32,10 @@ export const LISTING_WORKSPACE_TABS: ListingWorkspaceTab[] = [
   },
   {
     id: "edit",
-    label: "Αγγελία",
+    label: "Καταχώριση",
     labelKey: "edit",
     href: (id) => `/dashboard/listings/${id}/edit`,
-    match: (path, id) =>
-      path.startsWith(`/dashboard/listings/${id}/edit`) ||
-      path.startsWith(`/dashboard/listings/${id}/pricing`),
-  },
-  {
-    id: "trust",
-    label: "Αξιοπιστία",
-    labelKey: "trust",
-    href: (id) => `/dashboard/listings/${id}/trust-links`,
-    match: (path, id) => path.startsWith(`/dashboard/listings/${id}/trust-links`),
+    match: (path, id) => path.startsWith(`/dashboard/listings/${id}/edit`),
   },
   {
     id: "photos",
@@ -60,11 +52,25 @@ export const LISTING_WORKSPACE_TABS: ListingWorkspaceTab[] = [
     match: (path, id) => path.startsWith(`/dashboard/listings/${id}/availability`),
   },
   {
+    id: "pricing",
+    label: "Τιμές",
+    labelKey: "pricing",
+    href: (id) => `/dashboard/listings/${id}/pricing`,
+    match: (path, id) => path.startsWith(`/dashboard/listings/${id}/pricing`),
+  },
+  {
     id: "inquiries",
     label: "Αιτήματα",
     labelKey: "inquiries",
     href: (id) => `/dashboard/listings/${id}/inquiries`,
     match: (path, id) => path.startsWith(`/dashboard/listings/${id}/inquiries`),
+  },
+  {
+    id: "trust",
+    label: "Αξιοπιστία",
+    labelKey: "trust",
+    href: (id) => `/dashboard/listings/${id}/trust-links`,
+    match: (path, id) => path.startsWith(`/dashboard/listings/${id}/trust-links`),
   },
   {
     id: "analytics",
@@ -93,10 +99,11 @@ export const LISTING_WORKSPACE_TABS: ListingWorkspaceTab[] = [
 
 const WORKSPACE_TAB_LABELS_EN: Record<ListingWorkspaceTabId, string> = {
   overview: "Overview",
-  edit: "Listing",
+  edit: "Details",
   trust: "Trust",
   photos: "Photos",
   availability: "Availability",
+  pricing: "Pricing",
   inquiries: "Inquiries",
   analytics: "Analytics",
   publish: "Publish",

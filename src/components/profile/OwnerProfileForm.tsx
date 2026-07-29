@@ -125,8 +125,13 @@ export function OwnerProfileForm({
       onChange={markDirty}
       className="space-y-6"
     >
-      <section className="rounded-2xl border border-border bg-white p-6 shadow-soft">
-        <h2 className="font-display text-lg font-semibold text-charcoal">{t("publicProfileTitle")}</h2>
+      <section className="rounded-2xl border border-border bg-white p-5 shadow-soft sm:p-6">
+        <p className="text-[11px] font-medium tracking-wide text-gold-dark uppercase">
+          {t("publicBadge")}
+        </p>
+        <h2 className="mt-1 font-display text-lg font-semibold text-charcoal">
+          {t("publicProfileTitle")}
+        </h2>
         <p className="mt-1 text-sm text-muted">{t("publicProfileSubtitle")}</p>
 
         <div className="mt-5 space-y-5">
@@ -351,8 +356,11 @@ export function OwnerProfileForm({
         showPublicPhoto={showPublicPhoto}
       />
 
-      <section className="rounded-2xl border border-border bg-white p-6 shadow-soft">
-        <h2 className="font-display text-lg font-semibold text-charcoal">
+      <section className="rounded-2xl border border-border bg-white p-5 shadow-soft sm:p-6">
+        <p className="text-[11px] font-medium tracking-wide text-muted uppercase">
+          {t("privateBadge")}
+        </p>
+        <h2 className="mt-1 font-display text-lg font-semibold text-charcoal">
           {t("contactDetailsTitle")}
         </h2>
         <p className="mt-1 text-sm text-muted">{t("contactDetailsSubtitle")}</p>

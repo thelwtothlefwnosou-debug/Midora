@@ -3,23 +3,14 @@
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
+import {
+  SETTINGS_TABS,
+  type SettingsTabId,
+} from "@/lib/dashboard-settings-tabs";
 import { cn } from "@/lib/utils";
 
-export const SETTINGS_TABS = [
-  { id: "contact", labelKey: "tabContact" },
-  { id: "privacy", labelKey: "tabPrivacy" },
-  { id: "security", labelKey: "tabSecurity" },
-  { id: "notifications", labelKey: "tabNotifications" },
-] as const;
-
-export type SettingsTabId = (typeof SETTINGS_TABS)[number]["id"];
-
-export function parseSettingsTab(value: string | null | undefined): SettingsTabId {
-  if (value && SETTINGS_TABS.some((t) => t.id === value)) {
-    return value as SettingsTabId;
-  }
-  return "security";
-}
+export type { SettingsTabId };
+export { SETTINGS_TABS, parseSettingsTab } from "@/lib/dashboard-settings-tabs";
 
 type Props = {
   active: SettingsTabId;

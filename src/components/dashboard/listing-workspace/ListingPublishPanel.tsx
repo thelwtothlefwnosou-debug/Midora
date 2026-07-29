@@ -74,8 +74,8 @@ export function ListingPublishPanel({
         </p>
       )}
 
-      <div className="rounded-xl border border-gold/25 bg-white p-4 shadow-soft">
-        <h3 className="text-sm font-semibold text-charcoal">{t("trustTitle")}</h3>
+      <div className="rounded-2xl border border-gold/25 bg-white p-4 shadow-soft sm:p-5">
+        <h3 className="font-display text-sm font-semibold text-charcoal">{t("trustTitle")}</h3>
         <p className="mt-2 text-sm text-muted">{t("trustBody")}</p>
         {externalLinkCount > 0 ? (
           <p className="mt-2 text-xs text-muted">
@@ -95,7 +95,7 @@ export function ListingPublishPanel({
         </Link>
       </div>
 
-      <div className="rounded-xl border border-border bg-white p-4 shadow-soft">
+      <div className="rounded-2xl border border-border bg-white p-4 shadow-soft sm:p-5">
         <dl className="space-y-3 text-sm">
           <div className="flex justify-between gap-4">
             <dt className="text-muted">{t("status")}</dt>
@@ -160,7 +160,7 @@ export function ListingPublishPanel({
             {ownerStatusKey === "expired" ? t("renew") : t("submitRenew")}
           </Button>
         )}
-        {ownerStatusKey === "draft" && (
+        {(ownerStatusKey === "draft" || ownerStatusKey === "needs_fixes") && (
           <Link
             href={`/dashboard/listings/new?draft=${listingId}`}
             className="inline-flex min-h-9 items-center rounded-xl bg-charcoal px-4 text-sm font-semibold text-white hover:bg-charcoal/90"

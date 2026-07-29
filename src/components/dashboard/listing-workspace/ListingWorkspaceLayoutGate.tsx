@@ -47,6 +47,7 @@ export function ListingWorkspaceLayoutGate({
         listingId={listingId}
         role={ctx.access.role}
         permissions={ctx.permissions}
+        rentalType={ctx.rentalType}
       />
       {children}
     </AccountShell>

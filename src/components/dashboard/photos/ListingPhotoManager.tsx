@@ -68,7 +68,7 @@ export function ListingPhotoManager({
 
   return (
     <div className="space-y-5">
-      <header className="rounded-xl border border-border bg-white px-4 py-3 shadow-soft">
+      <header className="rounded-2xl border border-border bg-white px-4 py-3.5 shadow-soft sm:px-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h2 className="font-display text-base font-semibold text-charcoal">{t("title")}</h2>

@@ -1,16 +1,15 @@
 import { notFound, redirect } from "next/navigation";
 import { requireDashboardContext } from "@/lib/dashboard-context";
 import { createClient } from "@/lib/supabase/server";
-import { getListingPriceRules } from "@/lib/listing-price-rules";
 import { resolveSupportsShortTerm } from "@/lib/listing-rental-modes";
-import { ListingPricingForm } from "./ListingPricingForm";
+import { MonthlyListingPricingPanel } from "@/components/dashboard/listing-workspace/MonthlyListingPricingPanel";
 
 export default async function ListingPricingPage({
   params,
 }: {
   params: Promise<{ id: string }>;
 }) {
-  const { profile, email } = await requireDashboardContext("/dashboard/listings");
+  const { profile } = await requireDashboardContext("/dashboard/listings");
   const { id } = await params;
   const supabase = await createClient();
   if (!supabase) notFound();
@@ -25,18 +24,10 @@ export default async function ListingPricingPage({
   if (!listing) notFound();
 
   if (resolveSupportsShortTerm(listing)) {
+    // Short-term pricing is managed in the calendar hub. Old /pricing bookmarks
+    // land on availability (shown as “Ημερολόγιο & τιμές”); the pricing tab is hidden.
     redirect(`/dashboard/listings/${id}/availability`);
   }
 
-  const rulesResult = await getListingPriceRules(id);
-  const rules = "rules" in rulesResult ? rulesResult.rules ?? [] : [];
-
-  return (
-    <ListingPricingForm
-      listing={listing}
-      rules={rules}
-      profile={profile}
-      email={email}
-    />
-  );
+  return <MonthlyListingPricingPanel listing={listing} />;
 }

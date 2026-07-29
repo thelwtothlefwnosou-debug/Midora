@@ -582,6 +582,7 @@ export async function savePortalListingDraft(
 ) {
   const auth = await requireUser();
   if ("error" in auth) return { error: auth.error };
+  const { supabase, user } = auth;
 
   const fields = parsePortalListingFields(formData);
 
@@ -590,7 +591,7 @@ export async function savePortalListingDraft(
   });
   if (descriptionError) return { error: descriptionError };
 
-  await ensureOwnerProfile(auth.supabase, auth.user);
+  await ensureOwnerProfile(supabase, user);
 
   const draftFields = {
     ...fields,
@@ -602,37 +603,72 @@ export async function savePortalListingDraft(
   const verificationCode =
     draftFields.midora_verification_code ||
     `MIDORA-${Math.floor(10000 + Math.random() * 90000)}`;
-  const baseRow = buildPortalListingRow(
-    draftFields,
-    auth.user.id,
-    verificationCode,
-    "draft"
-  );
+
+  /** True when draft save must not overwrite approval / verification lifecycle. */
+  function isProtectedApproval(status: string | null | undefined): boolean {
+    return (
+      status === "pending_review" ||
+      status === "approved" ||
+      status === "needs_changes" ||
+      status === "rejected"
+    );
+  }
+
+  async function fetchApprovalStatus(
+    existingId: string
+  ): Promise<string | null> {
+    const { data } = await supabase
+      .from("listings")
+      .select("approval_status")
+      .eq("id", existingId)
+      .eq("user_id", user.id)
+      .maybeSingle();
+    return (data?.approval_status as string | null | undefined) ?? null;
+  }
+
+  function rowForUpdate(
+    existingApproval: string | null
+  ): Record<string, unknown> {
+    const baseRow = buildPortalListingRow(
+      draftFields,
+      user.id,
+      verificationCode,
+      "draft"
+    );
+    const payload = withDraftSafePrices(baseRow, "update");
+    if (isProtectedApproval(existingApproval)) {
+      // Keep pending_review / approved / needs_changes / rejected — never demote.
+      delete payload.approval_status;
+      delete payload.property_verification_status;
+    }
+    return payload;
+  }
 
   if (listingId) {
     const owner = await requireListingOwner(listingId);
     if ("error" in owner) return { error: owner.error };
 
+    const existingApproval = await fetchApprovalStatus(listingId);
     const { data, error } = await updateListingRow(
       owner.supabase,
       listingId,
-      auth.user.id,
-      withDraftSafePrices(baseRow, "update")
+      user.id,
+      rowForUpdate(existingApproval)
     );
 
     if (error) return { error: await toListingSaveError(error) };
     if (!data?.id) return { error: LISTING_SAVE_ERROR_MSG };
-    await syncMonthlyOccupancyTiers(owner.supabase, data.id, auth.user.id, fields);
+    await syncMonthlyOccupancyTiers(owner.supabase, data.id, user.id, fields);
     // Do not revalidatePath here — invalidating /dashboard remounts the create
     // wizard (layout refresh) and was rolling the live step back to SSR resume.
     return { listingId: data.id };
   }
 
   if (draftFields.title && draftFields.title !== "Πρόχειρη αγγελία") {
-    const { data: existingDraft } = await auth.supabase
+    const { data: existingDraft } = await supabase
       .from("listings")
-      .select("id")
-      .eq("user_id", auth.user.id)
+      .select("id, approval_status")
+      .eq("user_id", user.id)
       .eq("status", "pending")
       .eq("approval_status", "draft")
       .eq("title", draftFields.title)
@@ -642,31 +678,40 @@ export async function savePortalListingDraft(
 
     if (existingDraft?.id) {
       const { data, error } = await updateListingRow(
-        auth.supabase,
+        supabase,
         existingDraft.id,
-        auth.user.id,
-        withDraftSafePrices(baseRow, "update")
+        user.id,
+        rowForUpdate(
+          (existingDraft.approval_status as string | null | undefined) ?? null
+        )
       );
       if (error) return { error: await toListingSaveError(error) };
       if (!data?.id) return { error: LISTING_SAVE_ERROR_MSG };
-      await syncMonthlyOccupancyTiers(auth.supabase, data.id, auth.user.id, fields);
+      await syncMonthlyOccupancyTiers(supabase, data.id, user.id, fields);
       return { listingId: data.id };
     }
   }
 
+  const baseRow = buildPortalListingRow(
+    draftFields,
+    user.id,
+    verificationCode,
+    "draft"
+  );
+
   const { data, error } = await insertListingRow(
-    auth.supabase,
+    supabase,
     withDraftSafePrices(baseRow, "insert"),
-    auth.user.id
+    user.id
   );
 
   if (error) return { error: await toListingSaveError(error) };
   if (!data?.id) return { error: LISTING_SAVE_ERROR_MSG };
 
-  await syncMonthlyOccupancyTiers(auth.supabase, data.id, auth.user.id, fields);
+  await syncMonthlyOccupancyTiers(supabase, data.id, user.id, fields);
 
   await logAppEvent("listing_draft_saved", {
-    userId: auth.user.id,
+    userId: user.id,
     entityType: "listing",
     entityId: data.id,
   });

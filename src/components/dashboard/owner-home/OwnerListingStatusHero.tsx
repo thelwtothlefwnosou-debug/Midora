@@ -1,9 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { ImageIcon } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { Button } from "@/components/ui/Button";
+import { DashboardListingCover } from "@/components/dashboard/DashboardListingCover";
 import { DashboardListingStatusBadge } from "@/components/dashboard/DashboardListingStatusBadge";
 import type { OwnerListingRowModel } from "@/lib/owner-listings-page";
 import { resolveOwnerListingUiStatus } from "@/lib/owner-listing-ui-status";
@@ -15,6 +15,7 @@ import {
 } from "@/lib/rental-types";
 import { listingManageHref } from "@/lib/listing-workspace-nav";
 import { pickListingCoverPhotoUrl } from "@/lib/listing-media";
+import { ownerListingContinueWizardHref } from "@/lib/owner-listing-ui-status";
 
 type Props = {
   row: OwnerListingRowModel;
@@ -47,14 +48,20 @@ function statusCopy(
         title: t("needsFixesTitle"),
         description:
           row.listing.admin_verification_notes?.slice(0, 160) || t("needsFixesFallback"),
-        primaryCta: { label: t("fixListing"), href: `${manage}/edit` },
+        primaryCta: {
+          label: t("fixListing"),
+          href: ownerListingContinueWizardHref(row.listing.id),
+        },
         secondaryCta: { label: t("seeStatus"), href: publish },
       };
     case "draft":
       return {
         title: t("draftTitle"),
         description: t("draftDesc"),
-        primaryCta: { label: t("continueDraft"), href: manage },
+        primaryCta: {
+          label: t("continueDraft"),
+          href: ownerListingContinueWizardHref(row.listing.id),
+        },
       };
     case "published":
     case "paused":
@@ -107,16 +114,9 @@ export function OwnerListingStatusHero({ row }: Props) {
         <div className="flex gap-4 p-4 sm:p-5">
           <Link
             href={listingManageHref(listing.id)}
-            className="relative hidden h-20 w-28 shrink-0 overflow-hidden rounded-xl bg-sand/50 sm:block"
+            className="relative hidden h-20 w-28 shrink-0 overflow-hidden rounded-xl sm:block"
           >
-            {cover ? (
-              // eslint-disable-next-line @next/next/no-img-element -- avoid next/image hostname crashes blanking dashboard
-              <img src={cover} alt="" className="absolute inset-0 h-full w-full object-cover" />
-            ) : (
-              <div className="flex h-full items-center justify-center text-muted">
-                <ImageIcon className="h-6 w-6 opacity-40" />
-              </div>
-            )}
+            <DashboardListingCover src={cover} compact roundedClassName="rounded-xl" />
           </Link>
 
           <div className="min-w-0 flex-1">

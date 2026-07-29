@@ -3159,21 +3159,30 @@
     "tabsAria": "Listing management",
     "tabs": {
       "overview": "Overview",
-      "edit": "Listing",
+      "edit": "Details",
       "trust": "Trust",
       "photos": "Photos",
       "availability": "Availability",
       "inquiries": "Inquiries",
-      "analytics": "Stats",
+      "analytics": "Analytics",
       "publish": "Publish",
-      "cohosts": "Co-hosts"
+      "cohosts": "Co-hosts",
+      "pricing": "Pricing",
+      "calendarPricing": "Calendar & prices"
     },
     "header": {
       "allListings": "All listings",
       "until": "until {date}",
       "edit": "Edit",
       "helpLabel": "Help for this listing",
-      "helpSeed": "How do I upload photos?"
+      "helpSeed": "How do I upload photos?",
+      "preview": "Preview",
+      "viewListing": "View listing",
+      "seeFixes": "See what needs fixing",
+      "moreActions": "More actions",
+      "untitled": "Untitled",
+      "completionPercent": "{percent}% complete",
+      "missingCount": "{count, plural, one {# item missing} other {# items missing}}"
     },
     "overview": {
       "recommendation": "Recommendation",
@@ -3213,7 +3222,23 @@
       "fixListing": "Fix listing",
       "seePublishStatus": "See publish status",
       "renewListing": "Renew listing",
-      "manageCalendar": "Manage calendar"
+      "manageCalendar": "Manage calendar",
+      "completionScore": "{percent}% complete",
+      "missingItems": "{count, plural, one {# item missing} other {# items missing}}",
+      "managePhotos": "Manage photos",
+      "manageAvailability": "Manage availability",
+      "managePricing": "Manage pricing",
+      "viewRequests": "View requests",
+      "healthTitle": "Listing health",
+      "healthBody": "What is ready and what is still missing.",
+      "healthPublish": "Publish",
+      "healthPhotos": "Photos",
+      "healthBasics": "Title & description",
+      "healthPrice": "Price",
+      "healthAvailability": "Availability",
+      "healthDone": "Done",
+      "healthMissing": "Missing",
+      "manageCalendarPricing": "Calendar & prices"
     },
     "publish": {
       "statusPublished": "The listing is visible publicly.",
@@ -3244,8 +3269,8 @@
     },
     "calendar": {
       "saving": "Saving…",
-      "title": "Price and availability calendar",
-      "subtitle": "Each day shows the price per night. Select dates to change the price or block them.",
+      "title": "Calendar & prices",
+      "subtitle": "Manage availability and nightly prices from the calendar.",
       "basePrice": "Base price: €{price} / night",
       "setBasePriceHint": "Set a base price in the settings on the right so prices appear.",
       "allDaysBase": "All available days use the base price.",
@@ -3295,7 +3320,8 @@
       "missing": "Missing: {label}",
       "edit": "Edit",
       "pricing": "Prices and availability",
-      "photos": "Photos"
+      "photos": "Photos",
+      "continueCompletion": "Continue completion"
     },
     "availabilityEditor": {
       "titleDefault": "Availability",
@@ -3526,7 +3552,20 @@
       "managePhotos": "Manage photos →",
       "availability": "Availability →",
       "saving": "Saving…",
-      "saveChanges": "Save changes"
+      "saveChanges": "Save changes",
+      "sectionBasics": "Basics",
+      "sectionBasicsBody": "Title, description and core listing details.",
+      "sectionLocation": "Location",
+      "sectionLocationBody": "Area, address and map pin.",
+      "sectionSleeping": "Bedrooms",
+      "sectionSleepingBody": "Sleeping arrangements and beds.",
+      "sectionAmenities": "Amenities",
+      "sectionAmenitiesBody": "Selected amenities for this listing.",
+      "sectionLinks": "External links",
+      "sectionLinksBody": "Airbnb, Booking and other trust links.",
+      "pricing": "Pricing",
+      "dangerTitle": "Danger zone",
+      "dangerBody": "Deleting a listing is permanent and cannot be undone."
     },
     "completenessItems": {
       "basics": "Basic details",
@@ -3541,6 +3580,128 @@
       "declarations": "Required declarations",
       "amenities": "Amenities",
       "house_rules": "House rules"
+    },
+    "continueCompletion": {
+      "title": "This listing needs completion",
+      "body": "Continue from where you left off so you can submit it for review.",
+      "needsFixesTitle": "This listing needs fixes",
+      "needsFixesBody": "Changes are required before it can be published.",
+      "continueCta": "Continue completion",
+      "fixCta": "Fix listing",
+      "seeMissing": "See what’s missing",
+      "missingCount": "{count, plural, one {# item missing} other {# items missing}}"
+    },
+    "videoUpload": {
+      "listingVideo": "Listing video",
+      "titleOptional": "Listing video (optional)",
+      "hint": "Up to {seconds} seconds. Shown on the public listing.",
+      "uploadVideo": "Choose a video",
+      "uploading": "Uploading…",
+      "saveVideo": "Save video",
+      "invalidFile": "Please choose a valid video file.",
+      "maxDuration": "Video cannot exceed {seconds} seconds."
+    },
+    "dailyPriceTable": {
+      "title": "Daily prices",
+      "subtitle": "Next {days} days",
+      "colDate": "Date",
+      "colStatus": "Status",
+      "colPrice": "Price",
+      "today": "Today",
+      "available": "Available",
+      "unavailable": "Unavailable"
+    },
+    "specialPeriodForm": {
+      "title": "Special period",
+      "namePlaceholder": "Period name (e.g. Easter)",
+      "pricePlaceholder": "Price / night (€)",
+      "minNightsPlaceholder": "Minimum nights",
+      "blockedPeriod": "Block period (unavailable)",
+      "added": "Period added.",
+      "saving": "Saving…",
+      "addPeriod": "Add period"
+    },
+    "pricingSettings": {
+      "title": "Base pricing settings",
+      "subtitle": "Used as default when no day-specific price is set.",
+      "basePrice": "Base price / night",
+      "weekendPrice": "Weekend price",
+      "weekendPricePlaceholder": "Same as base",
+      "specialOverride": "Special periods override this.",
+      "minStay": "Minimum stay (nights)",
+      "cleaningFee": "Cleaning fee",
+      "optional": "(optional)",
+      "cleaningFeePlaceholder": "e.g. 40",
+      "cleaningFeeHint": "Shown as informational only — Midora does not process payments.",
+      "discountsTitle": "Discounts",
+      "weeklyDiscount": "Weekly %",
+      "weeklyDiscountPlaceholder": "e.g. 10",
+      "monthlyDiscount": "Monthly %",
+      "monthlyDiscountPlaceholder": "e.g. 20",
+      "discountHint": "Percent off the base price.",
+      "discountConditions": "Discounts apply only when stay conditions are met.",
+      "saved": "Settings saved.",
+      "saving": "Saving…",
+      "saveSettings": "Save settings"
+    },
+    "deletePhoto": {
+      "confirm": "Delete this media?",
+      "aria": "Delete"
+    },
+    "preview": {
+      "backToManage": "Back to manage",
+      "viewListing": "View listing",
+      "desktop": "Desktop",
+      "mobile": "Mobile",
+      "openPublicLink": "Open public link",
+      "loading": "Loading…",
+      "mobilePreviewTitle": "Mobile preview"
+    },
+    "bedroomsEditor": {
+      "title": "Bedrooms & beds",
+      "subtitle": "Describe where guests sleep.",
+      "suggestionMaster": "Master bedroom",
+      "suggestionSecond": "2nd bedroom",
+      "suggestionThird": "3rd bedroom",
+      "suggestionLiving": "Living room",
+      "roomFallback": "Room {index}",
+      "savedRooms": "Bedrooms saved.",
+      "removedRooms": "Bedrooms removed.",
+      "empty": "You haven’t added bedrooms yet.",
+      "room": "Bedroom",
+      "removeRoom": "Remove bedroom",
+      "roomName": "Room name",
+      "roomNamePlaceholder": "e.g. Master bedroom",
+      "bedType": "Bed type",
+      "dimensions": "Dimensions",
+      "dimensionsPlaceholder": "e.g. 160×200",
+      "roomPhoto": "Room photo",
+      "noPhoto": "None",
+      "addRoom": "Add bedroom",
+      "save": "Save",
+      "saving": "Saving…",
+      "uploadHint": "You can link a photo from the photo manager."
+    },
+    "arrivalEditor": {
+      "title": "Check-in & check-out",
+      "subtitle": "Arrival times and method for guests.",
+      "checkInFrom": "Check-in from",
+      "checkInTo": "Check-in until",
+      "checkOutUntil": "Check-out until",
+      "arrivalMethod": "Arrival method",
+      "selectPlaceholder": "Select…",
+      "saving": "Saving…",
+      "save": "Save",
+      "saved": "Arrival settings saved."
+    },
+    "monthlyPricing": {
+      "title": "Monthly prices",
+      "subtitle": "Set the monthly price and pricing by number of people.",
+      "previewTitle": "Examples",
+      "previewRow": "{people} people → €{price} / month",
+      "save": "Save prices",
+      "saving": "Saving…",
+      "saved": "Prices saved."
     }
   },
   "Owner": {
@@ -3915,7 +4076,7 @@
     "inquiriesTab": {
       "title": "Requests",
       "subtitle": "Interest for \"{title}\".",
-      "emptyTitle": "No requests",
+      "emptyTitle": "There are no requests for this listing yet.",
       "emptyText": "There are no interest requests for this property yet."
     },
     "payPage": {

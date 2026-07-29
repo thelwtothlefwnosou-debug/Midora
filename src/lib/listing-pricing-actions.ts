@@ -144,3 +144,100 @@ export async function saveSpecialPricingPeriod(
   revalidatePath(`/listings/${listingId}`);
   return { success: true };
 }
+
+export async function saveMonthlyPricingSettings(
+  listingId: string,
+  formData: FormData
+): Promise<{ success?: boolean; error?: string }> {
+  const auth = await requireListingOwner(listingId);
+  if ("error" in auth) return { error: auth.error };
+
+  const modeRaw = (formData.get("monthly_pricing_mode") as string)?.trim();
+  const mode =
+    modeRaw === "fixed" || modeRaw === "extra_person" || modeRaw === "tiers"
+      ? modeRaw
+      : "extra_person";
+
+  const basePrice = parseInt(
+    (formData.get("monthly_base_price") as string) ||
+      (formData.get("price_monthly") as string) ||
+      "",
+    10
+  );
+  const includedPeople = parseOptionalInt(
+    formData.get("monthly_included_people") as string
+  );
+  const maxPeople = parseOptionalInt(formData.get("monthly_max_people") as string);
+  const extraPersonPrice = parseOptionalInt(
+    formData.get("monthly_extra_person_price") as string
+  );
+  const maxPrice = parseOptionalInt(formData.get("monthly_max_price") as string);
+
+  if (mode !== "tiers" && (!Number.isFinite(basePrice) || basePrice <= 0)) {
+    return { error: await actionError("pricingBaseRequired") };
+  }
+
+  let tiers: { people_from: number; people_to: number; monthly_price: number }[] =
+    [];
+  if (mode === "tiers") {
+    const raw = (formData.get("monthly_price_tiers_json") as string)?.trim();
+    try {
+      const parsed = raw ? JSON.parse(raw) : [];
+      if (Array.isArray(parsed)) {
+        tiers = parsed
+          .map((t: Record<string, unknown>) => ({
+            people_from: Number(t.people_from),
+            people_to: Number(t.people_to),
+            monthly_price: Number(t.monthly_price),
+          }))
+          .filter(
+            (t) =>
+              Number.isFinite(t.people_from) &&
+              Number.isFinite(t.people_to) &&
+              Number.isFinite(t.monthly_price) &&
+              t.monthly_price > 0
+          );
+      }
+    } catch {
+      return { error: await actionError("listingSaveFailed") };
+    }
+    if (tiers.length === 0) {
+      return { error: await actionError("pricingBaseRequired") };
+    }
+  }
+
+  const resolvedBase =
+    mode === "tiers"
+      ? tiers[0]?.monthly_price ?? null
+      : basePrice;
+
+  const row: Record<string, unknown> = {
+    monthly_pricing_mode: mode,
+    monthly_base_price: resolvedBase,
+    price_monthly: resolvedBase,
+    monthly_included_people: includedPeople ?? 2,
+    monthly_max_people: maxPeople,
+    monthly_extra_person_price: extraPersonPrice,
+    monthly_max_price: maxPrice,
+    max_guests: maxPeople ?? includedPeople ?? null,
+    updated_at: new Date().toISOString(),
+  };
+
+  const { error } = await auth.supabase.from("listings").update(row).eq("id", listingId);
+  if (error) return { error: error.message };
+
+  const { replaceListingMonthlyPriceTiers } = await import(
+    "@/lib/listing-monthly-tiers-db"
+  );
+  await replaceListingMonthlyPriceTiers(
+    auth.supabase,
+    listingId,
+    auth.user.id,
+    mode === "tiers" ? tiers : []
+  );
+
+  revalidatePath(`/dashboard/listings/${listingId}/pricing`);
+  revalidatePath(`/dashboard/listings/${listingId}`);
+  revalidatePath(`/listings/${listingId}`);
+  return { success: true };
+}

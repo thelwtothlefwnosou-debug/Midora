@@ -2265,6 +2265,14 @@ export function NewListingWizard({
     setNavBusy(true);
     void (async () => {
       try {
+        // Cancel pending autosave and wait for in-flight draft writes so they
+        // cannot race submit and demote approval_status back to "draft".
+        if (autosaveTimerRef.current) {
+          clearTimeout(autosaveTimerRef.current);
+          autosaveTimerRef.current = null;
+        }
+        await saveChainRef.current.catch(() => undefined);
+
         const invalid = await findFirstInvalidStep(true);
         if (invalid) {
           enterFixFromReview(invalid.step);

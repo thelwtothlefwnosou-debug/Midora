@@ -135,7 +135,7 @@ export function ProfileIdentityCard({
   }
 
   return (
-    <div className="rounded-2xl border border-border bg-white p-6 shadow-soft">
+    <div className="rounded-2xl border border-border bg-gradient-to-b from-white to-[#fcfbf9] p-6 shadow-soft lg:sticky lg:top-24">
       <div className="flex flex-col items-center text-center">
         <div className="relative">
           <ProfileAvatar

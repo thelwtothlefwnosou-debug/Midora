@@ -9,15 +9,19 @@ import {
 } from "@/lib/listing-completeness";
 import { MIN_LISTING_PHOTOS_FOR_REVIEW } from "@/lib/constants";
 import { listingSupportsShortTerm } from "@/lib/rental-types";
+import { ownerListingContinueWizardHref } from "@/lib/owner-listing-ui-status";
 
 export function ListingCompletenessCard({
   listing,
   photoCount,
   amenityCount = 0,
+  /** Hide the /edit self-link when this card is already on the edit page. */
+  hideEditLink = false,
 }: {
   listing: ListingWithImages;
   photoCount: number;
   amenityCount?: number;
+  hideEditLink?: boolean;
 }) {
   const t = useTranslations("Workspace.completenessCard");
   const tItems = useTranslations("Workspace.completenessItems");
@@ -26,6 +30,8 @@ export function ListingCompletenessCard({
   const items = shortTermCompletenessItems(listing, photoCount, amenityCount);
   const percent = completenessPercent(items);
   const missing = items.filter((i) => i.required && !i.done);
+  const needsCompletion = missing.length > 0;
+  const wizardHref = ownerListingContinueWizardHref(listing.id);
 
   function itemLabel(id: string): string {
     if (id === "photos") {
@@ -59,18 +65,26 @@ export function ListingCompletenessCard({
         </ul>
       )}
       <div className="mt-4 flex flex-wrap gap-2">
-        <Link
-          href={`/dashboard/listings/${listing.id}/edit`}
-          className="text-sm font-medium text-gold hover:underline"
-        >
-          {t("edit")}
-        </Link>
-        <Link
-          href={`/dashboard/listings/${listing.id}/edit#availability-calendar`}
-          className="text-sm font-medium text-charcoal/70 hover:underline"
-        >
-          {t("pricing")}
-        </Link>
+        {needsCompletion ? (
+          <Link
+            href={wizardHref}
+            className="text-sm font-medium text-gold hover:underline"
+          >
+            {t("continueCompletion")}
+          </Link>
+        ) : null}
+        {!hideEditLink ? (
+          <Link
+            href={`/dashboard/listings/${listing.id}/edit`}
+            className={
+              needsCompletion
+                ? "text-sm font-medium text-charcoal/70 hover:underline"
+                : "text-sm font-medium text-gold hover:underline"
+            }
+          >
+            {t("edit")}
+          </Link>
+        ) : null}
         <Link
           href={`/dashboard/listings/${listing.id}/photos`}
           className="text-sm font-medium text-charcoal/70 hover:underline"

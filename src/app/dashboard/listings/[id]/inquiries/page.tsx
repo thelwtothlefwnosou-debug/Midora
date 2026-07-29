@@ -2,6 +2,7 @@ import { Inbox } from "lucide-react";
 import { getTranslations } from "next-intl/server";
 import { DashboardEmptyState } from "@/components/dashboard/DashboardEmptyState";
 import { PropertyLeadRow } from "@/components/dashboard/PropertyLeadRow";
+import { WorkspaceSectionCard } from "@/components/dashboard/listing-workspace/WorkspaceSectionCard";
 import { requireDashboardContext } from "@/lib/dashboard-context";
 import { getAccessibleLeads } from "@/lib/leads";
 import { getLeadRepliesForLeads } from "@/lib/listing-contact-numbers-db";
@@ -22,15 +23,17 @@ export default async function ListingInquiriesPage({
   const repliesMap = await getLeadRepliesForLeads(leads.map((l) => l.id));
 
   return (
-    <div>
-      <h2 className="mb-1 font-display text-base font-semibold text-charcoal">{t("title")}</h2>
-      <p className="mb-4 text-sm text-muted">{t("subtitle", { title: ctx.listing.title })}</p>
+    <WorkspaceSectionCard
+      title={t("title")}
+      description={t("subtitle", { title: ctx.listing.title })}
+    >
       {leads.length === 0 ? (
         <DashboardEmptyState
           compact
           icon={Inbox}
           title={t("emptyTitle")}
           text={t("emptyText")}
+          className="border-0 bg-transparent px-0"
         />
       ) : (
         <div className="space-y-2">
@@ -43,6 +46,6 @@ export default async function ListingInquiriesPage({
           ))}
         </div>
       )}
-    </div>
+    </WorkspaceSectionCard>
   );
 }

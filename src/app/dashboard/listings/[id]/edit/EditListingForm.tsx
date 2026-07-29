@@ -11,6 +11,7 @@ import { ListingLocationEditor } from "@/components/dashboard/ListingLocationEdi
 import { ListingExternalLinksEditor } from "@/components/dashboard/ListingExternalLinksEditor";
 import { DeleteListingButton } from "@/components/dashboard/DeleteListingButton";
 import { ListingCompletenessCard } from "@/components/dashboard/ListingCompletenessCard";
+import { WorkspaceSectionCard } from "@/components/dashboard/listing-workspace/WorkspaceSectionCard";
 import { listingRentalType } from "@/lib/rental-types";
 import type { ListingUnavailablePeriod } from "@/lib/unavailable-periods";
 import { updateListing } from "@/lib/actions";
@@ -34,6 +35,23 @@ type Props = {
   amenities: ListingAmenityRow[];
 };
 
+function SectionIntro({
+  title,
+  description,
+}: {
+  title: string;
+  description: string;
+}) {
+  return (
+    <div className="mb-3">
+      <h3 className="font-display text-sm font-semibold text-charcoal sm:text-[15px]">
+        {title}
+      </h3>
+      <p className="mt-1 text-sm text-muted">{description}</p>
+    </div>
+  );
+}
+
 export function EditListingForm({
   listing,
   sleepingArrangements,
@@ -55,66 +73,89 @@ export function EditListingForm({
   const rentalType = listingRentalType(listing);
   const isShortTerm = rentalType === "short_term";
   const photoCount = listing.listing_images?.length ?? 0;
+  const pricingHref = isShortTerm
+    ? `/dashboard/listings/${listing.id}/availability`
+    : `/dashboard/listings/${listing.id}/pricing`;
 
   return (
-    <div>
-      <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h2 className="font-display text-lg font-semibold text-charcoal">{t("title")}</h2>
-          <p className="mt-1 text-sm text-muted">{t("subtitle")}</p>
-        </div>
-        <DeleteListingButton listingId={listing.id} />
+    <div className="space-y-6">
+      <div>
+        <h2 className="font-display text-lg font-semibold text-charcoal">{t("title")}</h2>
+        <p className="mt-1 text-sm text-muted">{t("subtitle")}</p>
       </div>
 
       {state?.saved && (
-        <p className="mb-4 rounded-xl border border-teal/30 bg-teal/10 px-4 py-3 text-sm text-teal">
+        <p className="rounded-xl border border-teal/30 bg-teal/10 px-4 py-3 text-sm text-teal">
           {t("saved")}
         </p>
       )}
       {state?.error && (
-        <p className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+        <p className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
           {state.error}
         </p>
       )}
 
       {isShortTerm && (
-        <div className="mb-6">
-          <ListingCompletenessCard
-            listing={listing}
-            photoCount={photoCount}
-            amenityCount={amenities.length}
-          />
-        </div>
+        <ListingCompletenessCard
+          listing={listing}
+          photoCount={photoCount}
+          amenityCount={amenities.length}
+          hideEditLink
+        />
       )}
 
-      <ListingExternalLinksEditor
-        listingId={listing.id}
-        initialLinks={externalLinks}
-        className="mb-6 mt-0"
-      />
+      <section>
+        <SectionIntro title={t("sectionBasics")} description={t("sectionBasicsBody")} />
+        <GlassCard className="p-6 sm:p-8">
+          <ListingForm
+            listing={listing}
+            action={formAction}
+            pending={pending}
+            error={state?.error}
+            submitLabel={pending ? t("saving") : t("saveChanges")}
+          />
+        </GlassCard>
+      </section>
+
+      <section>
+        <SectionIntro
+          title={t("sectionLocation")}
+          description={t("sectionLocationBody")}
+        />
+        <ListingLocationEditor listing={listing} />
+      </section>
 
       {isShortTerm && (
-        <ListingBedroomsEditor
-          listing={listing}
-          initialArrangements={sleepingArrangements}
-        />
+        <section>
+          <SectionIntro
+            title={t("sectionSleeping")}
+            description={t("sectionSleepingBody")}
+          />
+          <ListingBedroomsEditor
+            listing={listing}
+            initialArrangements={sleepingArrangements}
+          />
+        </section>
       )}
 
-      <ListingAmenitiesEditor listing={listing} initialAmenities={amenities} />
-
-      <ListingLocationEditor listing={listing} />
-
-      <GlassCard className="mt-6 p-6 sm:p-8">
-        <ListingForm
-          listing={listing}
-          action={formAction}
-          pending={pending}
-          error={state?.error}
-          submitLabel={pending ? t("saving") : t("saveChanges")}
+      <section>
+        <SectionIntro
+          title={t("sectionAmenities")}
+          description={t("sectionAmenitiesBody")}
         />
-      </GlassCard>
+        <ListingAmenitiesEditor listing={listing} initialAmenities={amenities} />
+      </section>
 
-      <p className="mt-4 flex flex-wrap gap-4 text-sm text-muted">
+      <section>
+        <SectionIntro title={t("sectionLinks")} description={t("sectionLinksBody")} />
+        <ListingExternalLinksEditor
+          listingId={listing.id}
+          initialLinks={externalLinks}
+          className="mt-0"
+        />
+      </section>
+
+      <div className="flex flex-wrap gap-4 text-sm text-muted">
         <Link
           href={`/dashboard/listings/${listing.id}/photos`}
           className="font-medium text-gold-dark hover:underline"
@@ -127,7 +168,21 @@ export function EditListingForm({
         >
           {t("availability")}
         </Link>
-      </p>
+        <Link
+          href={pricingHref}
+          className="font-medium text-gold-dark hover:underline"
+        >
+          {t("pricing")}
+        </Link>
+      </div>
+
+      <WorkspaceSectionCard
+        title={t("dangerTitle")}
+        description={t("dangerBody")}
+        tone="muted"
+      >
+        <DeleteListingButton listingId={listing.id} />
+      </WorkspaceSectionCard>
     </div>
   );
 }

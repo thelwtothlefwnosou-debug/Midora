@@ -198,7 +198,7 @@ export function ownerListingPrimaryAction(row: OwnerListingRowModel): {
   const editHref = `/dashboard/listings/${listing.id}/edit`;
   const publishHref = `/dashboard/listings/${listing.id}/publish`;
   const manageHref = `/dashboard/listings/${listing.id}`;
-  const draftHref = `/dashboard/listings/new?draft=${listing.id}`;
+  const draftHref = ownerListingContinueWizardHref(listing.id);
 
   switch (ui.key) {
     case "action_required":
@@ -229,7 +229,7 @@ export function ownerListingPrimaryAction(row: OwnerListingRowModel): {
     case "needs_fixes":
       return {
         labelKey: "fixNow",
-        href: editHref,
+        href: draftHref,
         secondary: { labelKey: "seeNotes", href: `${editHref}#admin-notes` },
       };
     case "inactive":
@@ -244,4 +244,30 @@ export function ownerListingPrimaryAction(row: OwnerListingRowModel): {
     default:
       return { labelKey: "manage", href: manageHref };
   }
+}
+
+/** Guided wizard resume URL for an existing listing (never creates a new draft). */
+export function ownerListingContinueWizardHref(listingId: string): string {
+  return `/dashboard/listings/new?draft=${encodeURIComponent(listingId)}`;
+}
+
+/**
+ * Incomplete listings that need the guided “continue completion” path
+ * (not healthy published / in-review / ready-to-submit listings).
+ */
+export function listingNeedsContinueCompletion(row: OwnerListingRowModel): boolean {
+  const ui = resolveOwnerListingUiStatus(row);
+  if (
+    ui.key === "published" ||
+    ui.key === "review" ||
+    ui.key === "inactive" ||
+    ui.key === "ready"
+  ) {
+    return false;
+  }
+  return (
+    ui.key === "draft" ||
+    ui.key === "action_required" ||
+    ui.key === "needs_fixes"
+  );
 }

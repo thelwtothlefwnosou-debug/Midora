@@ -2,10 +2,11 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { ImageIcon, MoreHorizontal } from "lucide-react";
+import { MoreHorizontal } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { Button } from "@/components/ui/Button";
 import { DeleteListingButton } from "@/components/dashboard/DeleteListingButton";
+import { DashboardListingCover } from "@/components/dashboard/DashboardListingCover";
 import { DashboardListingStatusBadge } from "@/components/dashboard/DashboardListingStatusBadge";
 import type { OwnerListingRowModel } from "@/lib/owner-listings-page";
 import {
@@ -69,21 +70,12 @@ export function DashboardListingGridCard({ row, onDeleted }: Props) {
       <div className="relative">
         <Link
           href={manageHref}
-          className="relative block aspect-[16/10] min-h-[180px] overflow-hidden bg-sand/60 sm:min-h-[200px]"
+          className="relative block aspect-[16/10] min-h-[180px] overflow-hidden sm:min-h-[200px]"
         >
-          {cover ? (
-            // eslint-disable-next-line @next/next/no-img-element -- avoid next/image hostname crashes blanking dashboard
-            <img
-              src={cover}
-              alt=""
-              className="absolute inset-0 h-full w-full object-cover object-center transition-transform duration-300 group-hover:scale-[1.02]"
-            />
-          ) : (
-            <div className="flex h-full min-h-[180px] flex-col items-center justify-center gap-2 px-4 text-center text-muted sm:min-h-[200px]">
-              <ImageIcon className="h-9 w-9 opacity-40" />
-              <span className="text-xs leading-snug">{t("noPhotoAdded")}</span>
-            </div>
-          )}
+          <DashboardListingCover
+            src={cover}
+            imgClassName="transition-transform duration-300 group-hover:scale-[1.02]"
+          />
           <span className="absolute top-2.5 left-2.5 rounded-full bg-charcoal/90 px-2.5 py-1 text-[10px] font-semibold tracking-wide text-white uppercase">
             {getRentalTypeBadgeLabel(rentalType, tListing)}
           </span>

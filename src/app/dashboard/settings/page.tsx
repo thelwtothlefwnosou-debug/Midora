@@ -1,9 +1,9 @@
 import { Suspense } from "react";
 import { getTranslations } from "next-intl/server";
 import { requireDashboardContext } from "@/lib/dashboard-context";
+import { parseSettingsTab } from "@/lib/dashboard-settings-tabs";
 import { AccountShell } from "@/components/account/AccountShell";
 import { SettingsForm } from "./SettingsForm";
-import { parseSettingsTab } from "@/components/dashboard/DashboardSettingsTabs";
 
 export default async function SettingsPage({
   searchParams,

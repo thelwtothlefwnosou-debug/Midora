@@ -11,12 +11,12 @@ import {
   Circle,
   CalendarDays,
   Link2,
-  ImageIcon,
 } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { Button } from "@/components/ui/Button";
 import { ListingViewButton } from "@/components/dashboard/ListingViewButton";
 import { DeleteListingButton } from "@/components/dashboard/DeleteListingButton";
+import { DashboardListingCover } from "@/components/dashboard/DashboardListingCover";
 import { DashboardListingStatusBadge } from "@/components/dashboard/DashboardListingStatusBadge";
 import { DashboardListingAnalyticsDrawer } from "@/components/dashboard/DashboardListingAnalyticsDrawer";
 import type { OwnerListingRowModel } from "@/lib/owner-listings-page";
@@ -220,20 +220,8 @@ export function DashboardListingRow({ row, isFree, onDeleted }: Props) {
         <div className="flex min-h-[190px] flex-col gap-5 p-5 sm:p-6 xl:grid xl:grid-cols-[minmax(0,1.85fr)_minmax(140px,0.5fr)_minmax(130px,0.45fr)_minmax(150px,0.55fr)_minmax(200px,0.7fr)] xl:items-stretch xl:gap-6">
           {/* Photo + listing summary */}
           <div className="flex min-w-0 flex-col gap-4 sm:flex-row sm:items-start sm:gap-6">
-            <div className="relative h-[200px] w-full shrink-0 overflow-hidden rounded-2xl bg-sand/50 sm:h-[140px] sm:w-[200px] xl:h-[160px] xl:w-[240px]">
-              {cover ? (
-                // eslint-disable-next-line @next/next/no-img-element -- avoid next/image hostname crashes blanking dashboard
-                <img
-                  src={cover}
-                  alt=""
-                  className="absolute inset-0 h-full w-full object-cover object-center"
-                />
-              ) : (
-                <div className="flex h-full flex-col items-center justify-center gap-2 px-4 text-center text-muted">
-                  <ImageIcon className="h-8 w-8 opacity-45" />
-                  <span className="text-xs leading-snug">{t("noPhotoAdded")}</span>
-                </div>
-              )}
+            <div className="relative h-[200px] w-full shrink-0 overflow-hidden rounded-2xl sm:h-[140px] sm:w-[200px] xl:h-[160px] xl:w-[240px]">
+              <DashboardListingCover src={cover} roundedClassName="rounded-2xl" />
               <span className="absolute top-2.5 left-2.5 rounded-full bg-charcoal/90 px-2.5 py-1 text-[10px] font-semibold tracking-wide text-white uppercase">
                 {getRentalTypeBadgeLabel(rentalType, tListing)}
               </span>

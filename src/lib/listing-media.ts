@@ -15,11 +15,38 @@ function supabasePublicBase(): string | null {
   return `https://${url}.supabase.co`;
 }
 
+/** Reject empty, data:, blob:, and obvious non-image / error payloads stored as URLs. */
+export function isUsableListingImageUrl(url?: string | null): url is string {
+  const trimmed = url?.trim();
+  if (!trimmed) return false;
+  if (trimmed.startsWith("data:") || trimmed.startsWith("blob:")) return false;
+  if (
+    /validation_failed|unsupported provider|ow terminated|unexpectedly|"msg"\s*:/i.test(
+      trimmed
+    )
+  ) {
+    return false;
+  }
+  if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) {
+    try {
+      return Boolean(new URL(trimmed).hostname);
+    } catch {
+      return false;
+    }
+  }
+  // Relative storage paths / object keys
+  if (trimmed.includes("://")) return false;
+  return trimmed.length > 2;
+}
+
 /** Resolve storage paths and relative URLs to absolute image URLs */
 export function resolveListingImageUrl(url?: string | null): string | null {
   const trimmed = url?.trim();
-  if (!trimmed) return null;
-  if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) return trimmed;
+  if (!trimmed || !isUsableListingImageUrl(trimmed)) return null;
+
+  if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) {
+    return trimmed;
+  }
 
   const base = supabasePublicBase();
   if (!base) return null;
@@ -55,7 +82,11 @@ export function pickListingCoverPhotoUrl(
     return bCover - aCover;
   });
 
-  return resolveListingImageUrl(sorted[0]?.url);
+  for (const photo of sorted) {
+    const resolved = resolveListingImageUrl(photo.url);
+    if (resolved) return resolved;
+  }
+  return null;
 }
 
 export function getListingCoverImage(listing: ListingWithImages): string {

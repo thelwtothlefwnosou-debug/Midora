@@ -6,7 +6,7 @@ import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/Button";
 import { DashboardListingGridCard } from "@/components/dashboard/DashboardListingGridCard";
 import { DashboardListingsOverviewMetrics } from "@/components/dashboard/DashboardListingsOverviewMetrics";
-import { OwnerHomeMetaStrip } from "@/components/dashboard/owner-home/OwnerHomeMetaStrip";
+import { OwnerHomeMetaStrip, OwnerHomeNextAction } from "@/components/dashboard/owner-home/OwnerHomeMetaStrip";
 import { OwnerListingStatusHero } from "@/components/dashboard/owner-home/OwnerListingStatusHero";
 import { OwnerProfileCompletionCompact } from "@/components/dashboard/owner-home/OwnerProfileCompletionCompact";
 import { OwnerRecentActivity } from "@/components/dashboard/owner-home/OwnerRecentActivity";
@@ -46,17 +46,21 @@ export function OwnerHomeOverview({
 
   if (rows.length === 0) {
     return (
-      <div className="rounded-2xl border border-dashed border-border bg-white px-6 py-10 text-center shadow-soft">
-        <p className="font-display text-lg font-semibold text-charcoal">
-          {t("emptyTitle")}
-        </p>
-        <p className="mx-auto mt-2 max-w-md text-sm text-muted">
-          {t("emptySubtitle")}
-        </p>
-        <Button href={OWNER_LISTING_NEW_PATH} className="mt-4">
-          <Plus className="h-4 w-4" />
-          {t("newListing")}
-        </Button>
+      <div className="space-y-4">
+        <OwnerHomeMetaStrip rows={rows} overview={overview} />
+        <OwnerHomeNextAction rows={rows} overview={overview} />
+        <div className="rounded-2xl border border-dashed border-border bg-white px-6 py-10 text-center shadow-soft">
+          <p className="font-display text-lg font-semibold text-charcoal">
+            {t("emptyTitle")}
+          </p>
+          <p className="mx-auto mt-2 max-w-md text-sm text-muted">
+            {t("emptySubtitle")}
+          </p>
+          <Button href={OWNER_LISTING_NEW_PATH} className="mt-4">
+            <Plus className="h-4 w-4" />
+            {t("newListing")}
+          </Button>
+        </div>
       </div>
     );
   }
@@ -67,6 +71,7 @@ export function OwnerHomeOverview({
   return (
     <div className="space-y-4">
       <OwnerHomeMetaStrip rows={rows} overview={overview} />
+      <OwnerHomeNextAction rows={rows} overview={overview} />
 
       <OwnerListingStatusHero row={primaryRow} />
 

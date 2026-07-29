@@ -110,6 +110,21 @@ export function getOwnerListingStatus(
     };
   }
 
+  // Submitted for review must stay "review" even if photos fail to join / load.
+  if (listing.approval_status === "pending_review") {
+    return {
+      key: "review",
+      label: getOwnerListingStatusLabel("review", locale),
+      labelKey: "review",
+      helperKey: "review",
+      helperText: pickLocale(
+        locale,
+        OWNER_STATUS_HELPER_EL.review!,
+        OWNER_STATUS_HELPER_EN.review!
+      ),
+    };
+  }
+
   if (effectiveStatus === "rejected") {
     return {
       key: "rejected",

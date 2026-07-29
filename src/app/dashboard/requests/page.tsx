@@ -1,9 +1,8 @@
 import { Inbox, Camera, CalendarDays, Tag } from "lucide-react";
 import { getTranslations } from "next-intl/server";
 import { AccountShell } from "@/components/account/AccountShell";
+import { DashboardEmptyState } from "@/components/dashboard/DashboardEmptyState";
 import { PropertyLeadRow } from "@/components/dashboard/PropertyLeadRow";
-import { Button } from "@/components/ui/Button";
-import { GlassCard } from "@/components/ui/GlassCard";
 import { requireDashboardContext } from "@/lib/dashboard-context";
 import { getOwnerLeads } from "@/lib/leads";
 
@@ -28,37 +27,27 @@ export default async function DashboardRequestsPage() {
       subtitle={t("subtitle")}
     >
       {activeLeads.length === 0 ? (
-        <GlassCard className="overflow-hidden">
-          <div className="flex flex-col items-center px-6 py-12 text-center">
-            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-sand">
-              <Inbox className="h-7 w-7 text-gold" strokeWidth={1.5} />
-            </div>
-            <h2 className="mt-5 font-display text-xl font-semibold text-charcoal">
-              {t("emptyTitle")}
-            </h2>
-            <p className="mt-2 max-w-md text-sm leading-relaxed text-muted">
-              {t("emptyDesc")}
+        <DashboardEmptyState
+          icon={Inbox}
+          title={t("emptyTitle")}
+          text={t("emptyDesc")}
+          actionLabel={t("viewMyListings")}
+          actionHref="/dashboard/listings"
+        >
+          <div className="mt-7 w-full max-w-sm rounded-xl border border-border bg-sand/30 p-4 text-left">
+            <p className="text-xs font-medium tracking-wide text-muted uppercase">
+              {t("tipsTitle")}
             </p>
-
-            <div className="mt-8 w-full max-w-sm rounded-xl border border-border bg-sand/30 p-4 text-left">
-              <p className="text-xs font-medium tracking-wide text-muted uppercase">
-                {t("tipsTitle")}
-              </p>
-              <ul className="mt-3 space-y-2.5">
-                {tips.map(({ icon: Icon, text }) => (
-                  <li key={text} className="flex items-center gap-2.5 text-sm text-charcoal">
-                    <Icon className="h-4 w-4 shrink-0 text-gold" />
-                    {text}
-                  </li>
-                ))}
-              </ul>
-            </div>
-
-            <Button href="/dashboard/listings" className="mt-6">
-              {t("viewMyListings")}
-            </Button>
+            <ul className="mt-3 space-y-2.5">
+              {tips.map(({ icon: Icon, text }) => (
+                <li key={text} className="flex items-center gap-2.5 text-sm text-charcoal">
+                  <Icon className="h-4 w-4 shrink-0 text-gold" />
+                  {text}
+                </li>
+              ))}
+            </ul>
           </div>
-        </GlassCard>
+        </DashboardEmptyState>
       ) : (
         <div className="space-y-4">
           {activeLeads.map((lead) => (
