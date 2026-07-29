@@ -173,7 +173,7 @@ export function SearchFieldPopover({
 
     // Ignore outside presses from the same gesture that opened the popover.
     // Without this, open → mount → outside-click can flash closed (esp. with lazy load).
-    const OPEN_GRACE_MS = 400;
+    const OPEN_GRACE_MS = 700;
 
     function onPointerDown(e: MouseEvent) {
       if (Date.now() - openedAtRef.current < OPEN_GRACE_MS) return;
@@ -197,7 +197,7 @@ export function SearchFieldPopover({
   }, [anchorRef, ignoreRefs, onOpenChange, open, useSheet]);
 
   function requestClose() {
-    if (Date.now() - openedAtRef.current < 400) return;
+    if (Date.now() - openedAtRef.current < 700) return;
     onOpenChange(false);
   }
 

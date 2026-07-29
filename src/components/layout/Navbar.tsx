@@ -29,11 +29,11 @@ export function Navbar({ variant = "default" }: NavbarProps) {
   const isHome = variant === "home" || pathname === "/";
   const overHero = isHome && !scrolled && !open;
 
-  const links = [
+  const links: { label: string; href: string; prefetch?: boolean }[] = [
     { label: t("home"), href: "/" },
     { label: t("howItWorks"), href: isHome ? "#explore" : "/how-it-works" },
     { label: t("forOwners"), href: isHome ? "#owners" : "/owners" },
-    { label: t("listings"), href: "/listings?rentalType=short_term" },
+    { label: t("listings"), href: "/listings?rentalType=short_term", prefetch: true },
   ];
 
   useEffect(() => {
@@ -105,6 +105,7 @@ export function Navbar({ variant = "default" }: NavbarProps) {
               key={link.href}
               href={link.href}
               scroll
+              prefetch={link.prefetch}
               className={navLinkClass(link.href)}
               aria-current={isNavActive(link.href) ? "page" : undefined}
             >
