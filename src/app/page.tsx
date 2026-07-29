@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import dynamic from "next/dynamic";
 import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
 import { Hero } from "@/components/sections/Hero";
@@ -8,11 +9,14 @@ import { RecentlyAddedListings } from "@/components/sections/RecentlyAddedListin
 import { RecentlyAddedSkeleton } from "@/components/sections/RecentlyAddedSkeleton";
 import { HowItWorks } from "@/components/sections/HowItWorks";
 import { PopularAreas } from "@/components/sections/PopularAreas";
-import { HomeFAQ } from "@/components/sections/HomeFAQ";
 import { HostCTA } from "@/components/sections/HostCTA";
 import { FinalHomeCta } from "@/components/sections/FinalHomeCta";
 import { PreviewSkipLink } from "@/components/preview/PreviewSkipLink";
 import { isPreviewV80 } from "@/lib/preview-v80";
+
+const HomeFAQ = dynamic(
+  () => import("@/components/sections/HomeFAQ").then((m) => m.HomeFAQ)
+);
 
 export const revalidate = 60;
 

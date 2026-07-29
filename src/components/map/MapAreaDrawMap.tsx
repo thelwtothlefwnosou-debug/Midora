@@ -10,6 +10,7 @@ import {
   useMap,
   useMapEvents,
 } from "react-leaflet";
+import "leaflet/dist/leaflet.css";
 import type { LatLng } from "@/lib/geo/polygon";
 import {
   haversineMeters,

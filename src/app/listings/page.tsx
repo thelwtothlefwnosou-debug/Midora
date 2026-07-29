@@ -8,6 +8,7 @@ import {
   type ListingsFilterValues,
 } from "@/components/listings/ListingsFilters";
 import { ListingsSearchView } from "@/components/listings/ListingsSearchView";
+import { ListingsScrollToTop } from "@/components/listings/ListingsScrollToTop";
 import { getSearchCatalogListings } from "@/lib/listings";
 import { getUnavailablePeriodsByListingIds } from "@/lib/unavailable-periods-db";
 import { parseListingFiltersWithMessages } from "@/lib/listing-filters";
@@ -228,6 +229,9 @@ export default async function ListingsPage({
 
   return (
     <>
+      <Suspense fallback={null}>
+        <ListingsScrollToTop />
+      </Suspense>
       <main className="listings-page bg-white">
         <Suspense fallback={<FiltersSkeleton />}>
           <ListingsFilters

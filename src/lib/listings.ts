@@ -57,6 +57,16 @@ function slimCatalogListing(listing: ListingWithImages): ListingWithImages {
   };
 }
 
+/** Homepage cards only: drop long text fields never shown on the card UI. */
+function slimHomepageListing(listing: ListingWithImages): ListingWithImages {
+  const base = slimCatalogListing(listing);
+  return {
+    ...base,
+    description: "",
+    description_en: null,
+  };
+}
+
 async function applyFilters(
   listings: ListingWithImages[],
   filters: ListingFilters
@@ -326,7 +336,9 @@ export async function getSearchCatalogListings(
 async function loadHomepageRecentListings(): Promise<ListingWithImages[]> {
   if (!isSupabaseConfigured()) {
     return shouldUseSeedListings()
-      ? filterSeedListings({ sort: "newest" }, HOMEPAGE_FETCH_LIMIT)
+      ? filterSeedListings({ sort: "newest" }, HOMEPAGE_FETCH_LIMIT).map(
+          slimHomepageListing
+        )
       : [];
   }
 
@@ -338,11 +350,13 @@ async function loadHomepageRecentListings(): Promise<ListingWithImages[]> {
 
   if (dbListings === null || dbListings.length === 0) {
     return shouldUseSeedListings()
-      ? filterSeedListings({ sort: "newest" }, HOMEPAGE_FETCH_LIMIT)
+      ? filterSeedListings({ sort: "newest" }, HOMEPAGE_FETCH_LIMIT).map(
+          slimHomepageListing
+        )
       : [];
   }
 
-  return sortListings(dbListings, "newest");
+  return sortListings(dbListings, "newest").map(slimHomepageListing);
 }
 
 const getHomepageRecentListingsCached = unstable_cache(
@@ -502,18 +516,28 @@ export async function getPendingListings() {
   const supabase = await createClient();
   if (!supabase) return [];
 
-  const { data, error } = await supabase
+  let result = await supabase
     .from("listings")
     .select(LISTING_SELECT)
     .eq("status", "pending")
     .order("created_at", { ascending: true });
 
-  if (error) {
-    console.error("[listings] getPendingListings:", error.message);
+  if (isMissingProfileContactColumn(result.error)) {
+    result = await supabase
+      .from("listings")
+      .select(LISTING_SELECT_MINIMAL)
+      .eq("status", "pending")
+      .order("created_at", { ascending: true });
+  }
+
+  if (result.error) {
+    console.error("[listings] getPendingListings:", result.error.message);
     return [];
   }
 
-  return data ?? [];
+  return (result.data ?? []).map((item) =>
+    sortImages(item as unknown as ListingWithImages)
+  );
 }
 
 export async function geocodeAddress(

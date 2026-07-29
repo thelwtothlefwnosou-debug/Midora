@@ -13,10 +13,10 @@ import {
   isPastMonthInAthens,
 } from "@/lib/dates-athens";
 import {
-  InterestDateRangePicker,
   type DateRangeFocusField,
   type DateRangeValue,
 } from "@/components/availability/InterestDateRangePicker";
+import { InterestDateRangePickerLazy as InterestDateRangePicker } from "@/components/availability/InterestDateRangePickerLazy";
 import { formatDateKeyDisplay } from "@/lib/availability-calendar";
 import { SearchInteractiveTile, HeroSearchField } from "@/components/search/SearchInteractiveTile";
 import { MonthInput } from "@/components/ui/MonthInput";

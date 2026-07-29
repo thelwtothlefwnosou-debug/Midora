@@ -7,6 +7,7 @@ import { resolveProfileAvatarUrl } from "@/lib/profile-avatar";
 import { getSupabaseUrl } from "@/lib/supabase/config";
 import { DashboardLayoutProvider } from "@/components/dashboard/DashboardLayoutProvider";
 import { DevBuildInfoStrip } from "@/components/dev/DevBuildInfoStrip";
+import { OwnerIntlProvider } from "@/components/i18n/OwnerIntlProvider";
 
 export default async function DashboardLayout({
   children,
@@ -37,15 +38,17 @@ export default async function DashboardLayout({
   }
 
   return (
-    <DashboardLayoutProvider
-      profile={profile}
-      email={email}
-      avatarUrl={avatarUrl}
-      notifications={notifications}
-      newLeadsCount={newLeads}
-    >
-      {children}
-      <DevBuildInfoStrip />
-    </DashboardLayoutProvider>
+    <OwnerIntlProvider>
+      <DashboardLayoutProvider
+        profile={profile}
+        email={email}
+        avatarUrl={avatarUrl}
+        notifications={notifications}
+        newLeadsCount={newLeads}
+      >
+        {children}
+        <DevBuildInfoStrip />
+      </DashboardLayoutProvider>
+    </OwnerIntlProvider>
   );
 }

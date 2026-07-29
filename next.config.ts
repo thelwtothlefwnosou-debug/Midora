@@ -30,6 +30,9 @@ const nextConfig: NextConfig = {
   poweredByHeader: false,
   compress: true,
   allowedDevOrigins: ["127.0.0.1", "localhost"],
+  experimental: {
+    optimizePackageImports: ["lucide-react", "framer-motion"],
+  },
   images: {
     qualities: [75, 85],
     formats: ["image/avif", "image/webp"],

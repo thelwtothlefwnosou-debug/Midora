@@ -1,0 +1,8 @@
+tmp-*/
+.tmp-*/
+test-results/
+playwright-report/
+coverage/
+*.log
+eslint-two-files.json
+CURRENT_GIT_COMMIT.txt

@@ -251,7 +251,7 @@ export function ListingsSearchView({
       setViewportDirty(false);
       setMapSearchPending(false);
       syncBoundsToUrl(bounds);
-      window.scrollTo({ top: 0, behavior: "smooth" });
+      window.scrollTo({ top: 0, left: 0, behavior: "auto" });
     },
     [syncBoundsToUrl]
   );
@@ -280,8 +280,13 @@ export function ListingsSearchView({
       return;
     }
     setHoveredId(null);
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    window.scrollTo({ top: 0, left: 0, behavior: "auto" });
   }, [clientPage]);
+
+  // New search / navigation into listings: always land at the top (not restored mid-page).
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+  }, [searchKey]);
 
   const favoriteSet = useMemo(() => new Set(favoriteIds), [favoriteIds]);
 

@@ -59,10 +59,17 @@ export function Navbar({ variant = "default" }: NavbarProps) {
     };
   }, []);
 
+  const navPath = (href: string) => href.split("?")[0] || href;
+
+  const isNavActive = (href: string) => {
+    if (href.startsWith("#")) return false;
+    if (href === "/") return pathname === "/";
+    const path = navPath(href);
+    return pathname === path || pathname.startsWith(`${path}/`);
+  };
+
   const navLinkClass = (href: string) => {
-    const isHash = href.startsWith("#");
-    const active =
-      !isHash && (pathname === href || (href !== "/" && pathname.startsWith(`${href}/`)));
+    const active = isNavActive(href);
     return cn(
       "site-header-nav-link",
       overHero && "site-header-nav-link--on-hero",
@@ -97,16 +104,9 @@ export function Navbar({ variant = "default" }: NavbarProps) {
             <Link
               key={link.href}
               href={link.href}
+              scroll
               className={navLinkClass(link.href)}
-              aria-current={
-                link.href === "/"
-                  ? pathname === "/"
-                    ? "page"
-                    : undefined
-                  : pathname === link.href || pathname.startsWith(`${link.href}/`)
-                    ? "page"
-                    : undefined
-              }
+              aria-current={isNavActive(link.href) ? "page" : undefined}
             >
               {link.label}
             </Link>
@@ -146,6 +146,7 @@ export function Navbar({ variant = "default" }: NavbarProps) {
               <Link
                 key={link.href}
                 href={link.href}
+                scroll
                 onClick={() => setOpen(false)}
                 className="rounded-lg px-4 py-3 text-charcoal/80 hover:bg-charcoal/5"
               >

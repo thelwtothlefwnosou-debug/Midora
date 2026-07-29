@@ -4,13 +4,13 @@ import { Suspense } from "react";
 import { NextIntlClientProvider } from "next-intl";
 import { getLocale, getMessages, getTranslations } from "next-intl/server";
 import { HelpAssistantProvider } from "@/components/assistant/HelpAssistantContext";
-import { MidoraHelpWidget } from "@/components/ai/MidoraHelpWidget";
+import { AiAssistantLazy } from "@/components/ai/AiAssistantLazy";
 import { HtmlLangSync } from "@/components/layout/HtmlLangSync";
 import { ToastHost } from "@/components/ui/ToastHost";
 import { PendingFavoriteSync } from "@/components/favorites/PendingFavoriteSync";
 import { WebsiteJsonLd } from "@/components/seo/WebsiteJsonLd";
+import { pickClientMessages } from "@/lib/client-messages";
 import { getSiteUrl } from "@/lib/site-url";
-import "leaflet/dist/leaflet.css";
 import "./globals.css";
 
 const siteUrl = getSiteUrl();
@@ -19,12 +19,14 @@ const playfair = Playfair_Display({
   variable: "--font-playfair",
   subsets: ["latin", "latin-ext"],
   weight: ["400", "500", "600", "700"],
+  display: "swap",
 });
 
 const inter = Inter({
   variable: "--font-inter",
   subsets: ["latin", "latin-ext"],
-  weight: ["300", "400", "500", "600", "700"],
+  weight: ["400", "500", "600", "700"],
+  display: "swap",
 });
 
 const cormorantBrand = Cormorant_Garamond({
@@ -76,7 +78,8 @@ export default async function RootLayout({
   children: React.ReactNode;
 }>) {
   const locale = await getLocale();
-  const messages = await getMessages();
+  // Public-default bundle: homepage/search stay light. Dashboard/admin nest a fuller provider.
+  const messages = pickClientMessages(await getMessages(), "public");
 
   return (
     <html lang={locale} className={`${playfair.variable} ${inter.variable} ${cormorantBrand.variable} h-full`}>
@@ -89,7 +92,7 @@ export default async function RootLayout({
             <ToastHost />
             <PendingFavoriteSync />
             <Suspense fallback={null}>
-              <MidoraHelpWidget />
+              <AiAssistantLazy />
             </Suspense>
           </HelpAssistantProvider>
         </NextIntlClientProvider>

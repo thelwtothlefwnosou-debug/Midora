@@ -6,6 +6,7 @@
 import { getPgConnectionString, loadEnv, readSql, runSqlViaPg } from "./db-env";
 
 const MIGRATION_FILES = [
+  "supabase/migrations/20250615180000_listing_contact_methods.sql",
   "supabase/migrations/20250618140000_listing_unavailable_periods.sql",
   "supabase/migrations/20250621120000_listing_wizard_fields.sql",
   "supabase/migrations/20250623120000_listing_rental_mode_fields.sql",

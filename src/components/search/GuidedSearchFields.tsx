@@ -4,10 +4,10 @@ import { useId, useRef } from "react";
 import { Calendar, Clock, Users } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import {
-  InterestDateRangePicker,
   type DateRangeFocusField,
   type DateRangeValue,
 } from "@/components/availability/InterestDateRangePicker";
+import { InterestDateRangePickerLazy as InterestDateRangePicker } from "@/components/availability/InterestDateRangePickerLazy";
 import {
   EMPTY_GUEST_COUNTS,
   GuestPicker,
