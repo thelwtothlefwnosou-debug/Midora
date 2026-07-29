@@ -129,6 +129,7 @@ export function SearchFieldPopover({
   const useSheet = mobileSheet && isMobile;
   const [position, setPosition] = useState<PopoverRect | null>(null);
   const panelRef = useRef<HTMLDivElement>(null);
+  const openedAtRef = useRef(0);
 
   useLayoutEffect(() => {
     if (!open || useSheet) {
@@ -155,6 +156,10 @@ export function SearchFieldPopover({
   }, [anchorRef, open, placement, preferredWidth, useSheet]);
 
   useEffect(() => {
+    if (open) openedAtRef.current = Date.now();
+  }, [open]);
+
+  useEffect(() => {
     if (!open) return;
     function onKeyDown(e: KeyboardEvent) {
       if (e.key === "Escape") onOpenChange(false);
@@ -166,7 +171,12 @@ export function SearchFieldPopover({
   useEffect(() => {
     if (!open || useSheet) return;
 
+    // Ignore outside presses from the same gesture that opened the popover.
+    // Without this, open → mount → outside-click can flash closed (esp. with lazy load).
+    const OPEN_GRACE_MS = 400;
+
     function onPointerDown(e: MouseEvent) {
+      if (Date.now() - openedAtRef.current < OPEN_GRACE_MS) return;
       const target = e.target as Node;
       if (panelRef.current?.contains(target)) return;
       if (anchorRef?.current?.contains(target)) return;
@@ -186,6 +196,11 @@ export function SearchFieldPopover({
     };
   }, [anchorRef, ignoreRefs, onOpenChange, open, useSheet]);
 
+  function requestClose() {
+    if (Date.now() - openedAtRef.current < 400) return;
+    onOpenChange(false);
+  }
+
   if (!open || typeof document === "undefined") return null;
 
   if (useSheet) {
@@ -200,7 +215,7 @@ export function SearchFieldPopover({
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              onClick={() => onOpenChange(false)}
+              onClick={requestClose}
             />
             <motion.div
               ref={panelRef}
@@ -249,7 +264,7 @@ export function SearchFieldPopover({
               exit={{ opacity: 0 }}
               transition={{ duration: 0.15 }}
               aria-hidden
-              onClick={() => onOpenChange(false)}
+              onClick={requestClose}
             />
           ) : null}
           <motion.div

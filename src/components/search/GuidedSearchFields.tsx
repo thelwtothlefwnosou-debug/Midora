@@ -147,6 +147,14 @@ function ShortTermGuidedFields({
     onActiveFieldChange(focus === "end" ? "checkOut" : "dates");
     onGuestPickerOpenChange(false);
     onDatePickerOpenChange(true);
+    // Avoid location input stealing focus and immediately closing the calendar.
+    if (
+      typeof document !== "undefined" &&
+      document.activeElement instanceof HTMLElement &&
+      document.activeElement.closest("input, textarea")
+    ) {
+      document.activeElement.blur();
+    }
   }
 
   function applyDateRange(next: DateRangeValue) {
@@ -259,6 +267,7 @@ function ShortTermGuidedFields({
           <span className="listings-search-segment__label">{t("checkIn")}</span>
           <button
             type="button"
+            onMouseDown={(e) => e.preventDefault()}
             onClick={() => openDates("start")}
             className={cn(
               searchFieldButtonClass,
@@ -271,6 +280,7 @@ function ShortTermGuidedFields({
       ) : (
         <button
           type="button"
+          onMouseDown={(e) => e.preventDefault()}
           onClick={() => openDates("start")}
           className="flex h-full w-full items-center gap-3 text-left"
         >
@@ -316,6 +326,7 @@ function ShortTermGuidedFields({
           <span className="listings-search-segment__label">{t("checkOut")}</span>
           <button
             type="button"
+            onMouseDown={(e) => e.preventDefault()}
             onClick={() => openDates("end")}
             className={cn(
               searchFieldButtonClass,
@@ -331,6 +342,7 @@ function ShortTermGuidedFields({
       ) : (
         <button
           type="button"
+          onMouseDown={(e) => e.preventDefault()}
           onClick={() => openDates("end")}
           className="flex h-full w-full items-center gap-3 text-left"
         >
@@ -375,6 +387,7 @@ function ShortTermGuidedFields({
           <span className="listings-search-segment__label">{t("who")}</span>
           <button
             type="button"
+            onMouseDown={(e) => e.preventDefault()}
             onClick={() => {
               onActiveFieldChange("guests");
               onDatePickerOpenChange(false);
@@ -391,6 +404,7 @@ function ShortTermGuidedFields({
       ) : (
         <button
           type="button"
+          onMouseDown={(e) => e.preventDefault()}
           onClick={() => {
             onActiveFieldChange("guests");
             onDatePickerOpenChange(false);
