@@ -28,6 +28,7 @@ import {
 import type { LatLng, MapBounds } from "@/lib/geo/polygon";
 import type { MapViewportChangeMeta } from "@/components/map/MidoraResultsMap";
 import { cn } from "@/lib/utils";
+import { useMaxWidth639 } from "@/components/mobile/useMaxWidth639";
 
 type Props = {
   catalogListings: ListingWithImages[];
@@ -103,6 +104,7 @@ export function ListingsSearchView({
   const router = useRouter();
   const searchParams = useSearchParams();
   const isLgUp = useIsLgUp();
+  const isPhone = useMaxWidth639();
   const listingRefs = useRef(new globalThis.Map<string, HTMLDivElement>());
   const baselineBoundsRef = useRef<MapBounds | undefined>(undefined);
   const pendingBoundsRef = useRef<MapBounds | null>(null);
@@ -536,8 +538,8 @@ export function ListingsSearchView({
   );
 
   const listingsColumnHeader = (
-    <div className="flex items-start justify-between gap-4 px-5 pb-4 pt-5">
-      <div className="min-w-0">
+    <div className="midora-msearch-results-header flex items-start justify-between gap-4 px-5 pb-4 pt-5">
+      <div className="midora-msearch-results-header__copy min-w-0">
         <h1 className="font-display text-lg font-semibold leading-snug text-charcoal">
           {pageTitle}
         </h1>
@@ -558,7 +560,7 @@ export function ListingsSearchView({
       </div>
       <ListingsSortSelect
         compact
-        className="mt-0.5 shrink-0 rounded-lg border-charcoal/15 px-2.5 py-1.5"
+        className="midora-msearch-results-header__sort mt-0.5 shrink-0 rounded-lg border-charcoal/15 px-2.5 py-1.5"
       />
     </div>
   );
@@ -611,7 +613,23 @@ export function ListingsSearchView({
             </button>
           )}
         </div>
-      ) : (
+      ) : isPhone === true ? (
+        <div className="midora-msearch-results">
+          <div className="midora-msearch-map-panel" aria-label={t("map")}>
+            <div className="midora-msearch-map-panel__inner">{mapPanel}</div>
+          </div>
+          <div className="midora-msearch-results__count px-5 pb-2 pt-4">
+            <p className="text-sm font-medium text-charcoal">
+              {pagination.totalCount === 0
+                ? t("noneMatch")
+                : pagination.totalCount === 1
+                  ? t("oneMatch")
+                  : t("nMatch", { count: pagination.totalCount })}
+            </p>
+          </div>
+          {listingsColumn}
+        </div>
+      ) : isPhone === false ? (
         <div>
           {mobileView === "list" && (
             <>
@@ -656,6 +674,8 @@ export function ListingsSearchView({
             </div>
           )}
         </div>
+      ) : (
+        <div>{listingsColumn}</div>
       )}
     </div>
   );

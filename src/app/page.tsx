@@ -13,6 +13,7 @@ import { HostCTA } from "@/components/sections/HostCTA";
 import { FinalHomeCta } from "@/components/sections/FinalHomeCta";
 import { PreviewSkipLink } from "@/components/preview/PreviewSkipLink";
 import { isPreviewV80 } from "@/lib/preview-v80";
+import { MobileBottomNav } from "@/components/mobile/MobileBottomNav";
 
 const HomeFAQ = dynamic(
   () => import("@/components/sections/HomeFAQ").then((m) => m.HomeFAQ)
@@ -22,7 +23,7 @@ export const revalidate = 60;
 
 export default function Home() {
   return (
-    <>
+    <div className="midora-msearch-shell midora-msearch-shell--home">
       {isPreviewV80 && <PreviewSkipLink />}
       <Navbar variant="home" />
       <main id="main-content" className="overflow-x-hidden">
@@ -39,6 +40,7 @@ export default function Home() {
         <FinalHomeCta />
       </main>
       <Footer />
-    </>
+      <MobileBottomNav />
+    </div>
   );
 }

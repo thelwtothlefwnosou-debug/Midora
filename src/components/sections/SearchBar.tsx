@@ -23,6 +23,7 @@ import {
 } from "@/lib/guided-search";
 import { saveLastSearchState } from "@/lib/midora-search-state";
 import { cn } from "@/lib/utils";
+import { MobileSearchCollapsedBar } from "@/components/mobile/MobileSearchCollapsedBar";
 
 const HERO_CITY_SUGGESTION_HREFS = {
   athens: "/listings?city=%CE%91%CE%B8%CE%AE%CE%BD%CE%B1",
@@ -38,6 +39,7 @@ type SearchBarProps = {
 export function SearchBar({ variant = "default" }: SearchBarProps) {
   const t = useTranslations("Home");
   const tListings = useTranslations("Listings");
+  const tCommon = useTranslations("Common");
   const locationPlaceholder = tListings("addDestination");
   const isFullscreen = variant === "fullscreen";
   const heroCitySuggestions = [
@@ -59,6 +61,8 @@ export function SearchBar({ variant = "default" }: SearchBarProps) {
   const [datePickerOpen, setDatePickerOpen] = useState(false);
   const [guestPickerOpen, setGuestPickerOpen] = useState(false);
   const [partialDateHint, setPartialDateHint] = useState<string | null>(null);
+  /** Phone-only (≤639): collapsed entry → existing search form. Ignored from 640px up via CSS. */
+  const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
 
   function patchGuidedState(patch: Partial<GuidedSearchState>) {
     setGuidedState((prev) => ({ ...prev, ...patch }));
@@ -158,13 +162,20 @@ export function SearchBar({ variant = "default" }: SearchBarProps) {
 
   return (
     <div className={cn("space-y-3", isFullscreen ? "sm:space-y-3" : "sm:space-y-3.5")}>
+      {!mobileSearchOpen ? (
+        <div className="midora-msearch-only">
+          <MobileSearchCollapsedBar onOpen={() => setMobileSearchOpen(true)} />
+        </div>
+      ) : null}
+
       <div
         className={cn(
           "border border-border bg-white/97 backdrop-blur-md",
           isFullscreen
             ? "rounded-[1.75rem] p-3 shadow-[0_20px_50px_-18px_rgba(20,16,12,0.45)] sm:p-4"
             : "rounded-2xl p-2.5 shadow-[0_8px_32px_-12px_rgba(26,26,26,0.14)] sm:p-3.5 ring-1 ring-white/60",
-          (datePickerOpen || guestPickerOpen) && "search-shell--popover-open"
+          (datePickerOpen || guestPickerOpen) && "search-shell--popover-open",
+          !mobileSearchOpen && "midora-msearch-hide-phone"
         )}
       >
         <form
@@ -307,6 +318,15 @@ export function SearchBar({ variant = "default" }: SearchBarProps) {
             >
               {t("searchClear")}
             </button>
+            {mobileSearchOpen ? (
+              <button
+                type="button"
+                onClick={() => setMobileSearchOpen(false)}
+                className="midora-msearch-only shrink-0 rounded-xl border border-border px-4 py-2.5 text-sm font-medium text-muted"
+              >
+                {tCommon("close")}
+              </button>
+            ) : null}
           </div>
         </form>
       </div>

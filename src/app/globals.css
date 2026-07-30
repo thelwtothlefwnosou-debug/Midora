@@ -2619,3 +2619,277 @@ body {
   margin: 0;
 }
 
+/* ============================================================
+   Midora mobile search experience — PHONE ONLY (max-width: 639px)
+   Prefix: midora-msearch-*
+   From 640px up these rules must not change layout.
+   ============================================================ */
+
+.midora-msearch-only {
+  display: none;
+}
+
+.midora-msearch-bottom-nav {
+  display: none;
+}
+
+@media (max-width: 639px) {
+  .midora-msearch-only {
+    display: block;
+  }
+
+  .midora-msearch-hide-phone {
+    display: none !important;
+  }
+
+  .midora-msearch-shell--home {
+    padding-bottom: calc(4.75rem + env(safe-area-inset-bottom, 0px));
+  }
+
+  .midora-msearch-shell--listings .listings-page {
+    --listings-header-offset: 9.75rem;
+    padding-bottom: calc(4.75rem + env(safe-area-inset-bottom, 0px));
+  }
+
+  .midora-msearch-shell--listings footer {
+    padding-bottom: calc(5.75rem + env(safe-area-inset-bottom, 0px));
+  }
+
+  .midora-msearch-collapsed {
+    display: flex;
+    width: 100%;
+    align-items: center;
+    gap: 0.75rem;
+    min-height: 3.25rem;
+    padding: 0.85rem 1.1rem;
+    border-radius: 9999px;
+    border: 1px solid color-mix(in srgb, var(--charcoal) 10%, white);
+    background: color-mix(in srgb, white 96%, transparent);
+    box-shadow: 0 14px 36px -18px rgba(20, 16, 12, 0.45);
+    text-align: left;
+    cursor: pointer;
+  }
+
+  .midora-msearch-collapsed__icon {
+    width: 1.15rem;
+    height: 1.15rem;
+    flex-shrink: 0;
+    color: var(--gold);
+  }
+
+  .midora-msearch-collapsed__text {
+    font-size: 0.9375rem;
+    font-weight: 600;
+    color: var(--charcoal);
+    letter-spacing: -0.01em;
+  }
+
+  .midora-msearch-summary {
+    display: flex;
+    width: 100%;
+    align-items: center;
+    gap: 0.75rem;
+    min-height: 3rem;
+    padding: 0.65rem 0.85rem;
+    border-radius: 1.15rem;
+    border: 1px solid color-mix(in srgb, var(--charcoal) 10%, white);
+    background: #fff;
+    box-shadow: 0 8px 24px -16px rgba(26, 26, 26, 0.28);
+    text-align: left;
+    cursor: pointer;
+  }
+
+  .midora-msearch-summary__icon-wrap {
+    display: inline-flex;
+    height: 2.15rem;
+    width: 2.15rem;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    border-radius: 9999px;
+    background: color-mix(in srgb, var(--gold) 14%, white);
+  }
+
+  .midora-msearch-summary__icon {
+    width: 1rem;
+    height: 1rem;
+    color: var(--gold-dark, var(--gold));
+  }
+
+  .midora-msearch-summary__copy {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    gap: 0.1rem;
+  }
+
+  .midora-msearch-summary__title {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 0.875rem;
+    font-weight: 650;
+    color: var(--charcoal);
+  }
+
+  .midora-msearch-summary__subtitle {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 0.75rem;
+    color: color-mix(in srgb, var(--charcoal) 55%, white);
+  }
+
+  .midora-msearch-chips {
+    display: flex;
+    gap: 0.5rem;
+    overflow-x: auto;
+    padding: 0.65rem 0 0.15rem;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+
+  .midora-msearch-chips::-webkit-scrollbar {
+    display: none;
+  }
+
+  .midora-msearch-chip {
+    display: inline-flex;
+    flex-shrink: 0;
+    align-items: center;
+    gap: 0.35rem;
+    min-height: 2.15rem;
+    padding: 0.35rem 0.85rem;
+    border-radius: 9999px;
+    border: 1px solid color-mix(in srgb, var(--charcoal) 12%, white);
+    background: #fff;
+    font-size: 0.8125rem;
+    font-weight: 550;
+    color: var(--charcoal);
+    white-space: nowrap;
+    cursor: pointer;
+  }
+
+  .midora-msearch-chip--active {
+    border-color: color-mix(in srgb, var(--gold) 45%, white);
+    background: color-mix(in srgb, var(--gold) 12%, white);
+  }
+
+  .midora-msearch-chip__badge {
+    display: inline-flex;
+    min-width: 1.15rem;
+    height: 1.15rem;
+    align-items: center;
+    justify-content: center;
+    border-radius: 9999px;
+    background: var(--charcoal);
+    color: #fff;
+    font-size: 0.65rem;
+    font-weight: 700;
+    padding: 0 0.3rem;
+  }
+
+  .midora-msearch-map-panel {
+    height: 33vh;
+    min-height: 11.5rem;
+    max-height: 18rem;
+    margin: 0 0.85rem;
+    overflow: hidden;
+    border-radius: 1.15rem;
+    border: 1px solid color-mix(in srgb, var(--charcoal) 10%, white);
+    background: #e8e8e8;
+    position: relative;
+  }
+
+  .midora-msearch-map-panel__inner {
+    position: absolute;
+    inset: 0;
+  }
+
+  .midora-msearch-bottom-nav {
+    display: block;
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 140;
+    padding: 0.35rem 0.4rem calc(0.35rem + env(safe-area-inset-bottom, 0px));
+    border-top: 1px solid color-mix(in srgb, var(--charcoal) 10%, white);
+    background: color-mix(in srgb, white 94%, transparent);
+    backdrop-filter: blur(12px);
+  }
+
+  .midora-msearch-bottom-nav__list {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 0.15rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .midora-msearch-bottom-nav__link {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.15rem;
+    min-height: 3.15rem;
+    border-radius: 0.85rem;
+    color: color-mix(in srgb, var(--charcoal) 55%, white);
+    text-decoration: none;
+    font-size: 0.625rem;
+    font-weight: 550;
+    letter-spacing: 0.01em;
+  }
+
+  .midora-msearch-bottom-nav__link--active {
+    color: var(--charcoal);
+    background: color-mix(in srgb, var(--gold) 12%, white);
+  }
+
+  .midora-msearch-bottom-nav__icon {
+    width: 1.2rem;
+    height: 1.2rem;
+  }
+
+  .midora-msearch-bottom-nav__label {
+    max-width: 100%;
+    overflow: visible;
+    text-overflow: clip;
+    white-space: nowrap;
+    padding: 0 0.1rem;
+    font-size: 0.625rem;
+    line-height: 1.15;
+  }
+
+  .midora-msearch-results-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.75rem;
+  }
+
+  .midora-msearch-results-header__copy {
+    width: 100%;
+  }
+
+  .midora-msearch-results-header__sort {
+    width: 100%;
+    max-width: 100%;
+    align-self: stretch;
+    margin-top: 0;
+  }
+}
+
+@media (min-width: 640px) {
+  .midora-msearch-only,
+  .midora-msearch-bottom-nav {
+    display: none !important;
+  }
+
+  .midora-msearch-hide-phone {
+    display: revert !important;
+  }
+}
+
+

@@ -20,6 +20,7 @@ import { filterListingsByMapBounds } from "@/lib/listing-map-bounds";
 import { computePriceHistogram } from "@/lib/listing-price-histogram";
 import { parsePublicRentalType } from "@/lib/rental-types";
 import { getUnavailablePeriodsByListingIds } from "@/lib/unavailable-periods-db";
+import { MobileBottomNav } from "@/components/mobile/MobileBottomNav";
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations("Meta");
@@ -314,7 +315,7 @@ export default async function ListingsPage({
   const filterDefaults = buildFilterDefaults(params);
 
   return (
-    <>
+    <div className="midora-msearch-shell midora-msearch-shell--listings">
       <Suspense fallback={null}>
         <ListingsScrollToTop />
       </Suspense>
@@ -327,6 +328,7 @@ export default async function ListingsPage({
         </Suspense>
       </main>
       <SearchPageFooter />
-    </>
+      <MobileBottomNav />
+    </div>
   );
 }
