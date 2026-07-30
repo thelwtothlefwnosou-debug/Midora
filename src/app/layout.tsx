@@ -8,6 +8,7 @@ import { AiAssistantLazy } from "@/components/ai/AiAssistantLazy";
 import { HtmlLangSync } from "@/components/layout/HtmlLangSync";
 import { ToastHost } from "@/components/ui/ToastHost";
 import { PendingFavoriteSync } from "@/components/favorites/PendingFavoriteSync";
+import { MobileBottomNav } from "@/components/mobile/MobileBottomNav";
 import { WebsiteJsonLd } from "@/components/seo/WebsiteJsonLd";
 import { pickClientMessages } from "@/lib/client-messages";
 import { getSiteUrl } from "@/lib/site-url";
@@ -91,6 +92,7 @@ export default async function RootLayout({
             {children}
             <ToastHost />
             <PendingFavoriteSync />
+            <MobileBottomNav />
             <Suspense fallback={null}>
               <AiAssistantLazy />
             </Suspense>

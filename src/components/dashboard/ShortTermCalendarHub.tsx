@@ -387,7 +387,7 @@ export function ShortTermCalendarHub({ listing, periods, priceRules }: Props) {
       </div>
 
       {selectionStart && (
-        <div className="fixed inset-x-0 bottom-0 z-[120] max-h-[75dvh] overflow-y-auto rounded-t-2xl border-t border-border bg-white p-4 pb-[max(1rem,env(safe-area-inset-bottom))] shadow-[0_-12px_40px_-12px_rgba(0,0,0,0.18)] xl:hidden">
+        <div className="fixed inset-x-0 bottom-0 z-[150] max-h-[75dvh] overflow-y-auto rounded-t-2xl border-t border-border bg-white p-4 pb-[max(1rem,env(safe-area-inset-bottom))] shadow-[0_-12px_40px_-12px_rgba(0,0,0,0.18)] xl:hidden">
           <div className="mb-3 flex items-center justify-between gap-3">
             <div>
               <p className="text-xs font-medium tracking-wide text-muted uppercase">

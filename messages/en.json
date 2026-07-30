@@ -914,7 +914,10 @@
       "menu": "Menu",
       "notLoadedTitle": "Dashboard didn't load",
       "notLoadedBody": "Refresh the page. If it keeps happening, sign out and sign back in.",
-      "refresh": "Refresh"
+      "refresh": "Refresh",
+      "publicNav": "Public navigation",
+      "navHome": "Home",
+      "navSearch": "Search properties"
     }
   },
   "Listings": {

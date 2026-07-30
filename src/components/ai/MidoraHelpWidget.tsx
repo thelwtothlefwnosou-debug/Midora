@@ -131,14 +131,8 @@ export function MidoraHelpWidget() {
     : suggestions.slice(0, VISIBLE_CHIP_COUNT);
   const hasMoreChips = suggestions.length > VISIBLE_CHIP_COUNT;
 
-  const isSearchPage = pathname.startsWith("/listings") && !listingId;
-  // Phone (≤639): clear fixed bottom nav + iOS safe-area. ≥640 unchanged (sm:bottom-6 still applies).
-  const fabBottomClass =
-    pathname === "/"
-      ? "bottom-24 max-[639px]:bottom-[calc(4.85rem+env(safe-area-inset-bottom,0px))]"
-      : isSearchPage
-        ? "bottom-20 max-[639px]:bottom-[calc(4.85rem+env(safe-area-inset-bottom,0px))]"
-        : "bottom-5";
+  // Phone FAB clearance vs bottom nav is handled in globals.css via body:has(.midora-msearch-bottom-nav).
+  const fabBottomClass = "bottom-5";
 
   useEffect(() => {
     if (!open || minimized) return;

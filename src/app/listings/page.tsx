@@ -20,8 +20,6 @@ import { filterListingsByMapBounds } from "@/lib/listing-map-bounds";
 import { computePriceHistogram } from "@/lib/listing-price-histogram";
 import { parsePublicRentalType } from "@/lib/rental-types";
 import { getUnavailablePeriodsByListingIds } from "@/lib/unavailable-periods-db";
-import { MobileBottomNav } from "@/components/mobile/MobileBottomNav";
-
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations("Meta");
   return {
@@ -328,7 +326,6 @@ export default async function ListingsPage({
         </Suspense>
       </main>
       <SearchPageFooter />
-      <MobileBottomNav />
     </div>
   );
 }

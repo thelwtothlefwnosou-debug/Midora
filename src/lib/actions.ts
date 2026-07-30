@@ -8,6 +8,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { geocodeAddress } from "@/lib/listings";
 import { safePostAuthPath } from "@/lib/auth-redirect";
+import { buildAuthCallbackUrl, getAuthCallbackOrigin } from "@/lib/auth-callback-origin";
 import { bootstrapAuthProfile } from "@/lib/profile-bootstrap";
 import { resolveAuthProfileName } from "@/lib/auth-profile-name";
 import { normalizePhoneToE164, isValidGreekMobileE164 } from "@/lib/phone-e164";
@@ -94,7 +95,8 @@ export async function signUp(formData: FormData) {
     password,
     options: {
       data: { full_name: fullName, phone },
-      emailRedirectTo: `${process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"}/auth/callback?next=${encodeURIComponent(redirectTo)}`,
+      // Use request origin so Preview signup confirmation returns to Preview, not Production/localhost.
+      emailRedirectTo: await buildAuthCallbackUrl(redirectTo),
     },
   });
 
@@ -273,9 +275,9 @@ export async function requestPasswordReset(formData: FormData) {
   const email = (formData.get("email") as string)?.trim();
   if (!email) return { error: "emailRequired" };
 
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
   const { error } = await supabase.auth.resetPasswordForEmail(email, {
-    redirectTo: `${appUrl}/auth/callback?next=/auth/update-password&type=recovery`,
+    // Request origin: Preview recovery stays on Preview; Production stays on Production.
+    redirectTo: `${await getAuthCallbackOrigin()}/auth/callback?next=${encodeURIComponent("/auth/update-password")}&type=recovery`,
   });
 
   if (error) return { error: translateAuthError(error.message) };

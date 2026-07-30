@@ -2642,17 +2642,25 @@ body {
     display: none !important;
   }
 
-  .midora-msearch-shell--home {
-    padding-bottom: calc(4.75rem + env(safe-area-inset-bottom, 0px));
-  }
-
   .midora-msearch-shell--listings .listings-page {
     --listings-header-offset: 9.75rem;
+  }
+
+  /* Global phone clearance when bottom nav is mounted (one nav app-wide). */
+  body:has(.midora-msearch-bottom-nav) {
     padding-bottom: calc(4.75rem + env(safe-area-inset-bottom, 0px));
   }
 
-  .midora-msearch-shell--listings footer {
-    padding-bottom: calc(5.75rem + env(safe-area-inset-bottom, 0px));
+  body:has(.midora-msearch-bottom-nav) .midora-above-mnav {
+    bottom: calc(4.75rem + env(safe-area-inset-bottom, 0px));
+  }
+
+  body:has(.midora-msearch-bottom-nav) .midora-above-mnav .midora-above-mnav__safe {
+    padding-bottom: 0;
+  }
+
+  body:has(.midora-msearch-bottom-nav) .assistant-fab {
+    bottom: calc(4.85rem + env(safe-area-inset-bottom, 0px)) !important;
   }
 
   .midora-msearch-collapsed {

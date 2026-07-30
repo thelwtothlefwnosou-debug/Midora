@@ -280,8 +280,8 @@ export function ShortTermInquiryCard({
   );
 
   const mobileBar = (
-    <div className="mobile-inquiry-card fixed inset-x-0 bottom-0 z-40 border-t border-charcoal/10 bg-white/95 px-4 py-3 backdrop-blur-md">
-      <div className="mx-auto flex max-w-6xl items-center gap-3 pb-[env(safe-area-inset-bottom)]">
+      <div className="mobile-inquiry-card midora-above-mnav fixed inset-x-0 bottom-0 z-40 border-t border-charcoal/10 bg-white/95 px-4 py-3 backdrop-blur-md">
+      <div className="midora-above-mnav__safe mx-auto flex max-w-6xl items-center gap-3 pb-[env(safe-area-inset-bottom)]">
         <button
           type="button"
           onClick={() => openDatePicker("start")}

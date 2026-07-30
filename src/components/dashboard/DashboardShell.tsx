@@ -1,8 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { Menu, X, LogOut } from "lucide-react";
+import { Menu, X, LogOut, Home, Search, LayoutDashboard } from "lucide-react";
 import { AccountNav, AccountNavCollapseButton } from "@/components/account/AccountNav";
 import { dashboardBreadcrumbKey, type AccountNavId } from "@/components/account/account-nav";
 import { DashboardBreadcrumbTrail } from "@/components/dashboard/DashboardBreadcrumbTrail";
@@ -28,7 +30,31 @@ export function DashboardShell({
   const tAccount = useTranslations("AccountNav");
   const tShell = useTranslations("Dashboard.shell");
   const tDash = useTranslations("Dashboard");
+  const pathname = usePathname();
   const ctx = useDashboardLayout();
+  const [mobileOpen, setMobileOpen] = useState(false);
+
+  function closeMobile() {
+    setMobileOpen(false);
+  }
+
+  useEffect(() => {
+    if (!mobileOpen) return;
+
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") setMobileOpen(false);
+    }
+
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    document.addEventListener("keydown", onKey);
+
+    return () => {
+      document.body.style.overflow = prevOverflow;
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [mobileOpen]);
+
   if (!ctx) {
     // Never blank the whole dashboard — show a recoverable shell instead of throwing.
     return (
@@ -52,7 +78,11 @@ export function DashboardShell({
 
   const { profile, email, avatarUrl, notifications, sidebarCollapsed, setSidebarCollapsed } =
     ctx;
-  const [mobileOpen, setMobileOpen] = useState(false);
+
+  const publicLinkClass =
+    "flex items-center gap-2.5 rounded-xl px-2.5 py-2 text-[13px] font-medium text-charcoal/70 hover:bg-sand hover:text-charcoal";
+  const overviewActive =
+    active === "overview" || pathname === "/dashboard" || pathname === "/dashboard/";
 
   return (
     <div className="min-h-screen bg-cream">
@@ -67,7 +97,8 @@ export function DashboardShell({
       <div className="mx-auto flex w-full max-w-[min(100%,1480px)]">
         <aside
           className={cn(
-            "fixed inset-y-0 left-0 z-30 flex w-[min(100vw-3rem,17rem)] flex-col border-r border-border/80 bg-white/95 p-3 pt-16 backdrop-blur-sm transition-transform lg:static lg:translate-x-0 lg:pt-3",
+            // z-[60] above Help FAB (z-40); help panel (z-120) still wins when open
+            "fixed inset-y-0 left-0 z-[60] flex w-[min(100vw-3rem,17rem)] flex-col border-r border-border/80 bg-white/95 p-3 pt-[max(4rem,calc(3.5rem+env(safe-area-inset-top,0px)))] pb-[max(0.75rem,env(safe-area-inset-bottom,0px))] pl-[max(0.75rem,env(safe-area-inset-left,0px))] backdrop-blur-sm transition-transform lg:static lg:z-30 lg:translate-x-0 lg:pt-3 lg:pb-3 lg:pl-3",
             mobileOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0",
             sidebarCollapsed ? "lg:w-[4.5rem]" : "lg:w-52",
             variant === "workspace" && "lg:border-border/60"
@@ -76,7 +107,7 @@ export function DashboardShell({
           <div className="mb-4 lg:hidden">
             <button
               type="button"
-              onClick={() => setMobileOpen(false)}
+              onClick={closeMobile}
               className="flex h-9 w-9 items-center justify-center rounded-lg border border-border"
               aria-label={tShell("close")}
             >
@@ -93,10 +124,38 @@ export function DashboardShell({
           />
 
           <div className="mt-4 flex-1 overflow-y-auto">
+            {/* Public exits — mobile drawer only; desktop sidebar unchanged */}
+            <nav
+              className="mb-4 space-y-0.5 border-b border-border pb-4 lg:hidden"
+              aria-label={tShell("publicNav")}
+            >
+              <Link href="/" onClick={closeMobile} className={publicLinkClass}>
+                <Home className="h-3.5 w-3.5 shrink-0" />
+                <span>{tShell("navHome")}</span>
+              </Link>
+              <Link href="/listings" onClick={closeMobile} className={publicLinkClass}>
+                <Search className="h-3.5 w-3.5 shrink-0" />
+                <span>{tShell("navSearch")}</span>
+              </Link>
+              <Link
+                href="/dashboard"
+                onClick={closeMobile}
+                className={cn(
+                  publicLinkClass,
+                  overviewActive &&
+                    "bg-charcoal text-white shadow-soft hover:bg-charcoal hover:text-white"
+                )}
+              >
+                <LayoutDashboard className="h-3.5 w-3.5 shrink-0" />
+                <span>{tAccount("overview")}</span>
+              </Link>
+            </nav>
+
             <AccountNav
               active={active}
               isAdmin={profile.role === "admin"}
               collapsed={sidebarCollapsed}
+              onNavigate={closeMobile}
             />
           </div>
 
@@ -123,8 +182,8 @@ export function DashboardShell({
         {mobileOpen && (
           <button
             type="button"
-            className="fixed inset-0 z-20 bg-charcoal/30 lg:hidden"
-            onClick={() => setMobileOpen(false)}
+            className="fixed inset-0 z-[55] bg-charcoal/30 lg:hidden"
+            onClick={closeMobile}
             aria-label={tShell("closeMenu")}
           />
         )}
@@ -149,7 +208,7 @@ export function DashboardShell({
               <DashboardBreadcrumbTrail
                 className="mb-3"
                 items={[
-                  { label: "Midora", href: "/dashboard/listings" },
+                  { label: "Midora", href: "/" },
                   { label: tDash("myListings") },
                 ]}
               />

@@ -13,8 +13,6 @@ import { HostCTA } from "@/components/sections/HostCTA";
 import { FinalHomeCta } from "@/components/sections/FinalHomeCta";
 import { PreviewSkipLink } from "@/components/preview/PreviewSkipLink";
 import { isPreviewV80 } from "@/lib/preview-v80";
-import { MobileBottomNav } from "@/components/mobile/MobileBottomNav";
-
 const HomeFAQ = dynamic(
   () => import("@/components/sections/HomeFAQ").then((m) => m.HomeFAQ)
 );
@@ -40,7 +38,6 @@ export default function Home() {
         <FinalHomeCta />
       </main>
       <Footer />
-      <MobileBottomNav />
     </div>
   );
 }

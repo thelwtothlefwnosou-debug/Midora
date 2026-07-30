@@ -89,7 +89,7 @@ export function DashboardHeader({
     <header className="sticky top-0 z-40 border-b border-border bg-white/95 backdrop-blur-md">
       <div className="mx-auto flex h-14 max-w-[min(100%,1480px)] items-center justify-between gap-3 px-3 sm:px-5">
         <div className="flex min-w-0 items-center gap-3">
-          <MidoraLogo href="/dashboard/listings" variant="default" size="sm" className="shrink-0" />
+          <MidoraLogo href="/" variant="default" size="sm" className="shrink-0" />
           <span className="hidden text-muted sm:inline">/</span>
           {inListingWorkspace ? (
             <OwnerListingsNavLink
