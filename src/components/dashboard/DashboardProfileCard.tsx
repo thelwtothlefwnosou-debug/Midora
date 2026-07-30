@@ -22,6 +22,10 @@ function isProfileCompletionId(id: string): id is ProfileCompletionId {
   return (PROFILE_COMPLETION_IDS as readonly string[]).includes(id);
 }
 
+/** Mobile drawer: wrap up to 2 lines. Desktop sidebar: keep single-line truncate. */
+const profileNameClass =
+  "max-w-full font-semibold text-charcoal max-lg:line-clamp-2 max-lg:[overflow-wrap:anywhere] lg:truncate";
+
 export function DashboardProfileCard({
   profile,
   email,
@@ -49,6 +53,7 @@ export function DashboardProfileCard({
   const requiredDone = profileRequiredComplete(profile, email);
   const [expanded, setExpanded] = useState(false);
   const [dismissed, setDismissed] = useState(true);
+  const displayName = profile.full_name || tHeader("userFallback");
 
   function itemLabel(id: string): string {
     return isProfileCompletionId(id) ? tItems(id) : id;
@@ -65,11 +70,9 @@ export function DashboardProfileCard({
   if (compact && requiredDone && !collapsed) {
     return (
       <div className="flex items-center gap-2.5 rounded-xl border border-border/70 bg-white px-2.5 py-2 shadow-soft">
-        <ProfileAvatar profile={{ ...profile, email }} imageUrl={avatarUrl} size="sm" />
+        <ProfileAvatar profile={{ ...profile, email }} imageUrl={avatarUrl} size="sm" className="shrink-0" />
         <div className="min-w-0 flex-1">
-          <p className="truncate text-xs font-semibold text-charcoal">
-            {profile.full_name || tHeader("userFallback")}
-          </p>
+          <p className={cn(profileNameClass, "text-xs")}>{displayName}</p>
           {recommendedPending.length > 0 && (
             <Link href="/dashboard/profile" className="text-[10px] font-medium text-gold-dark hover:underline">
               {tProfile("title")} {percent}%
@@ -84,7 +87,7 @@ export function DashboardProfileCard({
     if (collapsed) {
       return (
         <div className="flex justify-center rounded-2xl border border-border bg-white p-3 shadow-soft">
-          <ProfileAvatar profile={{ ...profile, email }} imageUrl={avatarUrl} size="md" />
+          <ProfileAvatar profile={{ ...profile, email }} imageUrl={avatarUrl} size="md" className="shrink-0" />
         </div>
       );
     }
@@ -92,11 +95,9 @@ export function DashboardProfileCard({
     return (
       <div className="rounded-2xl border border-border bg-white p-4 shadow-soft">
         <div className="flex items-center gap-3">
-          <ProfileAvatar profile={{ ...profile, email }} imageUrl={avatarUrl} size="lg" />
+          <ProfileAvatar profile={{ ...profile, email }} imageUrl={avatarUrl} size="lg" className="shrink-0" />
           <div className="min-w-0 flex-1">
-            <p className="truncate font-display text-base font-semibold text-charcoal">
-              {profile.full_name || tHeader("userFallback")}
-            </p>
+            <p className={cn(profileNameClass, "font-display text-base")}>{displayName}</p>
             <p className="mt-0.5 text-xs font-medium text-gold-dark">{tPreview("ownerRole")}</p>
           </div>
         </div>
@@ -108,19 +109,17 @@ export function DashboardProfileCard({
     return (
       <div className="rounded-2xl border border-border bg-white p-3 shadow-soft">
         <div className="flex items-center gap-3">
-          <ProfileAvatar profile={{ ...profile, email }} imageUrl={avatarUrl} size="md" />
+          <ProfileAvatar profile={{ ...profile, email }} imageUrl={avatarUrl} size="md" className="shrink-0" />
           {!collapsed && (
             <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-semibold text-charcoal">
-                {profile.full_name || tHeader("userFallback")}
-              </p>
+              <p className={cn(profileNameClass, "text-sm")}>{displayName}</p>
               <button
                 type="button"
                 onClick={() => setExpanded(true)}
                 className="mt-0.5 flex items-center gap-1 text-xs font-medium text-gold-dark hover:underline"
               >
                 {tCard("completePercent", { percent })}
-                <ChevronDown className="h-3 w-3" />
+                <ChevronDown className="h-3 w-3 shrink-0" />
               </button>
             </div>
           )}
@@ -132,21 +131,19 @@ export function DashboardProfileCard({
   if (collapsed) {
     return (
       <div className="flex justify-center rounded-2xl border border-border bg-white p-3 shadow-soft">
-        <ProfileAvatar profile={{ ...profile, email }} imageUrl={avatarUrl} size="md" />
+        <ProfileAvatar profile={{ ...profile, email }} imageUrl={avatarUrl} size="md" className="shrink-0" />
       </div>
     );
   }
 
   return (
-    <div className="rounded-2xl border border-border bg-white p-4 shadow-soft">
+    <div className="overflow-hidden rounded-2xl border border-border bg-white p-4 shadow-soft">
       <div className="flex items-start gap-3">
-        <ProfileAvatar profile={{ ...profile, email }} imageUrl={avatarUrl} size="lg" />
+        <ProfileAvatar profile={{ ...profile, email }} imageUrl={avatarUrl} size="lg" className="shrink-0" />
         <div className="min-w-0 flex-1">
           <div className="flex items-start justify-between gap-2">
-            <div>
-              <p className="truncate font-display text-base font-semibold text-charcoal">
-                {profile.full_name || tHeader("userFallback")}
-              </p>
+            <div className="min-w-0 flex-1">
+              <p className={cn(profileNameClass, "font-display text-base")}>{displayName}</p>
               <p className="mt-0.5 text-xs font-medium text-gold-dark">{tPreview("ownerRole")}</p>
             </div>
             <button

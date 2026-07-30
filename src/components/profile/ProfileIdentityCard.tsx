@@ -157,7 +157,9 @@ export function ProfileIdentityCard({
           </div>
         )}
 
-        <h2 className="mt-5 font-display text-xl font-semibold text-charcoal">{displayName}</h2>
+        <h2 className="mt-5 w-full max-w-full [overflow-wrap:anywhere] font-display text-xl font-semibold text-charcoal">
+          {displayName}
+        </h2>
         <p className="mt-1 text-sm text-muted">{advertiserTypeLabel(profile.advertiser_type, locale)}</p>
         {memberSince && (
           <p className="mt-1 text-xs text-muted">{t("memberSince", { date: memberSince })}</p>

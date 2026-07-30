@@ -98,8 +98,11 @@ export function DashboardShell({
         <aside
           className={cn(
             // z-[60] above Help FAB (z-40); help panel (z-120) still wins when open
-            "fixed inset-y-0 left-0 z-[60] flex w-[min(100vw-3rem,17rem)] flex-col border-r border-border/80 bg-white/95 p-3 pt-[max(4rem,calc(3.5rem+env(safe-area-inset-top,0px)))] pb-[max(0.75rem,env(safe-area-inset-bottom,0px))] pl-[max(0.75rem,env(safe-area-inset-left,0px))] backdrop-blur-sm transition-transform lg:static lg:z-30 lg:translate-x-0 lg:pt-3 lg:pb-3 lg:pl-3",
+            // overflow-x-hidden: clip long names so closed off-canvas drawer cannot bleed into the page
+            "fixed inset-y-0 left-0 z-[60] flex w-[min(100vw-3rem,17rem)] flex-col overflow-x-hidden border-r border-border/80 bg-white/95 p-3 pt-[max(4rem,calc(3.5rem+env(safe-area-inset-top,0px)))] pb-[max(0.75rem,env(safe-area-inset-bottom,0px))] pl-[max(0.75rem,env(safe-area-inset-left,0px))] backdrop-blur-sm transition-transform lg:static lg:z-30 lg:translate-x-0 lg:overflow-x-visible lg:pt-3 lg:pb-3 lg:pl-3",
             mobileOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0",
+            // When closed on phone, also hide paint + hits so nothing can peek into the page
+            !mobileOpen && "max-lg:invisible max-lg:pointer-events-none",
             sidebarCollapsed ? "lg:w-[4.5rem]" : "lg:w-52",
             variant === "workspace" && "lg:border-border/60"
           )}

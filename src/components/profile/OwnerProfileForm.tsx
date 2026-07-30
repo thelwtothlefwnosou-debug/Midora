@@ -123,7 +123,7 @@ export function OwnerProfileForm({
       ref={formRef}
       action={formAction}
       onChange={markDirty}
-      className="space-y-6"
+      className="space-y-6 max-sm:pb-28"
     >
       <section className="rounded-2xl border border-border bg-white p-5 shadow-soft sm:p-6">
         <p className="text-[11px] font-medium tracking-wide text-gold-dark uppercase">
@@ -492,14 +492,19 @@ export function OwnerProfileForm({
       <div
         className={cn(
           "sticky bottom-0 z-30 -mx-1 border-t border-border bg-white/95 px-1 py-4 backdrop-blur-md",
-          "supports-[backdrop-filter]:bg-white/80"
+          "supports-[backdrop-filter]:bg-white/80",
+          // max-sm = width < 640 so it includes 639px (Tailwind max-[639px] is width < 639 and misses the nav edge).
+          // Clearance matches midora-above-mnav / body:has(.midora-msearch-bottom-nav).
+          "max-sm:bottom-[calc(4.75rem+env(safe-area-inset-bottom,0px))]",
+          // Keep save control clear of Help FAB (fixed right-4, h-11) on phone
+          "max-sm:pr-16"
         )}
       >
         <div className="flex flex-wrap items-center justify-between gap-3">
           {stickyMessage ? (
             <p
               className={cn(
-                "text-xs",
+                "min-w-0 text-xs",
                 saveUi === "error" ? "text-red-600" : saveUi === "saved" ? "text-teal" : "text-muted"
               )}
             >
@@ -511,7 +516,7 @@ export function OwnerProfileForm({
           <button
             type="submit"
             disabled={pending}
-            className="min-h-11 rounded-xl bg-gold px-6 text-sm font-semibold text-white hover:bg-gold-dark disabled:opacity-60"
+            className="min-h-11 shrink-0 rounded-xl bg-gold px-6 text-sm font-semibold text-white hover:bg-gold-dark disabled:opacity-60"
           >
             {pending ? t("saving") : t("saveChanges")}
           </button>
