@@ -37,54 +37,33 @@ import {
   SEARCH_SESSION_WINDOW_SIZE,
 } from "@/lib/listings-pagination";
 
-/** Columns needed for filter/rank/quality/markers — no profiles, no long text. */
-const SEARCH_INDEX_SELECT = [
-  "id",
-  "slug",
-  "title",
-  "city",
-  "area",
-  "latitude",
-  "longitude",
-  "location_confirmed_by_owner",
-  "price_monthly",
-  "price_per_night",
-  "rental_type",
-  "bedrooms",
-  "bathrooms",
-  "sqm",
-  "floor",
-  "furnished",
-  "utilities_included",
-  "has_parking",
-  "pets_allowed",
-  "heating_type",
-  "has_elevator",
-  "min_months",
-  "max_guests",
-  "property_type",
-  "available_from",
-  "status",
-  "is_hidden",
-  "expires_at",
-  "approval_status",
-  "created_at",
-  "published_at",
-  "search_boost_until",
-  "supports_short_term",
-  "supports_monthly",
-  "minimum_stay_nights",
-  "minimum_stay_months",
-  "monthly_base_price",
-  "monthly_pricing_mode",
-  "monthly_includes_bills",
-  "listing_images(url, media_type, is_cover, sort_order)",
-].join(", ");
+/** Lightweight nested images for quality gate + marker thumbs — avoid full `*` image payloads. */
+const SEARCH_INDEX_SELECT =
+  "*, listing_images(url, media_type, is_cover, sort_order)";
 
 const INDEX_CHUNK = 1000;
 const INDEX_HARD_CAP = 20000;
 
 export type SearchIndexListing = ListingWithImages;
+
+function toIndexListing(row: ListingWithImages): SearchIndexListing {
+  const images = [...(row.listing_images ?? [])]
+    .filter((img) => img.media_type !== "video")
+    .sort((a, b) => {
+      const aCover = a.is_cover ? 1 : 0;
+      const bCover = b.is_cover ? 1 : 0;
+      if (aCover !== bCover) return bCover - aCover;
+      return (a.sort_order ?? 0) - (b.sort_order ?? 0);
+    })
+    .slice(0, 4);
+
+  return applyPublicSearchLocationPrivacy({
+    ...row,
+    description: "",
+    description_en: null,
+    listing_images: images,
+  });
+}
 
 export type SearchSessionResult = {
   /** Exact matching count (full corpus after filters). */
@@ -176,7 +155,7 @@ async function fetchSearchIndexChunked(): Promise<SearchIndexListing[]> {
 
     const rows = (result.data ?? []) as unknown as SearchIndexListing[];
     if (rows.length === 0) break;
-    all.push(...rows);
+    all.push(...rows.map(toIndexListing));
     if (rows.length < INDEX_CHUNK) break;
     from += INDEX_CHUNK;
   }
@@ -195,7 +174,7 @@ async function loadSearchIndexSnapshot(): Promise<SearchIndexListing[]> {
 
 const getSearchIndexSnapshotCached = unstable_cache(
   loadSearchIndexSnapshot,
-  ["midora-search-index-v1"],
+  ["midora-search-index-v2-star-select"],
   { revalidate: 60, tags: [LISTINGS_CATALOG_TAG] }
 );
 
