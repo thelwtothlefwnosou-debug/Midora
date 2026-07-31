@@ -8,19 +8,22 @@ import { useTranslations } from "next-intl";
 import { PropertyMapLoader } from "@/components/map/PropertyMapLoader";
 import type { ListingWithImages } from "@/lib/types";
 import type { ListingUnavailablePeriod } from "@/lib/unavailable-periods";
+import type { MapMarker } from "@/components/map/types";
 import { SearchListingCardGrid } from "@/components/listings/SearchListingCard";
 import { ListingsSortSelect } from "@/components/listings/ListingsSortSelect";
 import { ListingsPagination } from "@/components/listings/ListingsPagination";
 import { MapListingPreviewSheet } from "@/components/listings/MapListingPreviewSheet";
+import { PhoneFullMapOverlay } from "@/components/listings/PhoneFullMapOverlay";
 import { appendBoundsToParams } from "@/lib/search-params";
+import { resetListingsPage } from "@/lib/listings-pagination";
 import {
-  paginateListings,
-  parseListingsPage,
-  resetListingsPage,
-} from "@/lib/listings-pagination";
+  createResultSeed,
+  isBrowserReload,
+  listingsSearchFingerprint,
+  parseResultSeed,
+  getResultSeedParam,
+} from "@/lib/listings-result-seed";
 import { buildListingDetailHref, parseSearchDurationMonths } from "@/lib/listing-search-links";
-import { buildMapMarkersFromListings } from "@/lib/listings-map-markers";
-import { filterListingsByMapBounds } from "@/lib/listing-map-bounds";
 import {
   buildResultsPageTitle,
   buildResultsSubtitle,
@@ -31,7 +34,19 @@ import { cn } from "@/lib/utils";
 import { useMaxWidth639 } from "@/components/mobile/useMaxWidth639";
 
 type Props = {
-  catalogListings: ListingWithImages[];
+  /** ≤18 full cards for the current page (server-hydrated). */
+  pageListings: ListingWithImages[];
+  /** Privacy-safe markers for the rotating window (≤270). */
+  mapMarkers: MapMarker[];
+  /** Exact matching count across the full corpus (can be >270). */
+  totalCount: number;
+  /** Size of this session's rotating window (≤270). */
+  windowCount: number;
+  /** Pages within the rotating window (≤15). */
+  totalPages: number;
+  currentPage: number;
+  rangeStart: number;
+  rangeEnd: number;
   emptyDueToMinStay?: boolean;
   cityLabel?: string;
   districtLabel?: string;
@@ -69,6 +84,15 @@ function boundsMeaningfullyChanged(a: MapBounds, b: MapBounds): boolean {
   );
 }
 
+/** Marker hrefs come from the server without seed/page/map params — reattach them client-side. */
+function remapMarkerHref(marker: MapMarker, hrefParams: URLSearchParams): string | undefined {
+  if (!marker.href) return marker.href;
+  const path = marker.href.split("?")[0];
+  const publicId = path.split("/").filter(Boolean).pop();
+  if (!publicId) return marker.href;
+  return buildListingDetailHref({ id: publicId }, hrefParams);
+}
+
 function useIsLgUp() {
   const [isLgUp, setIsLgUp] = useState(false);
 
@@ -84,7 +108,14 @@ function useIsLgUp() {
 }
 
 export function ListingsSearchView({
-  catalogListings,
+  pageListings,
+  mapMarkers,
+  totalCount,
+  windowCount,
+  totalPages,
+  currentPage,
+  rangeStart,
+  rangeEnd,
   emptyDueToMinStay = false,
   cityLabel,
   districtLabel,
@@ -129,8 +160,6 @@ export function ListingsSearchView({
     searchParams.get("end")?.trim() ||
     undefined;
 
-  const [liveBounds, setLiveBounds] = useState<MapBounds | null>(null);
-  const [clientPage, setClientPage] = useState(1);
   const [mobileView, setMobileView] = useState<"list" | "map">("list");
   const [mapOpen, setMapOpen] = useState(true);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -139,61 +168,114 @@ export function ListingsSearchView({
   const [pendingBounds, setPendingBounds] = useState<MapBounds | null>(null);
   const [viewportDirty, setViewportDirty] = useState(false);
   const [mapSearchPending, setMapSearchPending] = useState(false);
+  const [resultSeed, setResultSeed] = useState<string | null>(() =>
+    parseResultSeed(searchParams.get(getResultSeedParam()))
+  );
+  const [phoneFullMap, setPhoneFullMap] = useState(false);
+  const [phoneSheet, setPhoneSheet] = useState<"collapsed" | "expanded">("collapsed");
+  const fingerprintRef = useRef<string | null>(null);
+  const seedReadyRef = useRef(false);
+  const listScrollRef = useRef(0);
 
   const searchKey = useMemo(() => {
     const p = new URLSearchParams(searchParams.toString());
     p.delete("page");
     p.delete("bounds");
+    p.delete(getResultSeedParam());
+    p.delete("map");
     return p.toString();
   }, [searchParams]);
 
-  const visibleListings = useMemo(() => {
-    if (!mapBoundsMode || !liveBounds) return catalogListings;
-    return filterListingsByMapBounds(catalogListings, liveBounds);
-  }, [catalogListings, liveBounds, mapBoundsMode]);
-
-  const pagination = useMemo(
-    () => paginateListings(visibleListings, clientPage),
-    [visibleListings, clientPage]
+  const searchFingerprint = useMemo(
+    () => listingsSearchFingerprint(new URLSearchParams(searchParams.toString())),
+    [searchParams]
   );
 
-  const listings = pagination.items;
+  // Seed: new on fingerprint change or hard reload; stable across page / map toggles.
+  // A new seed changes the server's rotating window, so we must navigate (router.replace)
+  // rather than only editing the address bar, or the page-1 window would drift from later pages.
+  // Defer random seed until after mount so SSR/client first paint match (no hydration mismatch).
+  useEffect(() => {
+    const urlSeed = parseResultSeed(searchParams.get(getResultSeedParam()));
+    const reload = !seedReadyRef.current && isBrowserReload();
+    const fingerprintChanged =
+      fingerprintRef.current != null && fingerprintRef.current !== searchFingerprint;
+
+    let nextSeed = urlSeed ?? resultSeed;
+    let resetPage = false;
+
+    if (!seedReadyRef.current) {
+      seedReadyRef.current = true;
+      fingerprintRef.current = searchFingerprint;
+      if (reload || !urlSeed) {
+        nextSeed = createResultSeed();
+        resetPage = reload;
+      } else {
+        nextSeed = urlSeed;
+      }
+    } else if (fingerprintChanged) {
+      fingerprintRef.current = searchFingerprint;
+      nextSeed = createResultSeed();
+      resetPage = true;
+    } else if (urlSeed) {
+      nextSeed = urlSeed;
+    } else if (!nextSeed) {
+      nextSeed = createResultSeed();
+    }
+
+    if (nextSeed && nextSeed !== resultSeed) setResultSeed(nextSeed);
+
+    const params = new URLSearchParams(searchParams.toString());
+    let urlChanged = false;
+    if (nextSeed && params.get(getResultSeedParam()) !== nextSeed) {
+      params.set(getResultSeedParam(), nextSeed);
+      urlChanged = true;
+    }
+    if (resetPage) {
+      params.delete("page");
+      urlChanged = true;
+    }
+    if (urlChanged) {
+      const qs = params.toString();
+      router.replace(qs ? `/listings?${qs}` : "/listings", { scroll: false });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional seed bootstrap
+  }, [searchFingerprint, searchParams]);
+
+  useEffect(() => {
+    if (isPhone === true && searchParams.get("map") === "1") {
+      setPhoneFullMap(true);
+    } else if (isPhone !== true) {
+      setPhoneFullMap(false);
+    }
+  }, [isPhone, searchParams]);
+
+  const resultsTotalCount = totalCount;
+
+  const listingHrefParams = useMemo(() => {
+    const hrefParams = new URLSearchParams(searchParams.toString());
+    if (resultSeed) hrefParams.set(getResultSeedParam(), resultSeed);
+    if (currentPage > 1) hrefParams.set("page", String(currentPage));
+    else hrefParams.delete("page");
+    if (phoneFullMap) hrefParams.set("map", "1");
+    else hrefParams.delete("map");
+    return hrefParams;
+  }, [searchParams, resultSeed, currentPage, phoneFullMap]);
 
   const listingHrefs = useMemo(() => {
-    const hrefParams = new URLSearchParams(searchKey);
     const hrefs = new Map<string, string>();
-    for (const listing of visibleListings) {
-      hrefs.set(listing.id, buildListingDetailHref(listing, hrefParams));
+    for (const listing of pageListings) {
+      hrefs.set(listing.id, buildListingDetailHref(listing, listingHrefParams));
     }
     return hrefs;
-  }, [visibleListings, searchKey]);
+  }, [pageListings, listingHrefParams]);
 
-  // Map pins match the current results page (up to 18) — one pin per card.
-  const mapMarkers = useMemo(() => {
-    const stayParams = new URLSearchParams(searchKey);
-    return buildMapMarkersFromListings(
-      listings,
-      rentalType,
-      (listing) => buildListingDetailHref(listing, stayParams),
-      {
-        interestFrom,
-        interestTo,
-        durationMonths,
-        rentalTypeFilter: rentalType,
-        guests: selectedGuests,
-      },
-      { fallbackCenter: mapCenter }
-    );
-  }, [
-    listings,
-    rentalType,
-    searchKey,
-    interestFrom,
-    interestTo,
-    durationMonths,
-    selectedGuests,
-    mapCenter,
-  ]);
+  // Map pins: server-provided privacy-safe markers for the rotating window, with
+  // hrefs remapped to carry the current seed/page/map params (not rebuilt from full listings).
+  const markers = useMemo(
+    () => mapMarkers.map((marker) => ({ ...marker, href: remapMarkerHref(marker, listingHrefParams) })),
+    [mapMarkers, listingHrefParams]
+  );
 
   const { title: pageTitle } = buildResultsPageTitle(
     {
@@ -206,14 +288,55 @@ export function ListingsSearchView({
     },
     t
   );
-  const pageSubtitle = buildResultsSubtitle(pagination.totalCount, t);
+  const pageSubtitle = buildResultsSubtitle(resultsTotalCount, t);
   const showDatesHint =
-    rentalType === "short_term" && !interestFrom && !interestTo && listings.length > 0;
+    rentalType === "short_term" && !interestFrom && !interestTo && pageListings.length > 0;
 
   const clearMarkerSelection = useCallback(() => {
     setSelectedId(null);
     setMobilePreviewId(null);
   }, []);
+
+  const openPhoneFullMap = useCallback(() => {
+    listScrollRef.current = typeof window !== "undefined" ? window.scrollY : 0;
+    setPhoneFullMap(true);
+    setPhoneSheet("collapsed");
+    const seed = resultSeed ?? createResultSeed();
+    if (!resultSeed) setResultSeed(seed);
+    const params = new URLSearchParams(searchParams.toString());
+    params.set(getResultSeedParam(), seed);
+    params.set("map", "1");
+    if (currentPage > 1) params.set("page", String(currentPage));
+    window.history.pushState({ midoraPhoneMap: 1 }, "", `/listings?${params.toString()}`);
+  }, [searchParams, resultSeed, currentPage]);
+
+  const closePhoneFullMap = useCallback(() => {
+    setPhoneFullMap(false);
+    setPhoneSheet("collapsed");
+    clearMarkerSelection();
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete("map");
+    if (resultSeed) params.set(getResultSeedParam(), resultSeed);
+    window.history.replaceState(null, "", `/listings?${params.toString()}`);
+    requestAnimationFrame(() => {
+      window.scrollTo({ top: listScrollRef.current, left: 0, behavior: "auto" });
+    });
+  }, [searchParams, resultSeed, clearMarkerSelection]);
+
+  useEffect(() => {
+    if (isPhone !== true) {
+      setPhoneFullMap(false);
+      return;
+    }
+    function onPopState() {
+      const params = new URLSearchParams(window.location.search);
+      const open = params.get("map") === "1";
+      setPhoneFullMap(open);
+      if (!open) setPhoneSheet("collapsed");
+    }
+    window.addEventListener("popstate", onPopState);
+    return () => window.removeEventListener("popstate", onPopState);
+  }, [isPhone]);
 
   useEffect(() => {
     setHoveredId(null);
@@ -221,14 +344,17 @@ export function ListingsSearchView({
   }, [searchKey, clearMarkerSelection]);
 
   useEffect(() => {
-    if (selectedId && !mapMarkers.some((marker) => marker.id === selectedId)) {
+    if (selectedId && !markers.some((marker) => marker.id === selectedId)) {
       clearMarkerSelection();
     }
-  }, [mapMarkers, selectedId, clearMarkerSelection]);
+  }, [markers, selectedId, clearMarkerSelection]);
 
   const skipPageScrollRef = useRef(true);
 
-  const syncBoundsToUrl = useCallback(
+  /** New search area: real navigation (new bounds + new seed + page=1) so the server
+   *  recomputes the rotating window. Used by phone and desktop alike — the catalog is
+   *  no longer fully client-side. */
+  const applyBoundsSearchNavigate = useCallback(
     (bounds: MapBounds) => {
       const params = resetListingsPage(new URLSearchParams(searchParams.toString()));
       params.delete("city");
@@ -238,29 +364,16 @@ export function ListingsSearchView({
       params.delete("polygon");
       params.delete("autoMap");
       appendBoundsToParams(params, bounds);
-      window.history.replaceState(null, "", `/listings?${params.toString()}`);
-    },
-    [searchParams]
-  );
-
-  const applyLiveBounds = useCallback(
-    (bounds: MapBounds) => {
-      setLiveBounds(bounds);
-      setClientPage(1);
-      baselineBoundsRef.current = bounds;
-      pendingBoundsRef.current = bounds;
-      setPendingBounds(bounds);
+      params.set(getResultSeedParam(), createResultSeed());
+      if (phoneFullMap) params.set("map", "1");
+      setMapSearchPending(true);
       setViewportDirty(false);
-      setMapSearchPending(false);
-      syncBoundsToUrl(bounds);
-      window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+      router.push(`/listings?${params.toString()}`);
     },
-    [syncBoundsToUrl]
+    [searchParams, phoneFullMap, router]
   );
 
   useEffect(() => {
-    setLiveBounds(initialBounds ?? null);
-    setClientPage(parseListingsPage(searchParams.get("page") ?? undefined));
     if (initialBounds) {
       baselineBoundsRef.current = initialBounds;
     } else {
@@ -282,15 +395,34 @@ export function ListingsSearchView({
       return;
     }
     setHoveredId(null);
-    window.scrollTo({ top: 0, left: 0, behavior: "auto" });
-  }, [clientPage]);
+    if (!phoneFullMap) {
+      window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+    }
+  }, [currentPage, phoneFullMap]);
 
   // New search / navigation into listings: always land at the top (not restored mid-page).
   useEffect(() => {
-    window.scrollTo({ top: 0, left: 0, behavior: "auto" });
-  }, [searchKey]);
+    if (!phoneFullMap) {
+      window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+    }
+  }, [searchKey, phoneFullMap]);
 
   const favoriteSet = useMemo(() => new Set(favoriteIds), [favoriteIds]);
+
+  const goToPage = useCallback(
+    (page: number) => {
+      const seed = resultSeed ?? createResultSeed();
+      if (!resultSeed) setResultSeed(seed);
+      const params = new URLSearchParams(searchParams.toString());
+      params.set(getResultSeedParam(), seed);
+      if (page <= 1) params.delete("page");
+      else params.set("page", String(page));
+      if (phoneFullMap) params.set("map", "1");
+      else params.delete("map");
+      router.push(`/listings?${params.toString()}`, { scroll: false });
+    },
+    [searchParams, resultSeed, phoneFullMap, router]
+  );
 
   const applyMapAreaSearch = useCallback(() => {
     const bounds = pendingBoundsRef.current ?? pendingBounds;
@@ -299,8 +431,8 @@ export function ListingsSearchView({
       clearTimeout(autoSearchDebounceRef.current);
       autoSearchDebounceRef.current = null;
     }
-    applyLiveBounds(bounds);
-  }, [pendingBounds, applyLiveBounds]);
+    applyBoundsSearchNavigate(bounds);
+  }, [pendingBounds, applyBoundsSearchNavigate]);
 
   const handleViewportChange = useCallback(
     (bounds: MapBounds, meta?: MapViewportChangeMeta) => {
@@ -336,18 +468,20 @@ export function ListingsSearchView({
         setPendingBounds(bounds);
         setViewportDirty(dirty);
 
+        // Auto-refresh after an idle debounce once the viewport settles meaningfully.
+        // The "search this area" button stays visible as a fallback while pending.
         if (dirty) {
           setMapSearchPending(true);
           autoSearchDebounceRef.current = setTimeout(() => {
             autoSearchDebounceRef.current = null;
-            applyLiveBounds(bounds);
-          }, 450);
+            applyBoundsSearchNavigate(bounds);
+          }, 500);
         } else {
           setMapSearchPending(false);
         }
-      }, 180);
+      }, isPhone === true ? 350 : 180);
     },
-    [mapBoundsMode, applyLiveBounds]
+    [mapBoundsMode, applyBoundsSearchNavigate, isPhone]
   );
 
   useEffect(() => {
@@ -373,7 +507,7 @@ export function ListingsSearchView({
   );
 
   const mobilePreviewMarker = mobilePreviewId
-    ? mapMarkers.find((m) => m.id === mobilePreviewId) ?? null
+    ? markers.find((m) => m.id === mobilePreviewId) ?? null
     : null;
 
   const gridClassName = cn(
@@ -387,6 +521,7 @@ export function ListingsSearchView({
       onClick={applyMapAreaSearch}
       disabled={mapSearchPending}
       className="absolute top-4 left-1/2 z-[500] flex -translate-x-1/2 items-center gap-2 rounded-full border border-border bg-white px-4 py-2.5 text-sm font-semibold text-charcoal shadow-float transition hover:border-gold/40 hover:bg-sand/30 disabled:cursor-default disabled:opacity-95"
+      aria-label={t("searchThisArea")}
     >
       {mapSearchPending ? (
         <Loader2 className="h-4 w-4 animate-spin text-gold" aria-hidden />
@@ -396,6 +531,9 @@ export function ListingsSearchView({
       {mapSearchPending ? t("searchThisAreaPending") : t("searchThisArea")}
     </button>
   );
+
+  const usePhoneClusters = isPhone === true;
+  const mapScrollMode = isPhone === true && !phoneFullMap ? "cooperative" : "full";
 
   const mapPanel = (
     <div className="relative h-full min-h-0 w-full">
@@ -411,10 +549,10 @@ export function ListingsSearchView({
         </button>
       )}
       <PropertyMapLoader
-        key={`${searchKey}|p${pagination.currentPage}`}
+        key={searchFingerprint}
         lat={mapCenter.lat}
         lng={mapCenter.lng}
-        markers={mapMarkers}
+        markers={markers}
         hoveredMarkerId={hoveredId}
         selectedMarkerId={selectedId}
         zoom={mapZoom}
@@ -424,33 +562,35 @@ export function ListingsSearchView({
         reportBoundsOnMove={false}
         onViewportChange={handleViewportChange}
         clustered
-        clusterMarkers={false}
+        clusterMarkers={usePhoneClusters}
+        scrollZoomMode={mapScrollMode}
         fitMarkersOnLoad={fitMapToMarkers && !boundsSearch && !searchPolygon?.length}
         fitMaxZoom={fitMapMaxZoom}
         fitMinZoom={fitMapMinZoom}
         onMarkerClick={handleMarkerClick}
         onMarkerHover={setHoveredId}
         onMarkerDeselect={clearMarkerSelection}
+        onBackgroundClick={isPhone === true && !phoneFullMap ? openPhoneFullMap : undefined}
         flush
       />
     </div>
   );
 
   const listingsPagination =
-    pagination.totalCount > 0 ? (
+    windowCount > 0 ? (
       <ListingsPagination
-        currentPage={pagination.currentPage}
-        totalPages={pagination.totalPages}
-        totalCount={pagination.totalCount}
-        rangeStart={pagination.rangeStart}
-        rangeEnd={pagination.rangeEnd}
-        onPageChange={setClientPage}
+        currentPage={currentPage}
+        totalPages={totalPages}
+        totalCount={windowCount}
+        rangeStart={rangeStart}
+        rangeEnd={rangeEnd}
+        onPageChange={goToPage}
       />
     ) : null;
 
   const listingsGrid = (
     <>
-      {listings.length === 0 ? (
+      {pageListings.length === 0 ? (
         <div className="flex flex-col items-center justify-center px-6 py-20 text-center">
           <p className="font-display text-lg font-semibold text-charcoal">
             {emptyDueToMinStay ? t("emptyMinStayTitle") : t("emptyCriteriaTitle")}
@@ -504,7 +644,7 @@ export function ListingsSearchView({
       ) : (
         <>
           <div className={gridClassName}>
-            {listings.map((listing) => (
+            {pageListings.map((listing) => (
               <div
                 key={listing.id}
                 className="h-full"
@@ -545,10 +685,10 @@ export function ListingsSearchView({
         </h1>
         <p className="mt-0.5 text-sm text-muted">
           {pageSubtitle}
-          {pagination.totalPages > 1
+          {totalPages > 1
             ? t("showingRange", {
-                start: pagination.rangeStart,
-                end: pagination.rangeEnd,
+                start: rangeStart,
+                end: rangeEnd,
               })
             : ""}
         </p>
@@ -615,19 +755,55 @@ export function ListingsSearchView({
         </div>
       ) : isPhone === true ? (
         <div className="midora-msearch-results">
-          <div className="midora-msearch-map-panel" aria-label={t("map")}>
-            <div className="midora-msearch-map-panel__inner">{mapPanel}</div>
-          </div>
-          <div className="midora-msearch-results__count px-5 pb-2 pt-4">
-            <p className="text-sm font-medium text-charcoal">
-              {pagination.totalCount === 0
-                ? t("noneMatch")
-                : pagination.totalCount === 1
-                  ? t("oneMatch")
-                  : t("nMatch", { count: pagination.totalCount })}
-            </p>
-          </div>
-          {listingsColumn}
+          {!phoneFullMap ? (
+            <>
+              <div className="midora-msearch-map-panel" aria-label={t("map")}>
+                <div className="midora-msearch-map-panel__inner">{mapPanel}</div>
+                <button
+                  type="button"
+                  className="midora-msearch-map-panel__open"
+                  onClick={openPhoneFullMap}
+                  aria-label={t("viewFullMap")}
+                >
+                  <MapIcon className="h-4 w-4 text-gold" aria-hidden />
+                  {t("viewFullMap")}
+                </button>
+              </div>
+              <div className="midora-msearch-results__count px-5 pb-2 pt-4">
+                <p className="text-sm font-medium text-charcoal">
+                  {resultsTotalCount === 0
+                    ? boundsSearch
+                      ? t("noneMatchArea")
+                      : t("noneMatch")
+                    : resultsTotalCount === 1
+                      ? t("oneMatch")
+                      : t("nMatch", { count: resultsTotalCount })}
+                </p>
+              </div>
+              {listingsColumn}
+            </>
+          ) : null}
+
+          <PhoneFullMapOverlay
+            open={phoneFullMap}
+            onClose={() => {
+              if (window.history.state?.midoraPhoneMap) {
+                window.history.back();
+              } else {
+                closePhoneFullMap();
+              }
+            }}
+            totalCount={resultsTotalCount}
+            sheet={phoneSheet}
+            onSheetChange={setPhoneSheet}
+            map={mapPanel}
+            previewMarker={mobilePreviewMarker}
+            onPreviewClose={clearMarkerSelection}
+            searchChrome={
+              <p className="truncate text-sm font-semibold text-charcoal">{pageTitle}</p>
+            }
+            results={<div className="bg-white pb-4">{listingsColumn}</div>}
+          />
         </div>
       ) : isPhone === false ? (
         <div>

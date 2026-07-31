@@ -54,6 +54,10 @@ function resolveListingMarkerCenter(
   fallbackCenter?: { lat: number; lng: number } | null
 ): { lat: number; lng: number } | null {
   if (listingHasSearchMapCoordinates(listing)) {
+    // Search catalog already ships server-sanitized public coordinates.
+    if (listing.public_map_coordinates) {
+      return { lat: listing.latitude!, lng: listing.longitude! };
+    }
     return getListingMapCenter(
       listing.id,
       listing.latitude!,

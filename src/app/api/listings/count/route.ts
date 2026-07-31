@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
-import { getApprovedListings } from "@/lib/listings";
+import { getExactSearchMatchCount } from "@/lib/search-session";
 import { parseListingFiltersWithMessages } from "@/lib/listing-filters";
-import { LISTINGS_SEARCH_MAX } from "@/lib/listings-pagination";
 
 export async function GET(request: Request) {
   const url = new URL(request.url);
@@ -11,7 +10,10 @@ export async function GET(request: Request) {
   });
 
   const { filters } = parseListingFiltersWithMessages(params);
-  const listings = await getApprovedListings(filters, LISTINGS_SEARCH_MAX);
+  const count = await getExactSearchMatchCount(filters);
 
-  return NextResponse.json({ count: listings.length });
+  return NextResponse.json({
+    count,
+    catalogFetchCapped: false,
+  });
 }

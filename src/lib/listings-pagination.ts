@@ -1,6 +1,14 @@
 export const LISTINGS_PAGE_SIZE = 18;
 
+/** @deprecated Prefer SEARCH_SESSION_WINDOW_SIZE — kept for legacy callers. */
 export const LISTINGS_SEARCH_MAX = 500;
+
+/** Max pages per search session (rotating window). */
+export const SEARCH_SESSION_MAX_PAGES = 15;
+
+/** Max unique listings in one session window (15 × 18). */
+export const SEARCH_SESSION_WINDOW_SIZE =
+  SEARCH_SESSION_MAX_PAGES * LISTINGS_PAGE_SIZE;
 
 export function parseListingsPage(raw: string | undefined): number {
   const n = parseInt(raw ?? "1", 10);

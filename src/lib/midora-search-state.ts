@@ -14,6 +14,7 @@ export const SEARCH_PRESERVE_KEYS = [
   "district",
   "nearby",
   "polygon",
+  "bounds",
   "interestFrom",
   "interestTo",
   "start",
@@ -24,6 +25,10 @@ export const SEARCH_PRESERVE_KEYS = [
   "durationMonths",
   "guests",
   "pets",
+  "page",
+  "rs",
+  "map",
+  "sort",
 ] as const;
 
 export type MidoraSearchState = {

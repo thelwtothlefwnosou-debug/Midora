@@ -10,16 +10,19 @@ import {
 import { ListingsSearchView } from "@/components/listings/ListingsSearchView";
 import { ListingsScrollToTop } from "@/components/listings/ListingsScrollToTop";
 import { SearchResultsSkeleton } from "@/components/listings/SearchResultsSkeleton";
-import { getSearchCatalogListings } from "@/lib/listings";
 import { parseListingFiltersWithMessages } from "@/lib/listing-filters";
-import { LISTINGS_PAGE_SIZE, LISTINGS_SEARCH_MAX } from "@/lib/listings-pagination";
+import { parseListingsPage } from "@/lib/listings-pagination";
+import { parseResultSeed } from "@/lib/listings-result-seed";
+import { getSearchSession } from "@/lib/search-session";
 import { getFavoriteListingIds } from "@/lib/user-features";
 import { resolveLocation } from "@/lib/locations/search-server";
 import { resolveSearchMapViewport } from "@/lib/search-map-viewport";
-import { filterListingsByMapBounds } from "@/lib/listing-map-bounds";
 import { computePriceHistogram } from "@/lib/listing-price-histogram";
 import { parsePublicRentalType } from "@/lib/rental-types";
 import { getUnavailablePeriodsByListingIds } from "@/lib/unavailable-periods-db";
+import { parseSearchDurationMonths } from "@/lib/listing-search-links";
+import type { ListingWithImages } from "@/lib/types";
+
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations("Meta");
   return {
@@ -95,81 +98,91 @@ function buildFilterDefaults(
   };
 }
 
-/** Deduped per-request catalog load — shared by filters + results Suspense lanes. */
+function markersAsMapListings(
+  markers: { id: string; lat: number; lng: number }[]
+): ListingWithImages[] {
+  return markers.map((m) => ({
+    id: m.id,
+    latitude: m.lat,
+    longitude: m.lng,
+  })) as ListingWithImages[];
+}
+
+/** Deduped per-request session load — shared by filters + results Suspense lanes. */
 const loadListingsSearchData = cache(
   async (params: Record<string, string | undefined>) => {
     const { filters, dateMessages } = parseListingFiltersWithMessages(params);
     const rawCity = params.city ? decodeURIComponent(params.city) : undefined;
     const resolved = rawCity ? resolveLocation(rawCity) : null;
+    const seed = parseResultSeed(params.rs);
+    const page = parseListingsPage(params.page);
+    const guestsRaw = params.guests ? parseInt(params.guests, 10) : undefined;
+    const guests =
+      guestsRaw != null && Number.isFinite(guestsRaw) && guestsRaw > 0
+        ? guestsRaw
+        : undefined;
 
-    let catalogListings: Awaited<ReturnType<typeof getSearchCatalogListings>> = [];
+    let session: Awaited<ReturnType<typeof getSearchSession>> | null = null;
     let favoriteIds: string[] = [];
     let emptyDueToMinStay = false;
     let loadFailed = false;
 
     try {
-      const catalogFilters = { ...filters, bounds: undefined };
-
-      // Catalog is the critical path. Favorites run in parallel and must not add serial delay.
-      const [listingsResult, favoritesResult] = await Promise.allSettled([
-        getSearchCatalogListings(catalogFilters, LISTINGS_SEARCH_MAX),
+      const [sessionResult, favoritesResult] = await Promise.allSettled([
+        getSearchSession({
+          filters,
+          seed,
+          page,
+          priceContext: {
+            interestFrom: filters.interestFrom,
+            interestTo: filters.interestTo,
+            durationMonths: parseSearchDurationMonths(params.durationMonths),
+            rentalTypeFilter: filters.rentalType,
+            guests,
+          },
+        }),
         getFavoriteListingIds(),
       ]);
 
-      if (listingsResult.status === "fulfilled") {
-        catalogListings = listingsResult.value;
+      if (sessionResult.status === "fulfilled") {
+        session = sessionResult.value;
       } else {
         loadFailed = true;
-        console.error("[listings] catalog load failed:", listingsResult.reason);
+        console.error("[listings] session load failed:", sessionResult.reason);
       }
 
       if (favoritesResult.status === "fulfilled") {
         favoriteIds = favoritesResult.value;
       }
 
-      // Only when empty + date search: explain min-stay (avoids a second heavy fetch on normal loads).
       if (
-        catalogListings.length === 0 &&
+        session &&
+        session.totalCount === 0 &&
         filters.rentalType === "short_term" &&
         filters.interestFrom &&
         filters.interestTo
       ) {
-        const withoutMinStay = await getSearchCatalogListings(
-          { ...catalogFilters, skipMinimumStayFilter: true },
-          LISTINGS_SEARCH_MAX
-        );
-        emptyDueToMinStay = withoutMinStay.length > 0;
-      } else if (
-        filters.bounds &&
-        catalogListings.length > 0 &&
-        filterListingsByMapBounds(catalogListings, filters.bounds).length === 0 &&
-        filters.rentalType === "short_term" &&
-        filters.interestFrom &&
-        filters.interestTo
-      ) {
-        const withoutMinStay = await getSearchCatalogListings(
-          { ...catalogFilters, skipMinimumStayFilter: true },
-          LISTINGS_SEARCH_MAX
-        );
-        emptyDueToMinStay =
-          filterListingsByMapBounds(withoutMinStay, filters.bounds).length > 0;
+        const withoutMinStay = await getSearchSession({
+          filters: { ...filters, skipMinimumStayFilter: true },
+          seed,
+          page: 1,
+        });
+        emptyDueToMinStay = withoutMinStay.totalCount > 0;
       }
     } catch (error) {
       loadFailed = true;
       console.error("[listings] page load failed:", error);
     }
 
-    // Periods only for the first results page — not all 100–500 ids (was a major stall).
     let unavailablePeriodsByListingId: Record<
       string,
       { start_date: string; end_date: string }[]
     > = {};
-    if (!loadFailed && catalogListings.length > 0) {
+    if (!loadFailed && session && session.pageListings.length > 0) {
       try {
-        const firstPageIds = catalogListings
-          .slice(0, LISTINGS_PAGE_SIZE)
-          .map((l) => l.id);
-        const periodsMap = await getUnavailablePeriodsByListingIds(firstPageIds);
+        const periodsMap = await getUnavailablePeriodsByListingIds(
+          session.pageListings.map((l) => l.id)
+        );
         unavailablePeriodsByListingId = Object.fromEntries(periodsMap.entries());
       } catch (error) {
         console.error("[listings] periods load failed:", error);
@@ -178,8 +191,12 @@ const loadListingsSearchData = cache(
 
     if (DEV_SEARCH_LOG) {
       console.info(
-        "[search] catalog:",
-        catalogListings.length,
+        "[search] total:",
+        session?.totalCount ?? 0,
+        "window:",
+        session?.windowCount ?? 0,
+        "page:",
+        session?.pageListings.length ?? 0,
         loadFailed ? "(failed)" : ""
       );
     }
@@ -188,7 +205,7 @@ const loadListingsSearchData = cache(
       filters,
       dateMessages,
       resolved,
-      catalogListings,
+      session,
       favoriteIds,
       emptyDueToMinStay,
       loadFailed,
@@ -206,14 +223,14 @@ async function ListingsFiltersLane({
 }) {
   const data = await loadListingsSearchData(params);
   const priceHistogram = computePriceHistogram(
-    data.catalogListings,
+    data.session?.pageListings ?? [],
     data.filters.rentalType ?? params.rentalType
   );
 
   return (
     <ListingsFilters
       defaults={defaults}
-      totalCount={data.catalogListings.length}
+      totalCount={data.session?.totalCount ?? 0}
       priceHistogram={priceHistogram}
     />
   );
@@ -227,6 +244,7 @@ async function ListingsResultsLane({
   const tListings = await getTranslations("Listings");
   const data = await loadListingsSearchData(params);
   const filterDefaults = buildFilterDefaults(params);
+  const session = data.session;
 
   const mapContext = {
     polygon: data.filters.polygon,
@@ -238,13 +256,12 @@ async function ListingsResultsLane({
     resolvedLocation: data.resolved,
   };
 
-  const mapDisplayListings = data.filters.bounds
-    ? filterListingsByMapBounds(data.catalogListings, data.filters.bounds)
-    : data.catalogListings;
-
-  const mapViewport = data.loadFailed
+  const mapViewport = data.loadFailed || !session
     ? GREECE_MAP_DEFAULT
-    : resolveSearchMapViewport(mapContext, mapDisplayListings);
+    : resolveSearchMapViewport(
+        mapContext,
+        markersAsMapListings(session.markers)
+      );
 
   const cityLabel =
     data.filters.polygon?.length || data.filters.bounds || data.filters.nearby
@@ -272,7 +289,14 @@ async function ListingsResultsLane({
       )}
 
       <ListingsSearchView
-        catalogListings={data.catalogListings}
+        pageListings={session?.pageListings ?? []}
+        mapMarkers={session?.markers ?? []}
+        totalCount={session?.totalCount ?? 0}
+        windowCount={session?.windowCount ?? 0}
+        totalPages={session?.totalPages ?? 1}
+        currentPage={session?.currentPage ?? 1}
+        rangeStart={session?.rangeStart ?? 0}
+        rangeEnd={session?.rangeEnd ?? 0}
         emptyDueToMinStay={data.emptyDueToMinStay}
         cityLabel={cityLabel}
         districtLabel={data.filters.district}
