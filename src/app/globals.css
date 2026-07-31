@@ -2663,6 +2663,38 @@ body {
     bottom: calc(4.85rem + env(safe-area-inset-bottom, 0px)) !important;
   }
 
+  /* Phone full-map: hide global bottom nav + lift FAB out of the way */
+  body[data-midora-phone-fullmap="1"] .midora-msearch-bottom-nav {
+    display: none !important;
+  }
+
+  body[data-midora-phone-fullmap="1"] .assistant-fab {
+    display: none !important;
+  }
+
+  body[data-midora-phone-fullmap="1"] {
+    padding-bottom: 0 !important;
+  }
+
+  /* Scroll / overlay hide — transform only (no layout shift). */
+  .midora-msearch-bottom-nav {
+    transform: translate3d(0, 0, 0);
+    transition: transform 0.22s ease;
+    will-change: transform;
+  }
+
+  body[data-midora-mnav-scroll-hidden="1"] .midora-msearch-bottom-nav,
+  body[data-midora-mnav-overlay="1"] .midora-msearch-bottom-nav {
+    transform: translate3d(0, calc(100% + 0.5rem), 0);
+    pointer-events: none;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .midora-msearch-bottom-nav {
+      transition: none;
+    }
+  }
+
   .midora-msearch-collapsed {
     display: flex;
     width: 100%;
@@ -2755,6 +2787,7 @@ body {
     padding: 0.65rem 0 0.15rem;
     -webkit-overflow-scrolling: touch;
     scrollbar-width: none;
+    scroll-snap-type: x proximity;
   }
 
   .midora-msearch-chips::-webkit-scrollbar {
@@ -2776,6 +2809,7 @@ body {
     color: var(--charcoal);
     white-space: nowrap;
     cursor: pointer;
+    scroll-snap-align: start;
   }
 
   .midora-msearch-chip--active {
@@ -2798,15 +2832,36 @@ body {
   }
 
   .midora-msearch-map-panel {
-    height: 33vh;
-    min-height: 11.5rem;
-    max-height: 18rem;
+    height: clamp(16rem, 36dvh, 21rem);
+    min-height: 16rem;
+    max-height: 21rem;
     margin: 0 0.85rem;
     overflow: hidden;
     border-radius: 1.15rem;
     border: 1px solid color-mix(in srgb, var(--charcoal) 10%, white);
     background: #e8e8e8;
     position: relative;
+  }
+
+  .midora-msearch-map-panel__open {
+    position: absolute;
+    left: 50%;
+    bottom: 0.75rem;
+    z-index: 5;
+    transform: translateX(-50%);
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    min-height: 2.5rem;
+    padding: 0.4rem 0.95rem;
+    border-radius: 9999px;
+    border: 1px solid color-mix(in srgb, var(--charcoal) 12%, white);
+    background: color-mix(in srgb, white 94%, transparent);
+    backdrop-filter: blur(10px);
+    box-shadow: 0 8px 24px -12px rgba(26, 26, 26, 0.35);
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--charcoal);
   }
 
   .midora-msearch-map-panel__inner {

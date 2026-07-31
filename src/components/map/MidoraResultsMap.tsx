@@ -44,9 +44,12 @@ type Props = {
   onMarkerClick?: (id: string) => void;
   onMarkerHover?: (id: string | null) => void;
   onMarkerDeselect?: () => void;
+  /** Fired when the user taps empty map canvas (not a marker/control). */
+  onBackgroundClick?: () => void;
   flush?: boolean;
   /** When false, every marker renders individually (no Supercluster merge). */
   clusterMarkers?: boolean;
+  scrollZoomMode?: "full" | "cooperative" | false;
 };
 
 function boundsFromMap(map: MapRef): MapBounds {
@@ -189,8 +192,10 @@ export function MidoraResultsMap({
   onMarkerClick,
   onMarkerHover,
   onMarkerDeselect,
+  onBackgroundClick,
   flush = false,
   clusterMarkers = true,
+  scrollZoomMode = "full",
 }: Props) {
   const mapRef = useRef<MapRef>(null);
   const userMovedRef = useRef(false);
@@ -352,7 +357,8 @@ export function MidoraResultsMap({
 
   const handleMapBackgroundClick = useCallback(() => {
     onMarkerDeselect?.();
-  }, [onMarkerDeselect]);
+    onBackgroundClick?.();
+  }, [onMarkerDeselect, onBackgroundClick]);
 
   return (
     <MidoraMapCore
@@ -364,7 +370,7 @@ export function MidoraResultsMap({
       onMoveStart={handleMoveStart}
       onMoveEnd={handleMoveEnd}
       onMapClick={handleMapBackgroundClick}
-      scrollZoomMode="full"
+      scrollZoomMode={scrollZoomMode}
       dragPan
       doubleClickZoom
       touchZoomRotate
