@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
 import { Heart, Home, MessageCircle, Search, UserRound } from "lucide-react";
 import { buildAuthRedirectUrl } from "@/lib/owner-flow";
 import { createClient, isSupabaseConfigured } from "@/lib/supabase/client";
+import { setMobileBottomNavScrollHidden } from "@/lib/mobile-bottom-nav-chrome";
 import { cn } from "@/lib/utils";
 
 const ITEMS = [
@@ -65,7 +66,6 @@ export function shouldShowMobileBottomNav(pathname: string | null): boolean {
   if (pathname === "/register" || pathname.startsWith("/register/")) return false;
   if (pathname.startsWith("/auth")) return false;
   if (pathname.startsWith("/admin")) return false;
-  // Create-listing wizard: fixed footer CTAs sit at bottom — nav would cover Back/Next.
   if (
     pathname === "/dashboard/listings/new" ||
     pathname.startsWith("/dashboard/listings/new/") ||
@@ -77,9 +77,14 @@ export function shouldShowMobileBottomNav(pathname: string | null): boolean {
   return true;
 }
 
+const SCROLL_DOWN_THRESHOLD = 12;
+const SCROLL_UP_THRESHOLD = 8;
+const TOP_ALWAYS_VISIBLE = 48;
+
 /**
  * Fixed bottom nav for phone (≤639px). Mounted once from the root layout.
  * Visibility gated with CSS max-width: 639px (never shows from 640px up).
+ * Scroll: hide on down, show on up / near top — transform only (no layout shift).
  */
 export function MobileBottomNav() {
   const pathname = usePathname();
@@ -87,6 +92,9 @@ export function MobileBottomNav() {
   const tNav = useTranslations("Nav");
   const tSearch = useTranslations("Search");
   const [signedIn, setSignedIn] = useState<boolean | null>(null);
+  const lastYRef = useRef(0);
+  const rafRef = useRef<number | null>(null);
+  const hiddenRef = useRef(false);
 
   useEffect(() => {
     if (!isSupabaseConfigured()) {
@@ -103,13 +111,72 @@ export function MobileBottomNav() {
     return () => subscription.unsubscribe();
   }, []);
 
-  // AccountNav is omitted from the public client message bundle — keep profile label local.
+  useEffect(() => {
+    hiddenRef.current = false;
+    setMobileBottomNavScrollHidden(false);
+    lastYRef.current = typeof window !== "undefined" ? window.scrollY : 0;
+  }, [pathname]);
+
+  useEffect(() => {
+    if (!shouldShowMobileBottomNav(pathname)) {
+      setMobileBottomNavScrollHidden(false);
+      return;
+    }
+
+    const reduceMotion =
+      typeof window !== "undefined" &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+    function onScroll() {
+      if (rafRef.current != null) return;
+      rafRef.current = window.requestAnimationFrame(() => {
+        rafRef.current = null;
+        const y = window.scrollY;
+        const delta = y - lastYRef.current;
+
+        if (y <= TOP_ALWAYS_VISIBLE) {
+          if (hiddenRef.current) {
+            hiddenRef.current = false;
+            setMobileBottomNavScrollHidden(false);
+          }
+          lastYRef.current = y;
+          return;
+        }
+
+        if (reduceMotion) {
+          lastYRef.current = y;
+          return;
+        }
+
+        if (delta > SCROLL_DOWN_THRESHOLD && !hiddenRef.current) {
+          hiddenRef.current = true;
+          setMobileBottomNavScrollHidden(true);
+        } else if (delta < -SCROLL_UP_THRESHOLD && hiddenRef.current) {
+          hiddenRef.current = false;
+          setMobileBottomNavScrollHidden(false);
+        }
+
+        lastYRef.current = y;
+      });
+    }
+
+    lastYRef.current = window.scrollY;
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      if (rafRef.current != null) {
+        cancelAnimationFrame(rafRef.current);
+        rafRef.current = null;
+      }
+      setMobileBottomNavScrollHidden(false);
+    };
+  }, [pathname]);
+
   const profileLabel = locale === "en" ? "Profile" : "Προφίλ";
 
   const labels: Record<(typeof ITEMS)[number]["labelKey"], string> = {
     search: tSearch("search"),
     favorites: tNav("favorites"),
-    // Short label so it fits 360–440 without ellipsis; route stays /dashboard/listings.
     myListings: tNav("listings"),
     messages: tNav("messages"),
     profile: profileLabel,
