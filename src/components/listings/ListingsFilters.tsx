@@ -314,6 +314,7 @@ export function ListingsFilters({
     if (v.parking === "true") p.set("parking", "true");
     if (v.pets === "true") p.set("pets", "true");
     if (v.heating === "true") p.set("heating", "true");
+    if (v.amenities?.trim()) p.set("amenities", v.amenities.trim());
     if (v.minSqm) p.set("minSqm", v.minSqm);
     if (v.minMonths) p.set("minMonths", v.minMonths);
     if (v.sort && v.sort !== "recommended") p.set("sort", v.sort);
@@ -587,7 +588,8 @@ export function ListingsFilters({
                 rentalType === "monthly" && "midora-msearch-chip--active"
               )}
             >
-              {tHome("tabMonthly")}
+              <span className="max-[360px]:hidden">{tHome("tabMonthly")}</span>
+              <span className="hidden max-[360px]:inline">{tHome("tabMonthlyShort")}</span>
             </button>
             <button
               type="button"

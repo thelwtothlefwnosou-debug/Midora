@@ -12,6 +12,7 @@ import {
   serializeAmenityFilterParam,
 } from "@/lib/search-amenity-filters";
 import { ListingsFilterModalContent } from "@/components/listings/filters/ListingsFilterModalContent";
+import { setMobileBottomNavOverlayHidden } from "@/lib/mobile-bottom-nav-chrome";
 import { cn } from "@/lib/utils";
 
 type Props = {
@@ -96,6 +97,11 @@ export function ListingsFilterModal({
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [open, onClose]);
+
+  useEffect(() => {
+    setMobileBottomNavOverlayHidden(open);
+    return () => setMobileBottomNavOverlayHidden(false);
+  }, [open]);
 
   function handleOverlayClick() {
     if (hasUnsavedChanges) return;
