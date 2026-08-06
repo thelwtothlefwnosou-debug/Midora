@@ -4,22 +4,17 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useRef, useState, useEffect } from "react";
 import { useTranslations } from "next-intl";
-import { Bell, ChevronDown, ExternalLink, Plus } from "lucide-react";
-import type { OwnerNotification } from "@/lib/owner-dashboard";
+import { ChevronDown, ExternalLink, Plus } from "lucide-react";
+import type { AppNotification } from "@/lib/notifications/types";
 import type { Profile } from "@/lib/types";
 import { dashboardBreadcrumbKey, type AccountNavId } from "@/components/account/account-nav";
 import { ProfileAvatar } from "@/components/profile/ProfileAvatar";
+import { NotificationCenter } from "@/components/notifications/NotificationCenter";
 import { signOut } from "@/lib/actions";
 import { OWNER_LISTING_NEW_PATH } from "@/lib/owner-flow";
 import { MidoraLogo } from "@/components/brand/MidoraLogo";
 import { OwnerListingsNavLink } from "@/components/dashboard/OwnerListingsNavLink";
-import { isPreviewV80 } from "@/lib/preview-v80";
 import { OWNER_LISTINGS_LIST_PATH, isOwnerListingWorkspacePath } from "@/lib/owner-listings-nav";
-import {
-  getReadNotificationIds,
-  markNotificationsRead,
-} from "@/lib/preview-v80-notifications";
-import { cn } from "@/lib/utils";
 
 export function DashboardHeader({
   profile,
@@ -27,23 +22,21 @@ export function DashboardHeader({
   active,
   avatarUrl,
   notifications,
+  unreadCount,
 }: {
   profile: Profile;
   email: string;
   active: AccountNavId;
   avatarUrl?: string | null;
-  notifications: OwnerNotification[];
+  notifications: AppNotification[];
+  unreadCount: number;
 }) {
   const tAccount = useTranslations("AccountNav");
   const tHeader = useTranslations("Owner.dashboardHeader");
-  const tNotif = useTranslations("Owner.notifications");
   const pathname = usePathname();
   const inListingWorkspace = isOwnerListingWorkspacePath(pathname ?? "");
   const [menuOpen, setMenuOpen] = useState(false);
-  const [bellOpen, setBellOpen] = useState(false);
-  const [readIds, setReadIds] = useState<Set<string>>(() => new Set());
   const menuRef = useRef<HTMLDivElement>(null);
-  const bellRef = useRef<HTMLDivElement>(null);
 
   const profileLinks = [
     { href: "/dashboard/profile", label: tHeader("profileLink") },
@@ -52,34 +45,11 @@ export function DashboardHeader({
     { href: "/dashboard/settings?tab=security", label: tHeader("securityLink") },
   ];
 
-  useEffect(() => {
-    if (isPreviewV80) setReadIds(getReadNotificationIds());
-  }, []);
-
-  const displayNotifications = isPreviewV80
-    ? notifications.map((n) => ({ ...n, read: n.read || readIds.has(n.id) }))
-    : notifications;
-  const unread = displayNotifications.filter((n) => !n.read).length;
   const breadcrumb = tAccount(dashboardBreadcrumbKey(pathname, active));
-
-  function openBell() {
-    setBellOpen((v) => {
-      const next = !v;
-      if (next && isPreviewV80) {
-        const unreadIds = displayNotifications.filter((n) => !n.read).map((n) => n.id);
-        if (unreadIds.length) {
-          markNotificationsRead(unreadIds);
-          setReadIds((prev) => new Set([...prev, ...unreadIds]));
-        }
-      }
-      return next;
-    });
-  }
 
   useEffect(() => {
     function onDoc(e: MouseEvent) {
       if (menuRef.current && !menuRef.current.contains(e.target as Node)) setMenuOpen(false);
-      if (bellRef.current && !bellRef.current.contains(e.target as Node)) setBellOpen(false);
     }
     document.addEventListener("mousedown", onDoc);
     return () => document.removeEventListener("mousedown", onDoc);
@@ -112,62 +82,10 @@ export function DashboardHeader({
             {tHeader("viewSite")}
           </Link>
 
-          <div className="relative" ref={bellRef}>
-            <button
-              type="button"
-              onClick={openBell}
-              className="relative flex h-9 w-9 items-center justify-center rounded-lg border border-border hover:bg-sand"
-              aria-label={tHeader("notifications")}
-            >
-              <Bell className="h-4 w-4 text-charcoal/70" />
-              {unread > 0 && (
-                <span className="absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white">
-                  {unread > 9 ? "9+" : unread}
-                </span>
-              )}
-            </button>
-
-            {bellOpen && (
-              <div className="absolute right-0 z-50 mt-2 w-[min(100vw-2rem,360px)] overflow-hidden rounded-2xl border border-border bg-white shadow-float">
-                <div className="border-b border-border px-4 py-3">
-                  <p className="font-display text-sm font-semibold text-charcoal">
-                    {tHeader("notifications")}
-                  </p>
-                </div>
-                <ul className="max-h-80 overflow-y-auto">
-                  {displayNotifications.length === 0 ? (
-                    <li className="px-4 py-8 text-center text-sm text-muted">
-                      {tHeader("emptyNotifications")}
-                    </li>
-                  ) : (
-                    displayNotifications.slice(0, 8).map((n) => (
-                      <li key={n.id}>
-                        <Link
-                          href={n.href}
-                          onClick={() => setBellOpen(false)}
-                          className={cn(
-                            "block border-b border-border px-4 py-3 hover:bg-sand/40",
-                            !n.read && "bg-gold/5"
-                          )}
-                        >
-                          <p className="text-sm font-medium text-charcoal">
-                            {tNotif(n.titleKey, n.titleValues)}
-                          </p>
-                          <p className="mt-0.5 line-clamp-2 text-xs text-muted">
-                            {n.bodyFallback
-                              ? n.bodyFallback
-                              : n.bodyKey
-                                ? tNotif(n.bodyKey, n.bodyValues)
-                                : null}
-                          </p>
-                        </Link>
-                      </li>
-                    ))
-                  )}
-                </ul>
-              </div>
-            )}
-          </div>
+          <NotificationCenter
+            initialNotifications={notifications}
+            initialUnreadCount={unreadCount}
+          />
 
           <Link
             href={OWNER_LISTING_NEW_PATH}

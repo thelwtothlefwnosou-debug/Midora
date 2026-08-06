@@ -824,7 +824,19 @@ export async function submitPortalListingForReview(
     entityId: listingId,
   });
 
+  {
+    const { notifyOwnerListingPendingReview } = await import(
+      "@/lib/notifications/emit"
+    );
+    await notifyOwnerListingPendingReview({
+      ownerId: auth.user.id,
+      listingId,
+      listingTitle: fields.title?.trim() || "Αγγελία",
+    });
+  }
+
   revalidatePath("/dashboard");
+  revalidatePath("/dashboard/notifications");
   revalidatePath("/admin");
   redirect(`/dashboard/listings?submitted=review`);
 }
@@ -1507,6 +1519,14 @@ export async function approveListing(listingId: string): Promise<{ error?: strin
 
   if (listing.user_id) {
     await rewardReferrerForListingApproval(db, listing.user_id);
+    const { notifyOwnerListingPublished } = await import(
+      "@/lib/notifications/emit"
+    );
+    await notifyOwnerListingPublished({
+      ownerId: listing.user_id,
+      listingId,
+      listingTitle: String(listing.title ?? "").trim() || "Αγγελία",
+    });
   }
 
   const { notifySavedSearchMatches } = await import("@/lib/notify-saved-searches");
@@ -1517,6 +1537,7 @@ export async function approveListing(listingId: string): Promise<{ error?: strin
   revalidatePath("/admin/listings/review");
   revalidatePath(`/admin/listings/${listingId}`);
   revalidatePath("/listings");
+  revalidatePath("/dashboard/notifications");
   revalidateListingsCatalog();
   return {};
 }
@@ -1534,6 +1555,13 @@ export async function rejectListing(
   }
 
   const db = createServiceClient() ?? auth.supabase;
+
+  const { data: rejectedListing } = await db
+    .from("listings")
+    .select("user_id, title")
+    .eq("id", listingId)
+    .maybeSingle();
+
   const { error } = await db
     .from("listings")
     .update({
@@ -1545,10 +1573,22 @@ export async function rejectListing(
 
   if (error) return { error: error.message };
 
+  if (rejectedListing?.user_id) {
+    const { notifyOwnerListingRejected } = await import(
+      "@/lib/notifications/emit"
+    );
+    await notifyOwnerListingRejected({
+      ownerId: rejectedListing.user_id,
+      listingId,
+      listingTitle: String(rejectedListing.title ?? "").trim() || "Αγγελία",
+    });
+  }
+
   revalidatePath("/admin");
   revalidatePath("/admin/listings");
   revalidatePath("/admin/listings/review");
   revalidatePath(`/admin/listings/${listingId}`);
+  revalidatePath("/dashboard/notifications");
   return {};
 }
 
@@ -1566,6 +1606,12 @@ export async function requestListingChanges(
 
   const db = createServiceClient() ?? auth.supabase;
 
+  const { data: listingRow } = await db
+    .from("listings")
+    .select("user_id, title")
+    .eq("id", listingId)
+    .maybeSingle();
+
   const { error } = await db
     .from("listings")
     .update({
@@ -1577,10 +1623,22 @@ export async function requestListingChanges(
 
   if (error) return { error: error.message };
 
+  if (listingRow?.user_id) {
+    const { notifyOwnerListingNeedsChanges } = await import(
+      "@/lib/notifications/emit"
+    );
+    await notifyOwnerListingNeedsChanges({
+      ownerId: listingRow.user_id,
+      listingId,
+      listingTitle: String(listingRow.title ?? "").trim() || "Αγγελία",
+    });
+  }
+
   revalidatePath("/admin");
   revalidatePath("/admin/listings");
   revalidatePath("/admin/listings/review");
   revalidatePath(`/admin/listings/${listingId}`);
+  revalidatePath("/dashboard/notifications");
   return {};
 }
 
@@ -2180,29 +2238,43 @@ export async function submitPropertyLead(formData: FormData) {
       : null;
   const start_date = null;
 
-  const { error } = await supabase.from("property_leads").insert({
-    listing_id: listing.id,
-    owner_id: listing.user_id,
-    guest_id: user?.id ?? null,
-    name,
-    email,
-    phone,
-    start_date,
-    timing_note: timingNote,
-    duration,
-    guests,
-    message,
-    interest_start_date: interestStartDate,
-    interest_end_date: interestEndDate,
-    interest_start_month: interestStartMonth,
-    interest_duration_months:
-      interestDurationMonths != null && Number.isFinite(interestDurationMonths)
-        ? interestDurationMonths
-        : null,
-    status: "new",
-  });
+  const { data: insertedLead, error } = await supabase
+    .from("property_leads")
+    .insert({
+      listing_id: listing.id,
+      owner_id: listing.user_id,
+      guest_id: user?.id ?? null,
+      name,
+      email,
+      phone,
+      start_date,
+      timing_note: timingNote,
+      duration,
+      guests,
+      message,
+      interest_start_date: interestStartDate,
+      interest_end_date: interestEndDate,
+      interest_start_month: interestStartMonth,
+      interest_duration_months:
+        interestDurationMonths != null && Number.isFinite(interestDurationMonths)
+          ? interestDurationMonths
+          : null,
+      status: "new",
+    })
+    .select("id")
+    .maybeSingle();
 
   if (error) return { error: mapLeadError(error) };
+
+  if (insertedLead?.id && listing.user_id) {
+    const { notifyOwnerNewLead } = await import("@/lib/notifications/emit");
+    await notifyOwnerNewLead({
+      ownerId: listing.user_id,
+      leadId: insertedLead.id,
+      listingId: listing.id,
+      listing,
+    });
+  }
 
   await logAppEvent("contact_interest_sent", {
     userId: user?.id,
@@ -2212,6 +2284,7 @@ export async function submitPropertyLead(formData: FormData) {
 
   revalidatePath("/dashboard/requests");
   revalidatePath("/dashboard/messages");
+  revalidatePath("/dashboard/notifications");
   return { success: true };
 }
 

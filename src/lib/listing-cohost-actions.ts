@@ -486,7 +486,7 @@ export async function replyToPropertyLead(
 
   const { data: lead } = await auth.supabase
     .from("property_leads")
-    .select("id, listing_id, owner_id")
+    .select("id, listing_id, owner_id, guest_id")
     .eq("id", leadId)
     .single();
 
@@ -510,14 +510,18 @@ export async function replyToPropertyLead(
   const displayName = profile ? profileDisplayName(profile) : await actionError("userFallback");
   const senderRole = access.role === "owner" ? "owner" : "cohost";
 
-  const { error: replyError } = await auth.supabase.from("property_lead_replies").insert({
-    lead_id: leadId,
-    listing_id: lead.listing_id,
-    sender_user_id: auth.user.id,
-    sender_role: senderRole,
-    sender_display_name: displayName,
-    body: trimmed,
-  });
+  const { data: replyRow, error: replyError } = await auth.supabase
+    .from("property_lead_replies")
+    .insert({
+      lead_id: leadId,
+      listing_id: lead.listing_id,
+      sender_user_id: auth.user.id,
+      sender_role: senderRole,
+      sender_display_name: displayName,
+      body: trimmed,
+    })
+    .select("id")
+    .maybeSingle();
 
   if (replyError) return { error: replyError.message };
 
@@ -542,8 +546,26 @@ export async function replyToPropertyLead(
       .eq("id", access.cohostId);
   }
 
+  if (lead.guest_id && replyRow?.id) {
+    const { data: listingRow } = await auth.supabase
+      .from("listings")
+      .select("title")
+      .eq("id", lead.listing_id)
+      .maybeSingle();
+    const { notifyGuestLeadReply } = await import("@/lib/notifications/emit");
+    await notifyGuestLeadReply({
+      guestId: lead.guest_id,
+      leadId,
+      listingId: lead.listing_id,
+      replyId: replyRow.id,
+      listingTitle: String(listingRow?.title ?? "").trim() || "Αγγελία",
+    });
+  }
+
   revalidatePath(`/dashboard/listings/${lead.listing_id}/inquiries`);
   revalidatePath("/dashboard/requests");
+  revalidatePath("/dashboard/messages");
+  revalidatePath("/dashboard/notifications");
   return { success: true };
 }
 

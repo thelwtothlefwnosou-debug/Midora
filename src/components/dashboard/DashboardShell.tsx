@@ -76,8 +76,15 @@ export function DashboardShell({
     );
   }
 
-  const { profile, email, avatarUrl, notifications, sidebarCollapsed, setSidebarCollapsed } =
-    ctx;
+  const {
+    profile,
+    email,
+    avatarUrl,
+    notifications,
+    unreadNotificationCount,
+    sidebarCollapsed,
+    setSidebarCollapsed,
+  } = ctx;
 
   const publicLinkClass =
     "flex items-center gap-2.5 rounded-xl px-2.5 py-2 text-[13px] font-medium text-charcoal/70 hover:bg-sand hover:text-charcoal";
@@ -92,6 +99,7 @@ export function DashboardShell({
         active={active}
         avatarUrl={avatarUrl}
         notifications={notifications}
+        unreadCount={unreadNotificationCount}
       />
 
       <div className="mx-auto flex w-full max-w-[min(100%,1480px)]">

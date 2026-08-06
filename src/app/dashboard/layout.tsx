@@ -1,8 +1,9 @@
 import { requireDashboardContext } from "@/lib/dashboard-context";
-import { getUserListingsForDashboardShell } from "@/lib/listings";
 import { countNewOwnerLeads } from "@/lib/leads";
-import { getEffectiveListingStatus } from "@/lib/listing-status";
-import { buildOwnerNotifications } from "@/lib/owner-dashboard";
+import {
+  countUnreadUserNotifications,
+  listUserNotifications,
+} from "@/lib/notifications/queries";
 import { resolveProfileAvatarUrl } from "@/lib/profile-avatar";
 import { getSupabaseUrl } from "@/lib/supabase/config";
 import { DashboardLayoutProvider } from "@/components/dashboard/DashboardLayoutProvider";
@@ -16,22 +17,20 @@ export default async function DashboardLayout({
 }) {
   const { profile, email } = await requireDashboardContext("/dashboard");
 
-  let notifications: ReturnType<typeof buildOwnerNotifications> = [];
+  let notifications: Awaited<ReturnType<typeof listUserNotifications>> = [];
+  let unreadNotificationCount = 0;
   let newLeads = 0;
   let avatarUrl: string | null = null;
 
   try {
-    const [listings, leadsCount] = await Promise.all([
-      getUserListingsForDashboardShell(profile.id),
+    const [leadsCount, recentNotifications, unreadCount] = await Promise.all([
       countNewOwnerLeads(profile.id),
+      listUserNotifications(profile.id, { limit: 6 }),
+      countUnreadUserNotifications(profile.id),
     ]);
     newLeads = leadsCount;
-    notifications = buildOwnerNotifications({
-      profile,
-      listings,
-      newLeadsCount: newLeads,
-      getEffectiveStatus: getEffectiveListingStatus,
-    });
+    notifications = recentNotifications;
+    unreadNotificationCount = unreadCount;
     avatarUrl = resolveProfileAvatarUrl(profile, getSupabaseUrl());
   } catch (err) {
     console.error("[dashboard] layout chrome data failed:", err);
@@ -44,6 +43,7 @@ export default async function DashboardLayout({
         email={email}
         avatarUrl={avatarUrl}
         notifications={notifications}
+        unreadNotificationCount={unreadNotificationCount}
         newLeadsCount={newLeads}
       >
         {children}

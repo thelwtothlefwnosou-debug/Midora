@@ -1,14 +1,15 @@
 "use client";
 
 import { createContext, useContext, useState } from "react";
-import type { OwnerNotification } from "@/lib/owner-dashboard";
+import type { AppNotification } from "@/lib/notifications/types";
 import type { Profile } from "@/lib/types";
 
 type DashboardLayoutContextValue = {
   profile: Profile;
   email: string;
   avatarUrl: string | null;
-  notifications: OwnerNotification[];
+  notifications: AppNotification[];
+  unreadNotificationCount: number;
   newLeadsCount: number;
   sidebarCollapsed: boolean;
   setSidebarCollapsed: (v: boolean) => void;
@@ -21,13 +22,15 @@ export function DashboardLayoutProvider({
   email,
   avatarUrl,
   notifications,
+  unreadNotificationCount = 0,
   newLeadsCount = 0,
   children,
 }: {
   profile: Profile;
   email: string;
   avatarUrl: string | null;
-  notifications: OwnerNotification[];
+  notifications: AppNotification[];
+  unreadNotificationCount?: number;
   newLeadsCount?: number;
   children: React.ReactNode;
 }) {
@@ -40,6 +43,7 @@ export function DashboardLayoutProvider({
         email,
         avatarUrl,
         notifications,
+        unreadNotificationCount,
         newLeadsCount,
         sidebarCollapsed,
         setSidebarCollapsed,
