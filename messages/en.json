@@ -21,9 +21,36 @@
     "signOut": "Sign out",
     "signIn": "Sign in",
     "signUp": "Sign up",
-    "listProperty": "List a property",
-    "listPropertyShort": "List",
+    "listProperty": "List free",
+    "listPropertyShort": "Free",
     "ariaMain": "Main navigation"
+  },
+  "Notifications": {
+    "title": "Notifications",
+    "markAllRead": "Mark all as read",
+    "viewAll": "View all notifications",
+    "empty": "You have no notifications yet.",
+    "loading": "Loading…",
+    "error": "Could not load notifications.",
+    "close": "Close",
+    "pageSubtitle": "Requests, messages, and listing updates.",
+    "backToDashboard": "Back to dashboard",
+    "items": {
+      "leadNewShortTitle": "New availability request",
+      "leadNewShortBody": "New interest in “{title}”.",
+      "leadNewMonthlyTitle": "New rental request",
+      "leadNewMonthlyBody": "New interest in “{title}”.",
+      "leadReplyTitle": "New reply",
+      "leadReplyBody": "You have a new reply about “{title}”.",
+      "listingPendingReviewTitle": "Listing under review",
+      "listingPendingReviewBody": "“{title}” was submitted for review.",
+      "listingPublishedTitle": "Listing published",
+      "listingPublishedBody": "“{title}” is now public.",
+      "listingNeedsChangesTitle": "Listing needs changes",
+      "listingNeedsChangesBody": "“{title}” needs updates.",
+      "listingRejectedTitle": "Listing rejected",
+      "listingRejectedBody": "“{title}” was not approved."
+    }
   },
   "Common": {
     "utilitiesIncluded": "Utilities included",
@@ -338,9 +365,9 @@
     "areasSubtitle": "Find homes for a few days or several months in cities and areas across Greece.",
     "areasCta": "See listings",
     "hostCtaEyebrow": "For owners",
-    "hostCtaTitle": "Do you have a home for short-term or monthly rental?",
-    "hostCtaBody": "List your property on Midora and receive inquiries directly from people looking for a stay in Greece.",
-    "hostCtaPrimary": "List a property",
+    "hostCtaTitle": "Have a property? Show it on Midora.",
+    "hostCtaBody": "Free listing and direct contact with interested guests, with no Midora commission.",
+    "hostCtaPrimary": "List your property free",
     "hostCtaSecondary": "How it works for owners",
     "searchWhere": "Where",
     "searchClear": "Clear",
@@ -432,7 +459,9 @@
     "cityKalamataBlurb": "Stays in Messinia",
     "cityVolosBlurb": "Homes for city and getaway",
     "cityKavalaBlurb": "Stays in northern Greece",
-    "cityKozaniBlurb": "Homes for monthly or short stays"
+    "cityKozaniBlurb": "Homes for monthly or short stays",
+    "faqOwn5q": "How much does it cost to list on Midora?",
+    "faqOwn5a": "Listing and publishing on Midora is free. Midora does not take a commission from the agreement between owner and guest. Midora does not handle payments or bookings; the final agreement is made directly between the parties."
   },
   "Meta": {
     "titleDefault": "Midora — Property listings in Greece",
@@ -897,12 +926,12 @@
     "emptyFilteredTitle": "No listings found in this category",
     "emptyFilteredHint": "Try a different filter or search.",
     "showAllListings": "See all listings",
-    "emptyListingsTitle": "You haven't uploaded a listing yet",
+    "emptyListingsTitle": "Your first property starts here",
     "emptyListingsCohostTitle": "You don't have listings of your own",
-    "emptyListingsText": "Create your first listing and start showcasing your property.",
+    "emptyListingsText": "Create your first listing free — no Midora commission — and talk directly with interested guests.",
     "emptyListingsCohostText": "Listings you manage as a co-host appear above. You can also upload your own listing anytime.",
     "uploadListing": "Upload listing",
-    "uploadFirstListing": "Upload your first listing",
+    "uploadFirstListing": "List your first property free",
     "listingsPage": {
       "title": "My properties",
       "subtitle": "Manage visibility, status, and requests for each property.",
@@ -1219,7 +1248,8 @@
       "saveFailed": "Not saved",
       "help": "Help",
       "stepOf": "Step {current} of {total}",
-      "homeAria": "Midora — Home"
+      "homeAria": "Midora — Home",
+      "createFreeNote": "Listing on Midora is free. You can save and continue later."
     },
     "counter": {
       "decreaseAria": "Decrease {label}",
@@ -3758,9 +3788,9 @@
       "saveChanges": "Save changes"
     },
     "home": {
-      "emptyTitle": "You have not listed a property yet",
-      "emptySubtitle": "Publish your first listing — short-term or monthly / mid-term stays.",
-      "newListing": "New listing",
+      "emptyTitle": "Your first property starts here",
+      "emptySubtitle": "Create your first Midora listing and talk directly with interested guests.",
+      "newListing": "List your first property free",
       "yourProperty": "Your property",
       "yourProperties": "Your properties",
       "allProperties": "All properties →",
@@ -3800,6 +3830,27 @@
         "title": "Complete your profile",
         "percentDone": "{percent}% complete",
         "cta": "Complete profile"
+      },
+      "freeValue": "Free listing · no Midora commission",
+      "anotherProperty": "Have another property? Add it free.",
+      "anotherPropertyCta": "+ New listing",
+      "gettingStartedTitle": "Get started",
+      "step1": "Add your property",
+      "step2": "Photos and description",
+      "step3": "Set price and availability",
+      "step4": "Review and publish",
+      "startFreeCta": "Start free",
+      "nextAction": {
+        "eyebrow": "Next step",
+        "firstTitle": "Create your first listing",
+        "firstBody": "Free listing · no Midora commission. You can save and continue later.",
+        "firstCta": "Start free",
+        "continueTitle": "Continue your draft",
+        "continueBody": "Finish your draft listing without losing what you have already saved.",
+        "continueCta": "Continue drafting",
+        "viewTitle": "Manage your listings",
+        "viewBody": "Have another property? Add it free.",
+        "viewCta": "See listings"
       }
     },
     "messages": {
@@ -3809,7 +3860,13 @@
       "viewInRequests": "View in Requests",
       "emptyTitle": "You have no messages yet",
       "emptyBody": "When someone sends a message or request from a public listing, it will appear here so you can reply.",
-      "viewListings": "See my listings"
+      "viewListings": "See my listings",
+      "emptyNoListingsTitle": "You have no messages yet.",
+      "emptyNoListingsBody": "List your first property so interested guests can contact you.",
+      "emptyNoListingsCta": "List a property free",
+      "emptyWithListingsTitle": "You have no messages yet",
+      "emptyWithListingsBody": "When someone sends a message or request from a public listing, it will appear here so you can reply.",
+      "emptyWithListingsCta": "See my listings"
     },
     "settings": {
       "title": "Settings",
@@ -3893,12 +3950,12 @@
       "manageListingsLink": "Manage listings"
     },
     "subscriptionPage": {
-      "title": "Visibility subscription",
-      "subtitle": "Billing for listing publication and active visibility",
+      "title": "Listing visibility",
+      "subtitle": "Publish and show listings with no Midora commission",
       "currentPlan": "Current plan",
       "freePlan": "Free visibility",
       "basicPlan": "Basic plan",
-      "freeDesc": "Launch offer — no publication fee",
+      "freeDesc": "€0 publishing fee. Publish and manage listings with no Midora commission.",
       "basicDesc": "Listing publication fee per month of visibility",
       "activeListings": "Active listings: {count}",
       "totalListings": "Total listings: {count}",
@@ -3907,7 +3964,12 @@
       "manageListingsDesc": "To renew or activate visibility, pick a listing from your list.",
       "myListings": "My listings",
       "newListing": "New listing",
-      "visibilityPackage": "Visibility package"
+      "visibilityPackage": "Visibility package",
+      "listingStatusTitle": "Listing status",
+      "listingStatusDesc": "See which listings are live, drafts, or need action.",
+      "statusLive": "Live",
+      "statusDraft": "Draft",
+      "statusAction": "Needs action"
     },
     "requestsPage": {
       "title": "Requests",
@@ -3918,7 +3980,13 @@
       "tipPhotos": "Add 5+ clear photos",
       "tipAvailability": "Fill in availability",
       "tipPrice": "Keep the price up to date",
-      "viewMyListings": "See my listings"
+      "viewMyListings": "See my listings",
+      "emptyNoListingsTitle": "You have no requests yet.",
+      "emptyNoListingsBody": "List your first property so interested guests can contact you.",
+      "emptyNoListingsCta": "List a property free",
+      "emptyWithListingsTitle": "You have no interest yet",
+      "emptyWithListingsBody": "When someone contacts you about a listing, it will appear here with their contact details.",
+      "emptyWithListingsCta": "See my listings"
     },
     "errorPage": {
       "title": "Something went wrong in the dashboard",
@@ -3958,7 +4026,11 @@
     },
     "profilePage": {
       "title": "My profile",
-      "subtitle": "Manage the details shown to interested people."
+      "subtitle": "Manage the details shown to interested people.",
+      "zeroListingTitle": "You have no listing yet",
+      "zeroListingBody": "List your first property free and start receiving interest.",
+      "zeroListingCta": "List a property free",
+      "continueListingCta": "Continue drafting"
     },
     "profileCard": {
       "completePercent": "Complete your profile ({percent}%)",
@@ -3994,7 +4066,11 @@
       "listingOther": "listings",
       "inReview": "in review",
       "active": "active",
-      "newRequests": "new requests"
+      "newRequests": "new requests",
+      "published": "Published",
+      "drafts": "Drafts",
+      "needsAction": "Needs action",
+      "requests": "Requests"
     },
     "identityModal": {
       "startCta": "Start identity verification",
@@ -4044,7 +4120,9 @@
       "preferredContactEmail": "Email",
       "privacyNote": "Your email and phone are not shown publicly on listings. Contact starts via a Midora request or message.",
       "retry": "Try again",
-      "saveChanges": "Save changes"
+      "saveChanges": "Save changes",
+      "publicBadge": "Public",
+      "privateBadge": "Private"
     },
     "avatarCrop": {
       "title": "Crop photo",
