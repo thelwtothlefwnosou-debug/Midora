@@ -169,6 +169,11 @@ export function CreateListingWizardShell({
                       {stepHint}
                     </p>
                   ) : null}
+                  {stepIndex === 0 ? (
+                    <p className="mt-3 max-w-xl text-sm leading-relaxed text-gold-dark/90 sm:text-[15px]">
+                      {t("createFreeNote")}
+                    </p>
+                  ) : null}
                 </>
               )}
 
