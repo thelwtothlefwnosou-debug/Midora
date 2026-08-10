@@ -34,6 +34,10 @@ const nextConfig: NextConfig = {
     optimizePackageImports: ["lucide-react", "framer-motion"],
   },
   images: {
+    // Vercel Hobby Image Optimization returns 402 Payment Required when the
+    // monthly quota is exceeded — listing cards then show blank/broken photos.
+    // Serve remote listing/media URLs directly until Pro or a dedicated CDN.
+    unoptimized: true,
     qualities: [75, 85],
     formats: ["image/avif", "image/webp"],
     remotePatterns: [
