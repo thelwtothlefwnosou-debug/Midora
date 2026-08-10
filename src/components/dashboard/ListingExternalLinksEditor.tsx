@@ -42,14 +42,12 @@ type FormState = {
   platform: ExternalLinkPlatform;
   url: string;
   label: string;
-  isPublic: boolean;
 };
 
 const EMPTY_FORM: FormState = {
   platform: "airbnb",
   url: "",
   label: "",
-  isPublic: false,
 };
 
 function formFromLink(link: ListingExternalLink): FormState {
@@ -57,7 +55,6 @@ function formFromLink(link: ListingExternalLink): FormState {
     platform: link.platform,
     url: link.url,
     label: link.label ?? "",
-    isPublic: link.is_public,
   };
 }
 
@@ -124,7 +121,6 @@ function ExternalLinkModal({
         listingId,
         form.platform,
         result.normalizedUrl!,
-        form.isPublic,
         form.platform === "other" ? form.label : null
       );
       if (saveResult && "error" in saveResult && saveResult.error) {
@@ -263,19 +259,6 @@ function ExternalLinkModal({
           </label>
         )}
 
-        <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-border bg-sand/15 px-3 py-3">
-          <input
-            type="checkbox"
-            checked={form.isPublic}
-            onChange={(e) => setForm((prev) => ({ ...prev, isPublic: e.target.checked }))}
-            className="mt-0.5 h-4 w-4 accent-charcoal"
-          />
-          <span className="text-sm text-charcoal">
-            <span className="font-medium">{t("publicToggleLabel")}</span>
-            <span className="mt-1 block text-xs text-muted">{t("publicToggleHint")}</span>
-          </span>
-        </label>
-
         {error && (
           <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
             {error}
@@ -403,20 +386,6 @@ export function ListingExternalLinksEditor({
                             {t("invalidLinkBadge")}
                           </>
                         )}
-                      </span>
-                      <span
-                        className={cn(
-                          "rounded-full px-2 py-0.5 text-[10px] font-medium",
-                          link.is_public
-                            ? "bg-gold/10 text-gold-dark"
-                            : "bg-sand text-muted"
-                        )}
-                      >
-                        {t("publicStatusLabel", {
-                          status: link.is_public
-                            ? t("publicStatusActive")
-                            : t("publicStatusInactive"),
-                        })}
                       </span>
                     </div>
                     <p className="mt-1 truncate font-mono text-xs text-muted">

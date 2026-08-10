@@ -2330,7 +2330,6 @@ export async function saveListingExternalLink(
   listingId: string,
   platform: string,
   url: string,
-  isPublic: boolean,
   label?: string | null
 ) {
   const auth = await requireListingOwner(listingId);
@@ -2351,7 +2350,7 @@ export async function saveListingExternalLink(
     platform: plat,
     url: validation.normalizedUrl,
     label: label?.trim() || null,
-    is_public: isPublic,
+    is_public: true,
     updated_at: now,
   };
 
