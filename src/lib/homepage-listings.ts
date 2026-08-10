@@ -2,6 +2,7 @@ import type { ListingWithImages } from "@/lib/types";
 import { pickListingCoverPhotoUrl, resolveListingImageUrl } from "@/lib/listing-media";
 import {
   isPublicMvpListing,
+  listingMatchesRentalTypeFilter,
   listingRentalType,
   listingSupportsMonthly,
   listingSupportsShortTerm,
@@ -71,26 +72,13 @@ function hasValidCoverPhoto(listing: ListingWithImages): boolean {
   });
 }
 
-function hasGreekTitle(title: string): boolean {
-  const trimmed = title.trim();
-  if (trimmed.length < 6) return false;
-  if (!GREEK_CHARS.test(trimmed)) return false;
-  if (containsBadPattern(trimmed)) return false;
-  return true;
-}
-
-function isMostlyLatin(title: string): boolean {
-  const greek = (title.match(/[\u0370-\u03FF]/g) ?? []).length;
-  const latin = (title.match(/[a-zA-Z]/g) ?? []).length;
-  return latin >= 4 && latin > greek;
-}
-
 function hasValidLocation(listing: ListingWithImages): boolean {
   const city = listing.city?.trim() ?? "";
-  const area = listing.area?.trim() ?? "";
-  if (!city || !area) return false;
+  if (!city) return false;
   if (!GREEK_CHARS.test(city)) return false;
-  if (containsBadPattern(`${city} ${area}`)) return false;
+  if (containsBadPattern(city)) return false;
+  const area = listing.area?.trim() ?? "";
+  if (area && containsBadPattern(area)) return false;
   return true;
 }
 
@@ -113,16 +101,29 @@ function isPublishedListing(listing: ListingWithImages): boolean {
   return true;
 }
 
+function hasDisplayableTitle(title: string): boolean {
+  const trimmed = title.trim();
+  if (trimmed.length < 4) return false;
+  if (containsBadPattern(trimmed)) return false;
+  // Prefer Greek titles; still allow bilingual titles with enough Greek.
+  if (GREEK_CHARS.test(trimmed)) return true;
+  // Fallback: readable Latin title without spam patterns (real published inventory).
+  return /[a-zA-Z]{4,}/.test(trimmed) && !isMostlySpamLatin(trimmed);
+}
+
+function isMostlySpamLatin(title: string): boolean {
+  return /lorem|test listing|demo listing|asdf|qwerty/i.test(title);
+}
+
 /** Strict quality gate for homepage inventory cards. */
 export function isHomepageQualityListing(listing: ListingWithImages): boolean {
   if (!isPublicMvpListing(listing)) return false;
   if (!isPublishedListing(listing)) return false;
   if (!hasValidCoverPhoto(listing)) return false;
-  if (!hasGreekTitle(listing.title)) return false;
-  if (isMostlyLatin(listing.title)) return false;
+  if (!hasDisplayableTitle(listing.title)) return false;
   if (!hasValidLocation(listing)) return false;
   if (!hasValidPriceForMode(listing)) return false;
-  if (listing.bedrooms == null || listing.bedrooms < 0) return false;
+  if (listing.bedrooms != null && listing.bedrooms < 0) return false;
   return true;
 }
 
@@ -135,5 +136,37 @@ export function pickHomepageListings(
   listings: ListingWithImages[],
   max = 6
 ): ListingWithImages[] {
-  return listings.filter(isHomepageQualityListing).slice(0, max);
+  return shuffleListings(listings.filter(isHomepageQualityListing)).slice(0, max);
+}
+
+/** Fisher–Yates shuffle — in-memory only (no SQL RANDOM). */
+export function shuffleListings<T>(items: T[]): T[] {
+  const next = [...items];
+  for (let i = next.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(Math.random() * (i + 1));
+    const tmp = next[i]!;
+    next[i] = next[j]!;
+    next[j] = tmp;
+  }
+  return next;
+}
+
+/**
+ * Random homepage cards for one rental mode.
+ * Pool is fetched/cached separately; shuffle runs per request so cards rotate.
+ */
+export function pickHomepageListingsByMode(
+  listings: ListingWithImages[],
+  mode: "short_term" | "monthly",
+  max = 6
+): ListingWithImages[] {
+  const pool = listings
+    .filter(isHomepageQualityListing)
+    .filter((listing) => listingMatchesRentalTypeFilter(listing, mode))
+    .filter((listing) => {
+      if (mode === "short_term") return (listing.price_per_night ?? 0) > 0;
+      return listing.price_monthly > 0;
+    });
+
+  return shuffleListings(pool).slice(0, max);
 }

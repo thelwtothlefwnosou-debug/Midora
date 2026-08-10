@@ -108,13 +108,15 @@ const LISTING_SELECT =
 const LISTING_SELECT_MINIMAL = "*, listing_images(*)" as const;
 
 const DEFAULT_APPROVED_FETCH_LIMIT = SEARCH_CATALOG_FETCH_LIMIT;
-const HOMEPAGE_FETCH_LIMIT = 36;
+/** Per-mode window for homepage featured cards (short_term + monthly fetched separately). */
+const HOMEPAGE_MODE_FETCH_LIMIT = 48;
 
 type FetchApprovedOptions = {
   limit?: number;
   minimal?: boolean;
   /** Public reads inside unstable_cache — no cookies/session. */
   useServiceClient?: boolean;
+  rentalType?: "short_term" | "monthly";
 };
 
 function isMissingHiddenColumn(error: { message?: string } | null): boolean {
@@ -154,7 +156,7 @@ async function fetchApprovedFromDb(
   const db = supabase;
 
   async function runQuery(select: string) {
-    let result = await db
+    let query = db
       .from("listings")
       .select(select)
       .eq("status", "approved")
@@ -163,14 +165,26 @@ async function fetchApprovedFromDb(
       .order("created_at", { ascending: false })
       .limit(fetchLimit);
 
+    if (options.rentalType) {
+      query = query.eq("rental_type", options.rentalType);
+    }
+
+    let result = await query;
+
     if (isMissingHiddenColumn(result.error)) {
-      result = await db
+      let fallback = db
         .from("listings")
         .select(select)
         .eq("status", "approved")
         .or(expiresFilter)
         .order("created_at", { ascending: false })
         .limit(fetchLimit);
+
+      if (options.rentalType) {
+        fallback = fallback.eq("rental_type", options.rentalType);
+      }
+
+      result = await fallback;
     }
 
     return result;
@@ -415,39 +429,71 @@ export async function getSearchCatalogMatchCount(
 
 async function loadHomepageRecentListings(): Promise<ListingWithImages[]> {
   if (!isSupabaseConfigured()) {
-    return shouldUseSeedListings()
-      ? filterSeedListings({ sort: "newest" }, HOMEPAGE_FETCH_LIMIT).map(
-          slimHomepageListing
-        )
-      : [];
+    if (!shouldUseSeedListings()) return [];
+    const short = filterSeedListings(
+      { sort: "newest", rentalType: "short_term" },
+      HOMEPAGE_MODE_FETCH_LIMIT
+    );
+    const monthly = filterSeedListings(
+      { sort: "newest", rentalType: "monthly" },
+      HOMEPAGE_MODE_FETCH_LIMIT
+    );
+    return [...short, ...monthly].map(slimHomepageListing);
   }
 
-  const dbListings = await fetchApprovedFromDb({
-    limit: HOMEPAGE_FETCH_LIMIT,
-    minimal: true,
-    useServiceClient: true,
-  });
+  const [shortRows, monthlyRows] = await Promise.all([
+    fetchApprovedFromDb({
+      limit: HOMEPAGE_MODE_FETCH_LIMIT,
+      minimal: true,
+      useServiceClient: true,
+      rentalType: "short_term",
+    }),
+    fetchApprovedFromDb({
+      limit: HOMEPAGE_MODE_FETCH_LIMIT,
+      minimal: true,
+      useServiceClient: true,
+      rentalType: "monthly",
+    }),
+  ]);
 
-  if (dbListings === null || dbListings.length === 0) {
-    return shouldUseSeedListings()
-      ? filterSeedListings({ sort: "newest" }, HOMEPAGE_FETCH_LIMIT).map(
-          slimHomepageListing
-        )
-      : [];
+  const dbListings = [...(shortRows ?? []), ...(monthlyRows ?? [])];
+
+  if (dbListings.length === 0) {
+    if (!shouldUseSeedListings()) return [];
+    const short = filterSeedListings(
+      { sort: "newest", rentalType: "short_term" },
+      HOMEPAGE_MODE_FETCH_LIMIT
+    );
+    const monthly = filterSeedListings(
+      { sort: "newest", rentalType: "monthly" },
+      HOMEPAGE_MODE_FETCH_LIMIT
+    );
+    return [...short, ...monthly].map(slimHomepageListing);
   }
 
-  return sortListings(dbListings, "newest").map(slimHomepageListing);
+  return dbListings.map(slimHomepageListing);
 }
 
 const getHomepageRecentListingsCached = unstable_cache(
   loadHomepageRecentListings,
-  ["midora-homepage-recent-listings"],
+  ["midora-homepage-featured-pools-v2"],
   { revalidate: 60 }
 );
 
 /** Lean fetch for homepage cards — small DB window + short cache. */
 export async function getHomepageRecentListings(): Promise<ListingWithImages[]> {
-  return getHomepageRecentListingsCached();
+  if (process.env.NODE_ENV === "development") {
+    return loadHomepageRecentListings();
+  }
+  try {
+    return await getHomepageRecentListingsCached();
+  } catch (error) {
+    console.error(
+      "[listings] homepage featured cache unavailable, using direct fetch:",
+      error
+    );
+    return loadHomepageRecentListings();
+  }
 }
 
 export async function getApprovedListingsCount(): Promise<number> {
