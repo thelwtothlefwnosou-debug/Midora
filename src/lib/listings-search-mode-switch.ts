@@ -50,6 +50,7 @@ export function applyRentalModeSwitch(
   } else {
     next.interestFrom = undefined;
     next.interestTo = undefined;
+    next.freeHosting = undefined;
     const checkInMonth = values.interestFrom?.trim().slice(0, 7);
     next.startMonth = cache.monthly.startMonth || checkInMonth || undefined;
     next.durationMonths = cache.monthly.durationMonths || "2";

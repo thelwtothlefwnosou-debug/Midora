@@ -14,7 +14,8 @@ export type ListingBadgeKind =
   | "rental_type"
   | "rental_type_secondary"
   | "ama"
-  | "checked";
+  | "checked"
+  | "free_hosting";
 
 export type ListingBadge = {
   kind: ListingBadgeKind;
@@ -31,6 +32,7 @@ const BADGE_LABELS_EL: Record<ListingBadgeKind, string> = {
   rental_type_secondary: "",
   ama: "Με καταχωρημένο ΑΜΑ",
   checked: "Ελεγμένη αγγελία",
+  free_hosting: "Δωρεάν φιλοξενία",
 };
 
 const BADGE_LABELS_EN: Record<ListingBadgeKind, string> = {
@@ -42,6 +44,7 @@ const BADGE_LABELS_EN: Record<ListingBadgeKind, string> = {
   rental_type_secondary: "",
   ama: "Registered AMA",
   checked: "Reviewed listing",
+  free_hosting: "Free hosting",
 };
 
 const BADGE_LABEL_KEYS: Partial<Record<ListingBadgeKind, string>> = {
@@ -162,6 +165,8 @@ export function badgeClassName(kind: ListingBadgeKind, variant: "default" | "hom
       return "bg-gold/95 text-white";
     case "instant":
       return "bg-teal/95 text-white";
+    case "free_hosting":
+      return "bg-charcoal/92 text-white tracking-[0.08em]";
     case "verified":
     default:
       return "bg-white/95 text-charcoal";

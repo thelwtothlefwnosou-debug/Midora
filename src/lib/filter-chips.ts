@@ -82,6 +82,7 @@ export function buildFilterChips(
     bills: "Λογαριασμοί περιλαμβάνονται",
     rentalShortTerm: "Βραχυχρόνια μίσθωση",
     rentalMonthly: "Μηνιαία / μεσοπρόθεσμη",
+    freeHosting: "Δωρεάν φιλοξενία",
   };
   const fallbackEn: Record<string, string> = {
     from: "From {value}",
@@ -106,6 +107,7 @@ export function buildFilterChips(
     bills: "Utilities included",
     rentalShortTerm: "Short-term rental",
     rentalMonthly: "Monthly / mid-term",
+    freeHosting: "Free hosting",
   };
   const fallback = locale === "en" ? fallbackEn : fallbackEl;
 
@@ -244,6 +246,9 @@ export function buildFilterChips(
   if (params.get("pets") === "true") push("pets", "pets", tr("pets"));
   if (params.get("heating") === "true") push("heating", "heating", tr("heating"));
   if (params.get("bills") === "true") push("bills", "bills", tr("bills"));
+  if (isShort && (params.get("freeHosting") === "true" || params.get("freeHosting") === "1")) {
+    push("freeHosting", "freeHosting", tr("freeHosting"));
+  }
 
   return chips;
 }

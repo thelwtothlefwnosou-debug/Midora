@@ -1,3 +1,4 @@
+import { FreeHostingMark } from "@/components/brand/FreeHostingMark";
 import { badgeClassName, getListingBadges, type ListingBadge } from "@/lib/listing-badges";
 import type { ListingWithImages } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -27,11 +28,14 @@ export function ListingCardBadges({
         <span
           key={`${b.kind}-${b.label}`}
           className={cn(
-            "rounded-md px-2 py-0.5 text-[10px] font-semibold tracking-wide uppercase shadow-[0_1px_3px_rgba(26,26,26,0.08)] backdrop-blur-[2px]",
+            "inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[10px] font-semibold tracking-wide uppercase shadow-[0_1px_3px_rgba(26,26,26,0.08)] backdrop-blur-[2px]",
             b.kind === "checked" && variant === "home" && "px-1.5 py-0.5 text-[9px]",
             badgeClassName(b.kind, variant)
           )}
         >
+          {b.kind === "free_hosting" ? (
+            <FreeHostingMark className="h-3 w-3 text-current" />
+          ) : null}
           {b.label}
         </span>
       ))}

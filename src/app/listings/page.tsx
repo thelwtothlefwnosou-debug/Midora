@@ -21,6 +21,7 @@ import { computePriceHistogram } from "@/lib/listing-price-histogram";
 import { parsePublicRentalType } from "@/lib/rental-types";
 import { getUnavailablePeriodsByListingIds } from "@/lib/unavailable-periods-db";
 import { parseSearchDurationMonths } from "@/lib/listing-search-links";
+import { getMatchingFreeHostingListingIds } from "@/lib/free-hosting";
 import type { ListingWithImages } from "@/lib/types";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -95,6 +96,8 @@ function buildFilterDefaults(
     heating: params.heating,
     amenities: params.amenities,
     sort: params.sort ?? "recommended",
+    freeHosting:
+      params.freeHosting === "true" || params.freeHosting === "1" ? "true" : undefined,
   };
 }
 
@@ -111,7 +114,22 @@ function markersAsMapListings(
 /** Deduped per-request session load — shared by filters + results Suspense lanes. */
 const loadListingsSearchData = cache(
   async (params: Record<string, string | undefined>) => {
-    const { filters, dateMessages } = parseListingFiltersWithMessages(params);
+    const { filters: parsedFilters, dateMessages } = parseListingFiltersWithMessages(params);
+    let filters = parsedFilters;
+
+    if (filters.freeHosting && filters.rentalType === "short_term") {
+      const freeHostingListingIds = await getMatchingFreeHostingListingIds({
+        interestFrom: filters.interestFrom,
+        interestTo: filters.interestTo,
+        guests: filters.guests,
+      });
+      filters = {
+        ...filters,
+        freeHostingListingIds,
+        skipMinimumStayFilter: true,
+      };
+    }
+
     const rawCity = params.city ? decodeURIComponent(params.city) : undefined;
     const resolved = rawCity ? resolveLocation(rawCity) : null;
     const seed = parseResultSeed(params.rs);

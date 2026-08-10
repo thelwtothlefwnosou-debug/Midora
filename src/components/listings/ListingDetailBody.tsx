@@ -9,6 +9,7 @@ import { getFavoriteListingIds } from "@/lib/user-features";
 import { createClient, getCurrentProfile } from "@/lib/supabase/server";
 import { resolveListingPublicContact } from "@/lib/listing-contact";
 import { getPublicUnavailablePeriods } from "@/lib/unavailable-periods-db";
+import { getActiveFreeHostingOffersForListing } from "@/lib/free-hosting";
 import { isPublicMvpListing } from "@/lib/rental-types";
 import { defaultPublicRentalMode, publicPricePrimary, resolveSupportsShortTerm } from "@/lib/listing-rental-modes";
 import { isListingActive } from "@/lib/listings";
@@ -36,12 +37,13 @@ export async function ListingDetailBody({ id }: { id: string }) {
   const favoriteIds = await getFavoriteListingIds();
   const isFavorited = favoriteIds.includes(listing.id);
   const unavailablePeriods = await getPublicUnavailablePeriods(listing.id);
-  const [nearby, publicCohosts, publicContactPhones] = await Promise.all([
+  const [nearby, publicCohosts, publicContactPhones, freeHostingOffers] = await Promise.all([
     getNearbyListings(listing, {
       rentalMode: defaultPublicRentalMode(listing),
     }),
     getAcceptedPublicCohosts(listing.id),
     getPublicListingContactNumbers(listing.id),
+    getActiveFreeHostingOffersForListing(listing.id),
   ]);
 
   const supabase = await createClient();
@@ -85,6 +87,7 @@ export async function ListingDetailBody({ id }: { id: string }) {
                 listing={listing}
                 nearby={nearby}
                 unavailablePeriods={unavailablePeriods}
+                freeHostingOffers={freeHostingOffers}
                 isFavorited={isFavorited}
                 mapPrice={mapPrice}
                 contact={contact}

@@ -5,6 +5,8 @@ export type ListingAvailabilityStatus =
   | "from_month"
   | "upon_request";
 
+export type PropertyLeadKind = "availability" | "rental" | "message" | "free_hosting";
+
 export type PropertyLead = {
   id: string;
   listing_id: string;
@@ -22,6 +24,8 @@ export type PropertyLead = {
   interest_duration_months?: number | null;
   guests: number | null;
   message: string | null;
+  /** Present when migration applied; free_hosting requests use the Free Hosting mark. */
+  lead_kind?: PropertyLeadKind | string | null;
   status: PropertyLeadStatus;
   created_at: string;
   updated_at: string;
@@ -492,6 +496,13 @@ export type ListingFilters = {
   hasHeating?: boolean;
   amenityKeys?: string[];
   sort?: ListingSort;
+  /** Short-term only: restrict to listings with matching Free Hosting offers. */
+  freeHosting?: boolean;
+  /**
+   * Internal allowlist when freeHosting is on.
+   * Empty array = no matches (do not treat as “no filter”).
+   */
+  freeHostingListingIds?: string[];
   /** Internal: skip minimum-stay night filter when measuring empty-state cause */
   skipMinimumStayFilter?: boolean;
 };

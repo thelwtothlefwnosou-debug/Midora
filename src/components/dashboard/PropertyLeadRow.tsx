@@ -42,6 +42,8 @@ import { pickListingCoverPhotoUrl } from "@/lib/listing-media";
 
 import { ConversationReportButton } from "@/components/listings/ConversationReportButton";
 
+import { FreeHostingMark } from "@/components/brand/FreeHostingMark";
+
 import { cn } from "@/lib/utils";
 
 import { useLocale, useTranslations } from "next-intl";
@@ -359,6 +361,18 @@ export function PropertyLeadRow({
                 </p>
 
               )}
+
+              {lead.lead_kind === "free_hosting" ? (
+
+                <span className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-charcoal/90 px-2.5 py-1 text-[10px] font-semibold tracking-[0.08em] text-white uppercase">
+
+                  <FreeHostingMark className="h-3 w-3 text-current" />
+
+                  {t("kindFreeHosting")}
+
+                </span>
+
+              ) : null}
 
             </div>
 

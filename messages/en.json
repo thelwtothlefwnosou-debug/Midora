@@ -21,8 +21,8 @@
     "signOut": "Sign out",
     "signIn": "Sign in",
     "signUp": "Sign up",
-    "listProperty": "List free",
-    "listPropertyShort": "Free",
+    "listProperty": "List a property",
+    "listPropertyShort": "List",
     "ariaMain": "Main navigation"
   },
   "Notifications": {
@@ -645,7 +645,8 @@
       "subtitle": "Discover homes whose hosts open selected dates without a lodging charge.",
       "primaryCta": "Discover free stays",
       "secondaryCta": "I want to offer my home",
-      "clarity": "Free Hosting applies to the lodging charge for specific dates. Midora does not handle payments or bookings."
+      "clarity": "Free Hosting applies to the lodging charge for specific dates. Midora does not handle payments or bookings.",
+      "visualEmpty": "Open dates. Open hospitality."
     }
   },
   "FreeStays": {
@@ -656,10 +657,12 @@
       "ogDescription": "Selected dates without a lodging charge. A request, not a booking."
     },
     "hero": {
-      "eyebrow": "Free Hosting — a Midora initiative",
+      "eyebrow": "Free Hosting",
+      "eyebrowSub": "A Midora initiative",
       "title": "A few days can make a difference.",
       "subtitle": "Hosts open selected dates on their homes without a lodging charge.",
-      "note": "You send a request to the host. Midora does not handle payments or bookings."
+      "note": "You send a request to the host. Midora does not handle payments or bookings.",
+      "visualEmpty": "Open dates. Open hospitality."
     },
     "search": {
       "aria": "Search free hosting",
@@ -674,16 +677,26 @@
       "title": "Available free stays",
       "emptyCount": "No active offers yet.",
       "count": "{count} active offers",
-      "emptyTitle": "No free stays found",
-      "emptyBody": "When hosts publish available dates, they will appear here with a map and real listings.",
+      "emptyTitle": "No free stays found for these dates.",
+      "emptyBody": "Try different dates or widen the search area.",
       "tipDates": "Try different dates",
       "tipArea": "Widen the search area",
-      "tipGuests": "Reduce guest count when it makes sense"
+      "tipGuests": "Reduce guest count when it makes sense",
+      "browseMap": "View on search map",
+      "offerWindow": "{from} → {to}",
+      "maxNights": "Up to {count} nights",
+      "maxGuests": "Up to {count} guests",
+      "launchTitle": "Free Hosting is just getting started.",
+      "launchBody": "When hosts publish available dates, they will appear here with a real map and listings.",
+      "changeDates": "Change dates",
+      "clearSearch": "Clear search",
+      "ownerSoftCta": "Have a home? Offer a free stay.",
+      "badge": "Free hosting",
+      "noLodgingCharge": "No lodging charge",
+      "zeroPrice": "€0"
     },
     "map": {
-      "placeholderAria": "Free stays map — coming soon",
-      "placeholderTitle": "The map activates with the first offers",
-      "placeholderBody": "It will reuse Midora’s existing map infrastructure with the same privacy rules."
+      "aria": "Map of available free stays"
     },
     "how": {
       "title": "How it works",
@@ -699,7 +712,10 @@
     "guestStep4Text": "The final agreement is between the parties.",
     "forGuests": {
       "title": "For people looking for hosting",
-      "body": "You see real dates a host has opened without a lodging charge. You send a request and continue the conversation directly."
+      "body": "You see real dates a host has opened without a lodging charge. You send a request and continue the conversation directly.",
+      "point1": "See real available dates",
+      "point2": "Choose dates and guests",
+      "point3": "Send a request and talk directly"
     },
     "forOwners": {
       "title": "For owners",
@@ -736,6 +752,10 @@
       "body": "Search available dates or offer open dates from your short-term listing.",
       "searchCta": "Discover free stays",
       "ownerCta": "Create a listing"
+    },
+    "editorial": {
+      "title": "A few open dates can become a few days of rest for someone else.",
+      "body": "Hosts choose when and for how long they want to offer their space without a lodging charge."
     }
   },
   "Meta": {
@@ -886,6 +906,15 @@
     "registeredBadge": "Registered {type}",
     "moreOptions": "More options",
     "previewModeBlocked": "This is a test preview. Visitors will be able to send a request from here.",
+    "freeHosting": {
+      "title": "Free hosting",
+      "subtitle": "The host is offering selected dates without a lodging charge. You send a request — not a booking.",
+      "window": "{from} → {to}",
+      "maxNights": "Up to {count} nights",
+      "maxGuests": "Up to {count} guests",
+      "cta": "Send a free hosting request",
+      "note": "The final agreement is direct. Midora does not handle payments or bookings."
+    },
     "gallery": {
       "closeAria": "Close",
       "allPhotos": "All photos",
@@ -1083,6 +1112,7 @@
       "titleMessageHost": "Message to the host",
       "titleRentalRequest": "Rental request",
       "titleAvailabilityRequest": "Availability request",
+      "titleFreeHostingRequest": "Free hosting request",
       "titleContactOwner": "Contact the owner",
       "messageHelper": "Send a question about the property. The final agreement is made directly between the parties, outside Midora.",
       "yourChoices": "Your selections",
@@ -1227,6 +1257,7 @@
   },
   "Listings": {
     "filters": "Filters",
+    "freeHostingChip": "Free hosting",
     "clearAll": "Clear all",
     "showN": "Show {count}",
     "map": "Map",
@@ -1345,7 +1376,8 @@
       "heating": "Heating",
       "bills": "Utilities included",
       "rentalShortTerm": "Short-term rental",
-      "rentalMonthly": "Monthly / mid-term"
+      "rentalMonthly": "Monthly / mid-term",
+      "freeHosting": "Free hosting"
     },
     "sort": {
       "label": "Sort",
@@ -4619,7 +4651,8 @@
       "viewProperty": "View property",
       "markRead": "Mark as read",
       "markReplied": "Replied",
-      "archive": "Archive"
+      "archive": "Archive",
+      "kindFreeHosting": "Free hosting"
     },
     "completeness": {
       "photos": "Photos",
@@ -5026,6 +5059,8 @@
       "periodOverlapWarning": "The period overlaps with already blocked dates.",
       "periodExternalManaged": "This date comes from a connected calendar. Disconnect or update the external calendar to change it.",
       "datesUnavailable": "The selected dates are not available.",
+      "freeHostingOfferMissing": "There is no active free hosting offer for these dates.",
+      "freeHostingRequestLimit": "You have reached the limit of active free hosting requests.",
       "changeFailed": "Couldn't apply the change. Try again.",
       "invalidCoordinates": "Invalid coordinates.",
       "coordinatesOutsideGreece": "Coordinates must be within Greece.",

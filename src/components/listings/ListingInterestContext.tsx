@@ -18,6 +18,7 @@ export type InterestPrefill = {
   interestDurationMonths?: number;
   intent?: "message" | "interest" | "rental_request";
   rentalMode?: "short_term" | "monthly";
+  leadKind?: "availability" | "rental" | "message" | "free_hosting";
 };
 
 type Ctx = {

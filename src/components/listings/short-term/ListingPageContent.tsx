@@ -23,16 +23,27 @@ import { ListingCoreContent } from "@/components/listings/detail/ListingCoreCont
 import { ListingArrivalSection } from "@/components/listings/detail/ListingArrivalSection";
 import { ListingHeaderIconActions } from "@/components/listings/detail/ListingHeaderActions";
 import { ListingInquiryDatesProvider } from "@/components/listings/detail/ListingInquiryDatesContext";
+import { FreeHostingListingSection } from "@/components/listings/detail/FreeHostingListingSection";
 import { hasArrivalInfo } from "@/lib/listing-arrival";
 import type { ListingPublicDetail, ListingWithImages, ListingCohostWithProfile, ListingContactNumber } from "@/lib/types";
 import type { ListingUnavailablePeriod } from "@/lib/unavailable-periods";
 import type { ListingPublicContact } from "@/lib/listing-contact";
 import { buildProfileLinkContextFromSearchParams } from "@/lib/profile-link-context";
 
+type FreeHostingOfferView = {
+  id: string;
+  startDate: string;
+  endExclusive: string;
+  maxNights: number;
+  maxGuests: number;
+  ownerMessage: string | null;
+};
+
 type Props = {
   listing: ListingPublicDetail;
   nearby: ListingWithImages[];
   unavailablePeriods: ListingUnavailablePeriod[];
+  freeHostingOffers?: FreeHostingOfferView[];
   isFavorited: boolean;
   mapPrice: number;
   contact: ListingPublicContact;
@@ -45,6 +56,7 @@ function ListingPageContentInner({
   listing,
   nearby,
   unavailablePeriods,
+  freeHostingOffers = [],
   isFavorited,
   contact,
   publicCohosts = [],
@@ -164,6 +176,10 @@ function ListingPageContentInner({
               />
               <AvailabilityCalendarSection
                 listing={listing}
+                periods={unavailablePeriods}
+              />
+              <FreeHostingListingSection
+                offers={freeHostingOffers}
                 periods={unavailablePeriods}
               />
             </>

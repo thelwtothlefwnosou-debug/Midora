@@ -170,6 +170,11 @@ export function applyListingFilters(
     );
   }
 
+  if (filters.freeHosting) {
+    const allow = new Set(filters.freeHostingListingIds ?? []);
+    results = results.filter((l) => allow.has(l.id));
+  }
+
   if (
     !filters.skipMinimumStayFilter &&
     filters.rentalType === "short_term" &&
@@ -422,6 +427,10 @@ function buildListingFilters(
     hasHeating: params.heating === "true" ? true : undefined,
     amenityKeys: parseAmenityFilterParam(params.amenities),
     sort: (params.sort as ListingFilters["sort"]) || "recommended",
+    freeHosting:
+      isShort && (params.freeHosting === "true" || params.freeHosting === "1")
+        ? true
+        : undefined,
   };
 
   return filters;

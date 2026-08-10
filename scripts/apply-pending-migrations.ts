@@ -28,6 +28,7 @@ const MIGRATION_FILES = [
   "supabase/migrations/20250717130000_property_leads_interest_columns.sql",
   "supabase/migrations/20250718120000_fix_listing_cohosts_rls_recursion.sql",
   "supabase/migrations/20260810120000_listing_external_calendars.sql",
+  "supabase/migrations/20260810180000_listing_free_hosting_offers.sql",
 ] as const;
 
 async function main() {

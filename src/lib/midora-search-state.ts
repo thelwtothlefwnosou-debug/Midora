@@ -25,6 +25,7 @@ export const SEARCH_PRESERVE_KEYS = [
   "durationMonths",
   "guests",
   "pets",
+  "freeHosting",
   "page",
   "rs",
   "map",

@@ -2,15 +2,16 @@
 
 import { useEffect, useState, useTransition } from "react";
 import { useTranslations } from "next-intl";
-import { HeartHandshake, Loader2, Plus, Trash2 } from "lucide-react";
+import { FreeHostingMark } from "@/components/brand/FreeHostingMark";
+import { Loader2, Plus, Trash2 } from "lucide-react";
 import {
   deleteListingFreeHostingOffer,
   listListingFreeHostingOffers,
   setListingFreeHostingOfferStatus,
   upsertListingFreeHostingOffer,
   type FreeHostingOfferRow,
+  type FreeHostingOfferStatus,
 } from "@/lib/free-hosting-actions";
-import type { FreeHostingOfferStatus } from "@/lib/free-hosting";
 import { cn } from "@/lib/utils";
 
 type Props = {
@@ -125,7 +126,7 @@ export function FreeHostingOwnerSection({ listingId, maxGuestsFallback }: Props)
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="flex items-center gap-2">
-            <HeartHandshake className="h-4 w-4 text-gold" strokeWidth={1.75} aria-hidden />
+            <FreeHostingMark className="h-4 w-4" />
             <h2 className="font-display text-lg font-semibold text-charcoal">{t("title")}</h2>
           </div>
           <p className="mt-1.5 max-w-2xl text-sm leading-relaxed text-muted">{t("subtitle")}</p>

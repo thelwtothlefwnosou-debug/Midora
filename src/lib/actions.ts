@@ -2236,6 +2236,14 @@ export async function submitPropertyLead(formData: FormData) {
     : null;
   const guestsRaw = (formData.get("guests") as string)?.trim();
   const guestsParsed = guestsRaw ? parseInt(guestsRaw, 10) : null;
+  const leadKindRaw = (formData.get("lead_kind") as string)?.trim() || null;
+  const leadKind =
+    leadKindRaw === "free_hosting" ||
+    leadKindRaw === "availability" ||
+    leadKindRaw === "rental" ||
+    leadKindRaw === "message"
+      ? leadKindRaw
+      : null;
 
   if (!listingId) return { error: await actionError("invalidListing") };
   if (!name) return { error: await actionError("nameRequired") };
@@ -2267,11 +2275,60 @@ export async function submitPropertyLead(formData: FormData) {
     if (stayRangeHasBlockedNight(interestStartDate, interestEndDate, periods)) {
       return { error: await actionError("datesUnavailable") };
     }
+
+    if (leadKind === "free_hosting") {
+      const {
+        getActiveFreeHostingOffersForListing,
+        offerMatchesRequestedStay,
+        FREE_HOSTING_MAX_ACTIVE_GUEST_REQUESTS,
+      } = await import("@/lib/free-hosting");
+      const offers = await getActiveFreeHostingOffersForListing(listing.id);
+      const guestsForMatch =
+        guestsParsed != null && Number.isFinite(guestsParsed) && guestsParsed > 0
+          ? guestsParsed
+          : undefined;
+      const matches = offers.some((offer) =>
+        offerMatchesRequestedStay(
+          offer,
+          interestStartDate,
+          interestEndDate,
+          guestsForMatch,
+          periods
+        )
+      );
+      if (!matches) {
+        return { error: await actionError("freeHostingOfferMissing") };
+      }
+    }
+  } else if (leadKind === "free_hosting") {
+    return { error: await actionError("freeHostingOfferMissing") };
   }
 
   const {
     data: { user },
   } = await supabase.auth.getUser();
+
+  if (leadKind === "free_hosting") {
+    const { FREE_HOSTING_MAX_ACTIVE_GUEST_REQUESTS } = await import("@/lib/free-hosting");
+    const identityFilter = user?.id
+      ? { column: "guest_id" as const, value: user.id }
+      : email
+        ? { column: "email" as const, value: email }
+        : phone
+          ? { column: "phone" as const, value: phone }
+          : null;
+    if (identityFilter) {
+      const { count } = await supabase
+        .from("property_leads")
+        .select("id", { count: "exact", head: true })
+        .eq("lead_kind", "free_hosting")
+        .in("status", ["new", "read", "replied"])
+        .eq(identityFilter.column, identityFilter.value);
+      if ((count ?? 0) >= FREE_HOSTING_MAX_ACTIVE_GUEST_REQUESTS) {
+        return { error: await actionError("freeHostingRequestLimit") };
+      }
+    }
+  }
 
   const guests =
     guestsParsed != null && Number.isFinite(guestsParsed) && guestsParsed > 0
@@ -2300,6 +2357,7 @@ export async function submitPropertyLead(formData: FormData) {
         interestDurationMonths != null && Number.isFinite(interestDurationMonths)
           ? interestDurationMonths
           : null,
+      lead_kind: leadKind,
       status: "new",
     })
     .select("id")

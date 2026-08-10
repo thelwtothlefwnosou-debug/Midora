@@ -2,7 +2,9 @@
 
 import { revalidatePath } from "next/cache";
 import { requireListingOwner } from "@/lib/require-auth";
-import type { FreeHostingOfferStatus } from "@/lib/free-hosting";
+import type { FreeHostingOfferStatus } from "@/lib/free-hosting-match";
+
+export type { FreeHostingOfferStatus };
 
 export type FreeHostingOfferRow = {
   id: string;

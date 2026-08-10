@@ -112,6 +112,7 @@ function PropertyContactModalContent({
   const t = useTranslations("Listing.inquiry");
   const tCommon = useTranslations("Common");
   const isMessage = prefill?.intent === "message";
+  const isFreeHosting = prefill?.leadKind === "free_hosting";
   const rentalMode = resolveRentalMode(prefill);
   const isMonthly = rentalMode === "monthly" || Boolean(prefill?.interestStartMonth);
 
@@ -143,6 +144,7 @@ function PropertyContactModalContent({
   const listingHref = `/listings/${getListingPublicId(listing)}`;
   const modalTitle = (() => {
     if (success) return t("titleSuccess");
+    if (isFreeHosting) return t("titleFreeHostingRequest");
     if (isMessage) {
       return isMonthly ? t("titleMessageOwner") : t("titleMessageHost");
     }
@@ -198,6 +200,7 @@ function PropertyContactModalContent({
       fd.set("interest_duration_months", String(prefill.interestDurationMonths));
     }
     if (prefill?.guests != null) fd.set("guests", String(prefill.guests));
+    if (prefill?.leadKind) fd.set("lead_kind", prefill.leadKind);
 
     startTransition(async () => {
       const result = await submitPropertyLead(fd);

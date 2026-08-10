@@ -4,13 +4,14 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { Search } from "lucide-react";
-import { FREE_STAYS_PATH } from "@/lib/free-hosting";
+import { freeHostingListingsHref } from "@/lib/free-hosting-paths";
+import { cn } from "@/lib/utils";
 
 /**
- * Lightweight discovery search shell for /free-stays.
- * Persists query on the same route until offer matching is wired to listings.
+ * Discovery search for /free-stays → short-term listings with freeHosting=true.
+ * Visually anchored to the hero as the primary product action.
  */
-export function FreeStaysSearchBar() {
+export function FreeStaysSearchBar({ className }: { className?: string }) {
   const t = useTranslations("FreeStays.search");
   const router = useRouter();
   const [where, setWhere] = useState("");
@@ -20,22 +21,24 @@ export function FreeStaysSearchBar() {
 
   function onSubmit(event: React.FormEvent) {
     event.preventDefault();
-    const params = new URLSearchParams();
-    if (where.trim()) params.set("city", where.trim());
-    if (from) params.set("interestFrom", from);
-    if (to) params.set("interestTo", to);
-    if (guests) params.set("guests", guests);
-    const qs = params.toString();
-    router.push(qs ? `${FREE_STAYS_PATH}?${qs}` : FREE_STAYS_PATH);
+    const extra: Record<string, string> = {};
+    if (where.trim()) extra.city = where.trim();
+    if (from) extra.interestFrom = from;
+    if (to) extra.interestTo = to;
+    if (guests) extra.guests = guests;
+    router.push(freeHostingListingsHref(extra));
   }
 
   const fieldClass =
-    "w-full rounded-xl border border-border bg-white px-3.5 py-3 text-sm text-charcoal outline-none transition focus:border-gold/50 focus:ring-2 focus:ring-gold/20";
+    "w-full rounded-xl border border-border/80 bg-white px-3.5 py-3 text-sm text-charcoal outline-none transition focus:border-gold/50 focus:ring-2 focus:ring-gold/20";
 
   return (
     <form
       onSubmit={onSubmit}
-      className="rounded-[1.5rem] border border-charcoal/8 bg-white p-4 shadow-soft sm:p-5"
+      className={cn(
+        "rounded-[1.35rem] border border-charcoal/8 bg-white p-3.5 shadow-[0_18px_50px_-28px_rgba(44,40,37,0.45)] sm:p-4",
+        className
+      )}
       aria-label={t("aria")}
     >
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-[1.4fr_1fr_1fr_0.7fr_auto] lg:items-end">

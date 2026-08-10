@@ -81,6 +81,7 @@ export type ListingsFilterValues = {
   heating?: string;
   amenities?: string;
   sort?: string;
+  freeHosting?: string;
 };
 
 type Props = {
@@ -318,6 +319,9 @@ export function ListingsFilters({
     if (v.minSqm) p.set("minSqm", v.minSqm);
     if (v.minMonths) p.set("minMonths", v.minMonths);
     if (v.sort && v.sort !== "recommended") p.set("sort", v.sort);
+    if (rt === "short_term" && v.freeHosting === "true") {
+      p.set("freeHosting", "true");
+    }
 
     const isShort = rt === "short_term";
     if (isShort) {
@@ -591,6 +595,26 @@ export function ListingsFilters({
               <span className="max-[360px]:hidden">{tHome("tabMonthly")}</span>
               <span className="hidden max-[360px]:inline">{tHome("tabMonthlyShort")}</span>
             </button>
+            {rentalType === "short_term" ? (
+              <button
+                type="button"
+                role="listitem"
+                onClick={() => {
+                  const next: ListingsFilterValues = {
+                    ...values,
+                    freeHosting: values.freeHosting === "true" ? undefined : "true",
+                  };
+                  setValues(next);
+                  navigateWithValues(next);
+                }}
+                className={cn(
+                  "midora-msearch-chip",
+                  values.freeHosting === "true" && "midora-msearch-chip--active"
+                )}
+              >
+                {tListings("freeHostingChip")}
+              </button>
+            ) : null}
             <button
               type="button"
               role="listitem"
