@@ -4535,7 +4535,10 @@
       "title": "Delete listing?",
       "body": "This action cannot be undone. The listing's photos will also be deleted.",
       "cancel": "Cancel",
-      "confirm": "Yes, delete",
+      "confirm": "Continue",
+      "finalTitle": "Are you sure?",
+      "finalBody": "The listing will be permanently deleted. This action cannot be undone.",
+      "finalConfirm": "Yes, delete permanently",
       "deleting": "Deleting...",
       "successToast": "Listing deleted successfully",
       "errorToast": "Couldn't delete the listing. Please try again."
