@@ -44,6 +44,7 @@ import {
 } from "@/lib/guided-search";
 import { saveLastSearchState } from "@/lib/midora-search-state";
 import { cn } from "@/lib/utils";
+import { MobileSearchSummaryBar } from "@/components/mobile/MobileSearchSummaryBar";
 
 export type ListingsFilterValues = {
   city?: string;
@@ -106,7 +107,9 @@ export function ListingsFilters({
   priceHistogram = DEFAULT_PRICE_HISTOGRAM,
 }: Props) {
   const tListings = useTranslations("Listings");
+  const tChip = useTranslations("Listings.chip");
   const tSearch = useTranslations("Search");
+  const tHome = useTranslations("Home");
   const router = useRouter();
   const formRef = useRef<HTMLFormElement>(null);
   const [filtersOpen, setFiltersOpen] = useState(false);
@@ -144,6 +147,8 @@ export function ListingsFilters({
   const [datePickerOpen, setDatePickerOpen] = useState(false);
   const [guestPickerOpen, setGuestPickerOpen] = useState(false);
   const [partialDateHint, setPartialDateHint] = useState<string | null>(null);
+  /** Phone-only (≤639): compact summary → full dock. Hidden from 640px via CSS. */
+  const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
 
   const defaultsSyncKey = useMemo(() => JSON.stringify(defaults), [defaults]);
 
@@ -309,6 +314,7 @@ export function ListingsFilters({
     if (v.parking === "true") p.set("parking", "true");
     if (v.pets === "true") p.set("pets", "true");
     if (v.heating === "true") p.set("heating", "true");
+    if (v.amenities?.trim()) p.set("amenities", v.amenities.trim());
     if (v.minSqm) p.set("minSqm", v.minSqm);
     if (v.minMonths) p.set("minMonths", v.minMonths);
     if (v.sort && v.sort !== "recommended") p.set("sort", v.sort);
@@ -502,6 +508,29 @@ export function ListingsFilters({
     setValues((v) => ({ ...v, polygon: undefined }));
   }
 
+  const mobileSummaryTitle =
+    values.city?.trim() ||
+    (values.nearby ? tListings("nearYou") : null) ||
+    (values.polygon ? tListings("inMapArea") : null) ||
+    tSearch("search");
+
+  const mobileSummarySubtitle = (() => {
+    if (rentalType === "short_term") {
+      const from = values.interestFrom;
+      const to = values.interestTo;
+      if (from && to) return `${from} → ${to}`;
+      if (values.guests) {
+        return tChip("guests", { count: values.guests });
+      }
+      return tHome("tabShort");
+    }
+    const month = values.startMonth;
+    const duration = values.durationMonths;
+    if (month && duration) return `${month} · ${duration}`;
+    if (month) return month;
+    return tHome("tabMonthly");
+  })();
+
   return (
     <header className="listings-search-header fixed top-0 right-0 left-0 z-[100] border-b border-charcoal/8 bg-white">
       <form ref={formRef} onSubmit={applyFilters} className="relative mx-auto w-full max-w-[1600px]">
@@ -514,8 +543,84 @@ export function ListingsFilters({
           <SiteHeaderActions user={user} variant="listings" className="ml-auto shrink-0" />
         </div>
 
-        {/* Row 2 — unified search dock */}
-        <div className="listings-search-header__search relative overflow-visible px-4 pb-4 pt-1 lg:px-[18px]">
+        {/* Phone-only compact summary + horizontal filter chips (≤639) */}
+        <div className="midora-msearch-only px-4 pb-3 pt-1">
+          {!mobileSearchOpen ? (
+            <MobileSearchSummaryBar
+              title={mobileSummaryTitle}
+              subtitle={mobileSummarySubtitle}
+              onOpen={() => setMobileSearchOpen(true)}
+            />
+          ) : null}
+          <div className="midora-msearch-chips" role="list">
+            <button
+              type="button"
+              role="listitem"
+              onClick={openFilters}
+              className={cn(
+                "midora-msearch-chip",
+                filterBadge > 0 && "midora-msearch-chip--active"
+              )}
+            >
+              <SlidersHorizontal className="h-3.5 w-3.5" aria-hidden />
+              {tListings("filters")}
+              {filterBadge > 0 ? (
+                <span className="midora-msearch-chip__badge">{filterBadge}</span>
+              ) : null}
+            </button>
+            <button
+              type="button"
+              role="listitem"
+              onClick={() => handleRentalTypeChange("short_term")}
+              className={cn(
+                "midora-msearch-chip",
+                rentalType === "short_term" && "midora-msearch-chip--active"
+              )}
+            >
+              {tHome("tabShort")}
+            </button>
+            <button
+              type="button"
+              role="listitem"
+              onClick={() => handleRentalTypeChange("monthly")}
+              className={cn(
+                "midora-msearch-chip",
+                rentalType === "monthly" && "midora-msearch-chip--active"
+              )}
+            >
+              <span className="max-[360px]:hidden">{tHome("tabMonthly")}</span>
+              <span className="hidden max-[360px]:inline">{tHome("tabMonthlyShort")}</span>
+            </button>
+            <button
+              type="button"
+              role="listitem"
+              onClick={openFilters}
+              className="midora-msearch-chip"
+            >
+              {tListings("price")}
+            </button>
+            <button
+              type="button"
+              role="listitem"
+              onClick={() => {
+                setMobileSearchOpen(true);
+                setActiveSearchField("guests");
+                setGuestPickerOpen(true);
+              }}
+              className={cn("midora-msearch-chip", values.guests && "midora-msearch-chip--active")}
+            >
+              {tSearch("guests")}
+            </button>
+          </div>
+        </div>
+
+        {/* Row 2 — unified search dock (hidden on phone until expanded) */}
+        <div
+          className={cn(
+            "listings-search-header__search relative overflow-visible px-4 pb-4 pt-1 lg:px-[18px]",
+            !mobileSearchOpen && "midora-msearch-hide-phone"
+          )}
+        >
           <div
             ref={searchShellRef}
             className={cn(
@@ -601,6 +706,21 @@ export function ListingsFilters({
               <span className="hidden sm:inline">{tSearch("search")}</span>
             </button>
           </div>
+          {mobileSearchOpen ? (
+            <div className="midora-msearch-only mt-2 flex justify-end">
+              <button
+                type="button"
+                onClick={() => {
+                  setMobileSearchOpen(false);
+                  setDatePickerOpen(false);
+                  setGuestPickerOpen(false);
+                }}
+                className="rounded-xl border border-border px-3 py-2 text-sm font-medium text-muted"
+              >
+                {tListings("close")}
+              </button>
+            </div>
+          ) : null}
         </div>
 
         <input type="hidden" name="rentalType" value={rentalType} />

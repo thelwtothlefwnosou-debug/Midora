@@ -76,6 +76,8 @@ export function AccountNav({
 
   collapsed = false,
 
+  onNavigate,
+
 }: {
 
   active: AccountNavId;
@@ -85,6 +87,9 @@ export function AccountNav({
   compact?: boolean;
 
   collapsed?: boolean;
+
+  /** Close mobile drawer when a nav link is chosen. */
+  onNavigate?: () => void;
 
 }) {
 
@@ -194,6 +199,8 @@ export function AccountNav({
 
           className={linkClass}
 
+          onClick={onNavigate}
+
         >
 
           {linkBody}
@@ -217,6 +224,8 @@ export function AccountNav({
         title={collapsed ? label : undefined}
 
         className={linkClass}
+
+        onClick={onNavigate}
 
       >
 
@@ -283,6 +292,8 @@ export function AccountNav({
           <Link
 
             href={DASHBOARD_HELP_HREF}
+
+            onClick={onNavigate}
 
             className="flex items-center gap-2.5 rounded-xl px-2.5 py-2 text-[13px] font-medium text-charcoal/70 hover:bg-sand"
 

@@ -162,8 +162,8 @@ export function ListingInterestMobile({
         <ListingPortalNote />
       </div>
 
-      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-white/95 px-4 py-3 shadow-[0_-8px_32px_-8px_rgba(26,26,26,0.12)] backdrop-blur-md lg:hidden">
-        <div className="mx-auto flex max-w-6xl items-center gap-3 pb-[env(safe-area-inset-bottom)]">
+      <div className="midora-above-mnav fixed inset-x-0 bottom-0 z-40 border-t border-border bg-white/95 px-4 py-3 shadow-[0_-8px_32px_-8px_rgba(26,26,26,0.12)] backdrop-blur-md lg:hidden">
+        <div className="midora-above-mnav__safe mx-auto flex max-w-6xl items-center gap-3 pb-[env(safe-area-inset-bottom)]">
           <div className="min-w-0 flex-1">
             <p
               className={cn(

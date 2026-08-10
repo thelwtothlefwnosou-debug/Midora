@@ -21,6 +21,7 @@ import { getUnavailablePeriodsByListingIds } from "@/lib/unavailable-periods-db"
 import { getListingAmenitiesIndex } from "@/lib/listing-amenities";
 import { listingHasAmenityKeys } from "@/lib/listing-public-amenities";
 import { PROFILE_CONTACT_SELECT } from "@/lib/profile-contact-select";
+import { applyPublicSearchLocationPrivacy } from "@/lib/listing-map";
 
 function sortImages(listing: ListingWithImages): ListingWithImages {
   return {
@@ -33,6 +34,12 @@ function sortImages(listing: ListingWithImages): ListingWithImages {
 
 /** Search/map cards: keep a short ordered photo set for in-card carousel (cache-safe). */
 const SEARCH_CARD_PHOTO_LIMIT = 8;
+
+/**
+ * Cap on approved rows loaded into the search catalog snapshot (newest first).
+ * Filtered match counts cannot exceed this without a separate index/count path.
+ */
+export const SEARCH_CATALOG_FETCH_LIMIT = 500;
 
 function slimCatalogListing(listing: ListingWithImages): ListingWithImages {
   const images = listing.listing_images ?? [];
@@ -51,10 +58,10 @@ function slimCatalogListing(listing: ListingWithImages): ListingWithImages {
       is_cover: Boolean(img.is_cover),
     }));
 
-  return {
+  return applyPublicSearchLocationPrivacy({
     ...listing,
     listing_images: photos,
-  };
+  });
 }
 
 /** Homepage cards only: drop long text fields never shown on the card UI. */
@@ -100,14 +107,16 @@ const LISTING_SELECT =
 
 const LISTING_SELECT_MINIMAL = "*, listing_images(*)" as const;
 
-const DEFAULT_APPROVED_FETCH_LIMIT = 500;
-const HOMEPAGE_FETCH_LIMIT = 36;
+const DEFAULT_APPROVED_FETCH_LIMIT = SEARCH_CATALOG_FETCH_LIMIT;
+/** Per-mode window for homepage featured cards (short_term + monthly fetched separately). */
+const HOMEPAGE_MODE_FETCH_LIMIT = 48;
 
 type FetchApprovedOptions = {
   limit?: number;
   minimal?: boolean;
   /** Public reads inside unstable_cache — no cookies/session. */
   useServiceClient?: boolean;
+  rentalType?: "short_term" | "monthly";
 };
 
 function isMissingHiddenColumn(error: { message?: string } | null): boolean {
@@ -147,7 +156,7 @@ async function fetchApprovedFromDb(
   const db = supabase;
 
   async function runQuery(select: string) {
-    let result = await db
+    let query = db
       .from("listings")
       .select(select)
       .eq("status", "approved")
@@ -156,14 +165,26 @@ async function fetchApprovedFromDb(
       .order("created_at", { ascending: false })
       .limit(fetchLimit);
 
+    if (options.rentalType) {
+      query = query.eq("rental_type", options.rentalType);
+    }
+
+    let result = await query;
+
     if (isMissingHiddenColumn(result.error)) {
-      result = await db
+      let fallback = db
         .from("listings")
         .select(select)
         .eq("status", "approved")
         .or(expiresFilter)
         .order("created_at", { ascending: false })
         .limit(fetchLimit);
+
+      if (options.rentalType) {
+        fallback = fallback.eq("rental_type", options.rentalType);
+      }
+
+      result = await fallback;
     }
 
     return result;
@@ -209,7 +230,7 @@ async function loadSearchCatalogSnapshot(): Promise<ListingWithImages[] | null> 
 
 const getSearchCatalogSnapshotCached = unstable_cache(
   loadSearchCatalogSnapshot,
-  ["midora-search-catalog-slim-carousel-v3"],
+  ["midora-search-catalog-slim-carousel-v4-public-coords"],
   { revalidate: 60, tags: [LISTINGS_CATALOG_TAG] }
 );
 
@@ -228,18 +249,35 @@ async function getSearchCatalogSnapshot(): Promise<ListingWithImages[] | null> {
   }
 }
 
-async function resolveCatalogListings(
+export type SearchCatalogResult = {
+  listings: ListingWithImages[];
+  /** Filtered matches inside the loaded snapshot (before result-window slice). */
+  matchCount: number;
+  /**
+   * True when the approved snapshot hit SEARCH_CATALOG_FETCH_LIMIT.
+   * Match counts may undercount older approved listings outside that window.
+   */
+  catalogFetchCapped: boolean;
+};
+
+async function resolveCatalogMatchList(
   snapshot: ListingWithImages[] | null,
-  filters: ListingFilters,
-  limit: number
-): Promise<ListingWithImages[]> {
-  if (snapshot === null) {
-    return shouldUseSeedListings() ? filterSeedListings(filters, limit) : [];
+  filters: ListingFilters
+): Promise<{ listings: ListingWithImages[]; catalogFetchCapped: boolean }> {
+  if (snapshot === null || snapshot.length === 0) {
+    if (!shouldUseSeedListings()) {
+      return { listings: [], catalogFetchCapped: false };
+    }
+    const seeded = filterSeedListings(filters, Number.MAX_SAFE_INTEGER).map(
+      slimCatalogListing
+    );
+    return { listings: seeded, catalogFetchCapped: false };
   }
-  if (snapshot.length === 0) {
-    return shouldUseSeedListings() ? filterSeedListings(filters, limit) : [];
-  }
-  return (await applyFilters(snapshot, filters)).slice(0, limit);
+
+  return {
+    listings: await applyFilters(snapshot, filters),
+    catalogFetchCapped: snapshot.length >= SEARCH_CATALOG_FETCH_LIMIT,
+  };
 }
 
 export type SitemapListingEntry = {
@@ -318,56 +356,144 @@ export async function getApprovedListings(
 }
 
 /** Lighter catalog for search + map — no profile join, cached separately. */
-export async function getSearchCatalogListings(
+export async function getSearchCatalogResult(
   filters: ListingFilters = {},
-  limit = DEFAULT_APPROVED_FETCH_LIMIT
-): Promise<ListingWithImages[]> {
+  limit = SEARCH_CATALOG_FETCH_LIMIT
+): Promise<SearchCatalogResult> {
+  const empty: SearchCatalogResult = {
+    listings: [],
+    matchCount: 0,
+    catalogFetchCapped: false,
+  };
+
   if (!isSupabaseConfigured()) {
-    return shouldUseSeedListings() ? filterSeedListings(filters, limit) : [];
+    if (!shouldUseSeedListings()) return empty;
+    const seeded = filterSeedListings(filters, Number.MAX_SAFE_INTEGER).map(
+      slimCatalogListing
+    );
+    const { attachMonthlyPriceTiersToListings } = await import(
+      "@/lib/listing-monthly-tiers-db"
+    );
+    const windowed = seeded.slice(0, limit);
+    return {
+      listings: await attachMonthlyPriceTiersToListings(windowed),
+      matchCount: seeded.length,
+      catalogFetchCapped: false,
+    };
   }
+
   const snapshot = await getSearchCatalogSnapshot();
-  const listings = await resolveCatalogListings(snapshot, filters, limit);
+  const matched = await resolveCatalogMatchList(snapshot, filters);
   const { attachMonthlyPriceTiersToListings } = await import(
     "@/lib/listing-monthly-tiers-db"
   );
-  return attachMonthlyPriceTiersToListings(listings);
+  const windowed = matched.listings.slice(0, limit);
+  return {
+    listings: await attachMonthlyPriceTiersToListings(windowed),
+    matchCount: matched.listings.length,
+    catalogFetchCapped: matched.catalogFetchCapped,
+  };
+}
+
+/** Lighter catalog for search + map — no profile join, cached separately. */
+export async function getSearchCatalogListings(
+  filters: ListingFilters = {},
+  limit = SEARCH_CATALOG_FETCH_LIMIT
+): Promise<ListingWithImages[]> {
+  const result = await getSearchCatalogResult(filters, limit);
+  return result.listings;
+}
+
+/**
+ * Filtered match count inside the search snapshot — does not load extra full rows
+ * beyond the catalog fetch window, and does not use a post-slice length as the total.
+ */
+export async function getSearchCatalogMatchCount(
+  filters: ListingFilters = {}
+): Promise<{ matchCount: number; catalogFetchCapped: boolean }> {
+  if (!isSupabaseConfigured()) {
+    if (!shouldUseSeedListings()) {
+      return { matchCount: 0, catalogFetchCapped: false };
+    }
+    const seeded = filterSeedListings(filters, Number.MAX_SAFE_INTEGER);
+    return { matchCount: seeded.length, catalogFetchCapped: false };
+  }
+
+  const snapshot = await getSearchCatalogSnapshot();
+  const matched = await resolveCatalogMatchList(snapshot, filters);
+  return {
+    matchCount: matched.listings.length,
+    catalogFetchCapped: matched.catalogFetchCapped,
+  };
 }
 
 async function loadHomepageRecentListings(): Promise<ListingWithImages[]> {
   if (!isSupabaseConfigured()) {
-    return shouldUseSeedListings()
-      ? filterSeedListings({ sort: "newest" }, HOMEPAGE_FETCH_LIMIT).map(
-          slimHomepageListing
-        )
-      : [];
+    if (!shouldUseSeedListings()) return [];
+    const short = filterSeedListings(
+      { sort: "newest", rentalType: "short_term" },
+      HOMEPAGE_MODE_FETCH_LIMIT
+    );
+    const monthly = filterSeedListings(
+      { sort: "newest", rentalType: "monthly" },
+      HOMEPAGE_MODE_FETCH_LIMIT
+    );
+    return [...short, ...monthly].map(slimHomepageListing);
   }
 
-  const dbListings = await fetchApprovedFromDb({
-    limit: HOMEPAGE_FETCH_LIMIT,
-    minimal: true,
-    useServiceClient: true,
-  });
+  const [shortRows, monthlyRows] = await Promise.all([
+    fetchApprovedFromDb({
+      limit: HOMEPAGE_MODE_FETCH_LIMIT,
+      minimal: true,
+      useServiceClient: true,
+      rentalType: "short_term",
+    }),
+    fetchApprovedFromDb({
+      limit: HOMEPAGE_MODE_FETCH_LIMIT,
+      minimal: true,
+      useServiceClient: true,
+      rentalType: "monthly",
+    }),
+  ]);
 
-  if (dbListings === null || dbListings.length === 0) {
-    return shouldUseSeedListings()
-      ? filterSeedListings({ sort: "newest" }, HOMEPAGE_FETCH_LIMIT).map(
-          slimHomepageListing
-        )
-      : [];
+  const dbListings = [...(shortRows ?? []), ...(monthlyRows ?? [])];
+
+  if (dbListings.length === 0) {
+    if (!shouldUseSeedListings()) return [];
+    const short = filterSeedListings(
+      { sort: "newest", rentalType: "short_term" },
+      HOMEPAGE_MODE_FETCH_LIMIT
+    );
+    const monthly = filterSeedListings(
+      { sort: "newest", rentalType: "monthly" },
+      HOMEPAGE_MODE_FETCH_LIMIT
+    );
+    return [...short, ...monthly].map(slimHomepageListing);
   }
 
-  return sortListings(dbListings, "newest").map(slimHomepageListing);
+  return dbListings.map(slimHomepageListing);
 }
 
 const getHomepageRecentListingsCached = unstable_cache(
   loadHomepageRecentListings,
-  ["midora-homepage-recent-listings"],
+  ["midora-homepage-featured-pools-v2"],
   { revalidate: 60 }
 );
 
 /** Lean fetch for homepage cards — small DB window + short cache. */
 export async function getHomepageRecentListings(): Promise<ListingWithImages[]> {
-  return getHomepageRecentListingsCached();
+  if (process.env.NODE_ENV === "development") {
+    return loadHomepageRecentListings();
+  }
+  try {
+    return await getHomepageRecentListingsCached();
+  } catch (error) {
+    console.error(
+      "[listings] homepage featured cache unavailable, using direct fetch:",
+      error
+    );
+    return loadHomepageRecentListings();
+  }
 }
 
 export async function getApprovedListingsCount(): Promise<number> {

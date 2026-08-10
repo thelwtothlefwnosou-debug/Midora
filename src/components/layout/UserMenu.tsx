@@ -56,7 +56,7 @@ const MENU_WIDTH = 288;
 
 export function UserMenu({ user, compact = false }: { user: User; compact?: boolean }) {
   const tAccount = useTranslations("AccountNav");
-  const tDash = useTranslations("Dashboard");
+  const tNav = useTranslations("Nav");
   const locale = useLocale();
   const authNameInput = {
     email: user.email,
@@ -208,7 +208,7 @@ export function UserMenu({ user, compact = false }: { user: User; compact?: bool
             role="menuitem"
           >
             <LogOut className="h-4 w-4" />
-            {tDash("signOut")}
+            {tNav("signOut")}
           </button>
         </form>
       </div>

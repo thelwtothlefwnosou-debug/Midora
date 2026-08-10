@@ -509,7 +509,7 @@ export function ShortTermPriceCard({
 
         className={cn(
 
-          "fixed inset-x-0 bottom-0 z-40 border-t border-border bg-white/95 px-4 py-3 backdrop-blur-md lg:hidden",
+          "midora-above-mnav fixed inset-x-0 bottom-0 z-40 border-t border-border bg-white/95 px-4 py-3 backdrop-blur-md lg:hidden",
 
           className
 
@@ -517,7 +517,7 @@ export function ShortTermPriceCard({
 
       >
 
-        <div className="mx-auto flex max-w-6xl items-center gap-3 pb-[env(safe-area-inset-bottom)]">
+        <div className="midora-above-mnav__safe mx-auto flex max-w-6xl items-center gap-3 pb-[env(safe-area-inset-bottom)]">
 
           <button
 

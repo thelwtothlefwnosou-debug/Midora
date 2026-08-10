@@ -24,7 +24,7 @@ const OWNER_APP_MESSAGE_NAMESPACES = [
   "Owner",
   "Workspace",
   "Aade",
-  "AccountNav",
+  // AccountNav stays in the public bundle — UserMenu on marketing pages uses it.
   "Dashboard",
   "OwnerNav",
 ] as const;

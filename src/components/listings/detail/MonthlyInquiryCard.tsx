@@ -238,8 +238,8 @@ export function MonthlyInquiryCard({
   );
 
   const mobileBar = (
-    <div className="mobile-inquiry-card fixed inset-x-0 bottom-0 z-40 border-t border-charcoal/10 bg-white/95 px-4 py-3 backdrop-blur-md">
-      <div className="mx-auto flex max-w-6xl items-center gap-3 pb-[env(safe-area-inset-bottom)]">
+    <div className="mobile-inquiry-card midora-above-mnav fixed inset-x-0 bottom-0 z-40 border-t border-charcoal/10 bg-white/95 px-4 py-3 backdrop-blur-md">
+      <div className="midora-above-mnav__safe mx-auto flex max-w-6xl items-center gap-3 pb-[env(safe-area-inset-bottom)]">
         <div className="min-w-0 flex-1">
           <p className="listing-price-display text-lg">{price.display}</p>
           <p className="text-[11px] text-muted">

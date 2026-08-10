@@ -226,6 +226,11 @@ export type Listing = {
   location_admin_status?: string | null;
   latitude: number | null;
   longitude: number | null;
+  /**
+   * Set on public search/catalog payloads after server-side privacy.
+   * When true, latitude/longitude are already display-safe (exact or approximate).
+   */
+  public_map_coordinates?: boolean | null;
   price_monthly: number;
   price_per_night?: number | null;
   rental_type?: RentalType | null;

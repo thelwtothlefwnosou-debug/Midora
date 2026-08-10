@@ -16,7 +16,7 @@ const FAQ_GROUPS = [
   {
     id: "owners",
     titleKey: "faqGroupOwners",
-    items: ["faqOwn1", "faqOwn2", "faqOwn3", "faqOwn4"] as const,
+    items: ["faqOwn1", "faqOwn2", "faqOwn3", "faqOwn4", "faqOwn5"] as const,
   },
 ] as const;
 

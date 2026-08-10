@@ -50,16 +50,36 @@ export function OwnerHomeOverview({
         <OwnerHomeMetaStrip rows={rows} overview={overview} />
         <OwnerHomeNextAction rows={rows} overview={overview} />
         <div className="rounded-2xl border border-dashed border-border bg-white px-6 py-10 text-center shadow-soft">
-          <p className="font-display text-lg font-semibold text-charcoal">
+          <p className="font-display text-lg font-semibold text-charcoal sm:text-xl">
             {t("emptyTitle")}
           </p>
           <p className="mx-auto mt-2 max-w-md text-sm text-muted">
             {t("emptySubtitle")}
           </p>
-          <Button href={OWNER_LISTING_NEW_PATH} className="mt-4">
+          <p className="mx-auto mt-3 max-w-md text-sm font-medium text-gold-dark">
+            {t("freeValue")}
+          </p>
+          <Button href={OWNER_LISTING_NEW_PATH} className="mt-5">
             <Plus className="h-4 w-4" />
             {t("newListing")}
           </Button>
+          <div className="mx-auto mt-8 max-w-sm rounded-xl border border-border bg-sand/30 px-4 py-4 text-left">
+            <p className="text-[11px] font-medium tracking-wide text-muted uppercase">
+              {t("gettingStartedTitle")}
+            </p>
+            <ol className="mt-3 space-y-2 text-sm text-charcoal/90">
+              <li>1. {t("step1")}</li>
+              <li>2. {t("step2")}</li>
+              <li>3. {t("step3")}</li>
+              <li>4. {t("step4")}</li>
+            </ol>
+            <Link
+              href={OWNER_LISTING_NEW_PATH}
+              className="mt-4 inline-flex text-sm font-semibold text-gold-dark hover:underline"
+            >
+              {t("startFreeCta")}
+            </Link>
+          </div>
         </div>
       </div>
     );
@@ -81,17 +101,30 @@ export function OwnerHomeOverview({
 
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(260px,320px)] lg:items-start">
         <div>
-          <div className="mb-3 flex items-center justify-between gap-3">
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
             <h2 className="font-display text-base font-semibold text-charcoal">{propertyTitle}</h2>
-            {rows.length > 1 && (
-              <Link
-                href="/dashboard/listings"
-                className="text-xs font-medium text-gold-dark hover:underline"
-              >
-                {t("allProperties")}
-              </Link>
-            )}
+            <div className="flex flex-wrap items-center gap-3">
+              {hasPublished ? (
+                <Link
+                  href={OWNER_LISTING_NEW_PATH}
+                  className="text-xs font-medium text-charcoal/70 hover:text-charcoal hover:underline"
+                >
+                  {t("anotherPropertyCta")}
+                </Link>
+              ) : null}
+              {rows.length > 1 && (
+                <Link
+                  href="/dashboard/listings"
+                  className="text-xs font-medium text-gold-dark hover:underline"
+                >
+                  {t("allProperties")}
+                </Link>
+              )}
+            </div>
           </div>
+          {hasPublished ? (
+            <p className="mb-3 text-xs text-muted">{t("anotherProperty")}</p>
+          ) : null}
           <div className="grid gap-4 sm:grid-cols-2">
             {rows.slice(0, rows.length === 1 ? 1 : 2).map((row) => (
               <DashboardListingGridCard key={row.listing.id} row={row} />

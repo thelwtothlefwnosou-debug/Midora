@@ -53,3 +53,70 @@ export function listingShowsExactPublicLocation(listing: {
     listing.longitude != null
   );
 }
+
+/**
+ * Server-side public pin for search/map. Confirmed listings keep exact coords;
+ * otherwise only the deterministic approximate center is returned.
+ */
+export function resolvePublicSearchMapCenter(listing: {
+  id: string;
+  latitude?: number | null;
+  longitude?: number | null;
+  location_confirmed_by_owner?: boolean | null;
+}): { lat: number; lng: number } | null {
+  if (!listingHasSearchMapCoordinates(listing)) return null;
+  return getListingMapCenter(
+    listing.id,
+    listing.latitude!,
+    listing.longitude!,
+    listing.location_confirmed_by_owner === true
+  );
+}
+
+type PublicSearchLocationFields = {
+  latitude: number | null;
+  longitude: number | null;
+  public_map_coordinates: true;
+  address: null;
+  address_street: null;
+  address_number: null;
+  address_postal_code: null;
+  address_floor: null;
+  address_unit: null;
+  formatted_address: null;
+  provider_place_id: null;
+  private_street: null;
+  private_street_number: null;
+  private_postal_code: null;
+  floor: null;
+};
+
+/** Replace exact coords with public-safe center and strip private location fields. */
+export function applyPublicSearchLocationPrivacy<
+  T extends {
+    id: string;
+    latitude?: number | null;
+    longitude?: number | null;
+    location_confirmed_by_owner?: boolean | null;
+  },
+>(listing: T): T & PublicSearchLocationFields {
+  const center = resolvePublicSearchMapCenter(listing);
+  return {
+    ...listing,
+    latitude: center?.lat ?? null,
+    longitude: center?.lng ?? null,
+    public_map_coordinates: true,
+    address: null,
+    address_street: null,
+    address_number: null,
+    address_postal_code: null,
+    address_floor: null,
+    address_unit: null,
+    formatted_address: null,
+    provider_place_id: null,
+    private_street: null,
+    private_street_number: null,
+    private_postal_code: null,
+    floor: null,
+  };
+}

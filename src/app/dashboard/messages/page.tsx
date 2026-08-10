@@ -7,11 +7,17 @@ import { PropertyLeadRow } from "@/components/dashboard/PropertyLeadRow";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { requireDashboardContext } from "@/lib/dashboard-context";
 import { getOwnerLeads } from "@/lib/leads";
+import { getUserListings } from "@/lib/listings";
+import { OWNER_LISTING_NEW_PATH } from "@/lib/owner-flow";
 
 export default async function DashboardMessagesPage() {
   const { profile, email } = await requireDashboardContext("/dashboard/messages");
-  const leads = await getOwnerLeads(profile.id);
+  const [leads, listings] = await Promise.all([
+    getOwnerLeads(profile.id),
+    getUserListings(profile.id),
+  ]);
   const activeLeads = leads.filter((l) => l.status !== "archived");
+  const hasListings = listings.length > 0;
   const t = await getTranslations("Owner.messages");
   const tLegal = await getTranslations("Legal.shared");
 
@@ -45,10 +51,16 @@ export default async function DashboardMessagesPage() {
       {activeLeads.length === 0 ? (
         <DashboardEmptyState
           icon={MessageSquare}
-          title={t("emptyTitle")}
-          text={t("emptyBody")}
-          actionLabel={t("viewListings")}
-          actionHref="/dashboard/listings"
+          title={
+            hasListings ? t("emptyWithListingsTitle") : t("emptyNoListingsTitle")
+          }
+          text={
+            hasListings ? t("emptyWithListingsBody") : t("emptyNoListingsBody")
+          }
+          actionLabel={
+            hasListings ? t("emptyWithListingsCta") : t("emptyNoListingsCta")
+          }
+          actionHref={hasListings ? "/dashboard/listings" : OWNER_LISTING_NEW_PATH}
         />
       ) : (
         <div className="space-y-4">

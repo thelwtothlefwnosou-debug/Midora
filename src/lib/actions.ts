@@ -8,6 +8,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { geocodeAddress } from "@/lib/listings";
 import { safePostAuthPath } from "@/lib/auth-redirect";
+import { buildAuthCallbackUrl, getAuthCallbackOrigin } from "@/lib/auth-callback-origin";
 import { bootstrapAuthProfile } from "@/lib/profile-bootstrap";
 import { resolveAuthProfileName } from "@/lib/auth-profile-name";
 import { normalizePhoneToE164, isValidGreekMobileE164 } from "@/lib/phone-e164";
@@ -81,7 +82,7 @@ export async function signUp(formData: FormData) {
   const redirectTo = safePostAuthPath(
     (formData.get("redirect") as string) ||
       (formData.get("next") as string) ||
-      "/dashboard/profile"
+      "/"
   );
 
   const service = createServiceClient();
@@ -94,7 +95,8 @@ export async function signUp(formData: FormData) {
     password,
     options: {
       data: { full_name: fullName, phone },
-      emailRedirectTo: `${process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"}/auth/callback?next=${encodeURIComponent(redirectTo)}`,
+      // Use request origin so Preview signup confirmation returns to Preview, not Production/localhost.
+      emailRedirectTo: await buildAuthCallbackUrl(redirectTo),
     },
   });
 
@@ -256,7 +258,7 @@ export async function signIn(formData: FormData) {
     await promoteAdminFromEmail(user.id, user.email);
   }
 
-  const redirectTo = safePostAuthPath((formData.get("redirect") as string) || "/dashboard/profile");
+  const redirectTo = safePostAuthPath((formData.get("redirect") as string) || "/");
   redirect(redirectTo);
 }
 
@@ -273,9 +275,9 @@ export async function requestPasswordReset(formData: FormData) {
   const email = (formData.get("email") as string)?.trim();
   if (!email) return { error: "emailRequired" };
 
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
   const { error } = await supabase.auth.resetPasswordForEmail(email, {
-    redirectTo: `${appUrl}/auth/callback?next=/auth/update-password&type=recovery`,
+    // Request origin: Preview recovery stays on Preview; Production stays on Production.
+    redirectTo: `${await getAuthCallbackOrigin()}/auth/callback?next=${encodeURIComponent("/auth/update-password")}&type=recovery`,
   });
 
   if (error) return { error: translateAuthError(error.message) };
@@ -822,7 +824,19 @@ export async function submitPortalListingForReview(
     entityId: listingId,
   });
 
+  {
+    const { notifyOwnerListingPendingReview } = await import(
+      "@/lib/notifications/emit"
+    );
+    await notifyOwnerListingPendingReview({
+      ownerId: auth.user.id,
+      listingId,
+      listingTitle: fields.title?.trim() || "Αγγελία",
+    });
+  }
+
   revalidatePath("/dashboard");
+  revalidatePath("/dashboard/notifications");
   revalidatePath("/admin");
   redirect(`/dashboard/listings?submitted=review`);
 }
@@ -1505,6 +1519,14 @@ export async function approveListing(listingId: string): Promise<{ error?: strin
 
   if (listing.user_id) {
     await rewardReferrerForListingApproval(db, listing.user_id);
+    const { notifyOwnerListingPublished } = await import(
+      "@/lib/notifications/emit"
+    );
+    await notifyOwnerListingPublished({
+      ownerId: listing.user_id,
+      listingId,
+      listingTitle: String(listing.title ?? "").trim() || "Αγγελία",
+    });
   }
 
   const { notifySavedSearchMatches } = await import("@/lib/notify-saved-searches");
@@ -1515,6 +1537,7 @@ export async function approveListing(listingId: string): Promise<{ error?: strin
   revalidatePath("/admin/listings/review");
   revalidatePath(`/admin/listings/${listingId}`);
   revalidatePath("/listings");
+  revalidatePath("/dashboard/notifications");
   revalidateListingsCatalog();
   return {};
 }
@@ -1532,6 +1555,13 @@ export async function rejectListing(
   }
 
   const db = createServiceClient() ?? auth.supabase;
+
+  const { data: rejectedListing } = await db
+    .from("listings")
+    .select("user_id, title")
+    .eq("id", listingId)
+    .maybeSingle();
+
   const { error } = await db
     .from("listings")
     .update({
@@ -1543,10 +1573,22 @@ export async function rejectListing(
 
   if (error) return { error: error.message };
 
+  if (rejectedListing?.user_id) {
+    const { notifyOwnerListingRejected } = await import(
+      "@/lib/notifications/emit"
+    );
+    await notifyOwnerListingRejected({
+      ownerId: rejectedListing.user_id,
+      listingId,
+      listingTitle: String(rejectedListing.title ?? "").trim() || "Αγγελία",
+    });
+  }
+
   revalidatePath("/admin");
   revalidatePath("/admin/listings");
   revalidatePath("/admin/listings/review");
   revalidatePath(`/admin/listings/${listingId}`);
+  revalidatePath("/dashboard/notifications");
   return {};
 }
 
@@ -1564,6 +1606,12 @@ export async function requestListingChanges(
 
   const db = createServiceClient() ?? auth.supabase;
 
+  const { data: listingRow } = await db
+    .from("listings")
+    .select("user_id, title")
+    .eq("id", listingId)
+    .maybeSingle();
+
   const { error } = await db
     .from("listings")
     .update({
@@ -1575,10 +1623,22 @@ export async function requestListingChanges(
 
   if (error) return { error: error.message };
 
+  if (listingRow?.user_id) {
+    const { notifyOwnerListingNeedsChanges } = await import(
+      "@/lib/notifications/emit"
+    );
+    await notifyOwnerListingNeedsChanges({
+      ownerId: listingRow.user_id,
+      listingId,
+      listingTitle: String(listingRow.title ?? "").trim() || "Αγγελία",
+    });
+  }
+
   revalidatePath("/admin");
   revalidatePath("/admin/listings");
   revalidatePath("/admin/listings/review");
   revalidatePath(`/admin/listings/${listingId}`);
+  revalidatePath("/dashboard/notifications");
   return {};
 }
 
@@ -1698,7 +1758,14 @@ export async function saveUnavailablePeriod(formData: FormData) {
   );
 
   const existing = await getOwnerUnavailablePeriods(listingId, auth.user.id);
-  const overlap = findOverlappingPeriod(existing, startDate, endDate, periodId ?? undefined);
+  // Never merge/delete imported iCal blocks into manual owner ranges.
+  const manualExisting = existing.filter((p) => (p.source ?? "manual") !== "external_calendar");
+  const overlap = findOverlappingPeriod(
+    manualExisting,
+    startDate,
+    endDate,
+    periodId ?? undefined
+  );
 
   if (overlap && !forceOverlap) {
     return {
@@ -1710,7 +1777,7 @@ export async function saveUnavailablePeriod(formData: FormData) {
   let mergeIds: string[] = [];
   if (overlap && forceOverlap) {
     const merged = mergeUnavailableRange(
-      existing,
+      manualExisting,
       startDate,
       endDate,
       periodId ?? undefined
@@ -1727,6 +1794,9 @@ export async function saveUnavailablePeriod(formData: FormData) {
     end_date: endDate,
     reason,
     note,
+    source: "manual" as const,
+    external_calendar_id: null,
+    external_event_uid: null,
     updated_at: new Date().toISOString(),
   };
 
@@ -1851,11 +1921,24 @@ export async function deleteUnavailablePeriod(periodId: string, listingId: strin
   const auth = await requireListingOwner(listingId, "manage_availability");
   if ("error" in auth) return { error: auth.error };
 
+  const { data: existing } = await auth.supabase
+    .from("listing_unavailable_periods")
+    .select("id, source")
+    .eq("id", periodId)
+    .eq("listing_id", listingId)
+    .eq("owner_id", auth.user.id)
+    .maybeSingle();
+
+  if (existing?.source === "external_calendar") {
+    return { error: await actionError("periodExternalManaged") };
+  }
+
   const { error } = await auth.supabase
     .from("listing_unavailable_periods")
     .delete()
     .eq("id", periodId)
-    .eq("owner_id", auth.user.id);
+    .eq("owner_id", auth.user.id)
+    .or("source.is.null,source.eq.manual");
 
   if (error && isMissingUnavailableTable(error)) {
     const { deleteUnavailablePeriodFromStorage } = await import(
@@ -2168,6 +2251,24 @@ export async function submitPropertyLead(formData: FormData) {
     return { error: await actionError("listingUnavailable") };
   }
 
+  // Short-term: reject inquiries that overlap unavailable nights (manual + external iCal).
+  if (
+    listing.rental_type === "short_term" &&
+    interestStartDate &&
+    interestEndDate
+  ) {
+    const { getPublicUnavailablePeriods } = await import(
+      "@/lib/unavailable-periods-db"
+    );
+    const { stayRangeHasBlockedNight } = await import(
+      "@/lib/listing-short-term-price"
+    );
+    const periods = await getPublicUnavailablePeriods(listing.id);
+    if (stayRangeHasBlockedNight(interestStartDate, interestEndDate, periods)) {
+      return { error: await actionError("datesUnavailable") };
+    }
+  }
+
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -2178,29 +2279,43 @@ export async function submitPropertyLead(formData: FormData) {
       : null;
   const start_date = null;
 
-  const { error } = await supabase.from("property_leads").insert({
-    listing_id: listing.id,
-    owner_id: listing.user_id,
-    guest_id: user?.id ?? null,
-    name,
-    email,
-    phone,
-    start_date,
-    timing_note: timingNote,
-    duration,
-    guests,
-    message,
-    interest_start_date: interestStartDate,
-    interest_end_date: interestEndDate,
-    interest_start_month: interestStartMonth,
-    interest_duration_months:
-      interestDurationMonths != null && Number.isFinite(interestDurationMonths)
-        ? interestDurationMonths
-        : null,
-    status: "new",
-  });
+  const { data: insertedLead, error } = await supabase
+    .from("property_leads")
+    .insert({
+      listing_id: listing.id,
+      owner_id: listing.user_id,
+      guest_id: user?.id ?? null,
+      name,
+      email,
+      phone,
+      start_date,
+      timing_note: timingNote,
+      duration,
+      guests,
+      message,
+      interest_start_date: interestStartDate,
+      interest_end_date: interestEndDate,
+      interest_start_month: interestStartMonth,
+      interest_duration_months:
+        interestDurationMonths != null && Number.isFinite(interestDurationMonths)
+          ? interestDurationMonths
+          : null,
+      status: "new",
+    })
+    .select("id")
+    .maybeSingle();
 
   if (error) return { error: mapLeadError(error) };
+
+  if (insertedLead?.id && listing.user_id) {
+    const { notifyOwnerNewLead } = await import("@/lib/notifications/emit");
+    await notifyOwnerNewLead({
+      ownerId: listing.user_id,
+      leadId: insertedLead.id,
+      listingId: listing.id,
+      listing,
+    });
+  }
 
   await logAppEvent("contact_interest_sent", {
     userId: user?.id,
@@ -2210,6 +2325,7 @@ export async function submitPropertyLead(formData: FormData) {
 
   revalidatePath("/dashboard/requests");
   revalidatePath("/dashboard/messages");
+  revalidatePath("/dashboard/notifications");
   return { success: true };
 }
 
@@ -2255,7 +2371,6 @@ export async function saveListingExternalLink(
   listingId: string,
   platform: string,
   url: string,
-  isPublic: boolean,
   label?: string | null
 ) {
   const auth = await requireListingOwner(listingId);
@@ -2276,7 +2391,7 @@ export async function saveListingExternalLink(
     platform: plat,
     url: validation.normalizedUrl,
     label: label?.trim() || null,
-    is_public: isPublic,
+    is_public: true,
     updated_at: now,
   };
 

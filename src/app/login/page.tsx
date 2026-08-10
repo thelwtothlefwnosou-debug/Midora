@@ -1,4 +1,4 @@
-import { AuthPanel } from "@/components/auth/AuthPanel";
+import { AuthMarketingPage } from "@/components/auth/AuthMarketingPage";
 import { AuthLayout } from "@/components/layout/AuthLayout";
 
 export default async function LoginPage({
@@ -8,11 +8,11 @@ export default async function LoginPage({
 }) {
   const params = await searchParams;
   const mode = params.mode === "register" ? "register" : "login";
-  const redirectTo = params.redirect ?? params.next ?? "/dashboard/profile";
+  const redirectTo = params.redirect ?? params.next ?? "/";
 
   return (
-    <AuthLayout>
-      <AuthPanel
+    <AuthLayout variant="marketing">
+      <AuthMarketingPage
         initialMode={mode}
         redirectTo={redirectTo}
         errorCode={params.error ?? null}

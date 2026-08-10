@@ -50,11 +50,13 @@ type Props = {
   onMarkerClick?: (id: string) => void;
   onMarkerHover?: (id: string | null) => void;
   onMarkerDeselect?: () => void;
+  onBackgroundClick?: () => void;
   flush?: boolean;
   /** Detail page: listing id for approximate public coordinates */
   listingId?: string;
   /** Detail page: show exact pin when owner confirmed location */
   exactLocation?: boolean;
+  scrollZoomMode?: "full" | "cooperative" | false;
 };
 
 export function PropertyMapLoader({
@@ -78,8 +80,10 @@ export function PropertyMapLoader({
   onMarkerClick,
   onMarkerHover,
   onMarkerDeselect,
+  onBackgroundClick,
   flush,
   clusterMarkers = true,
+  scrollZoomMode,
 }: Props) {
   useEffect(() => {
     void import("@/components/map/MidoraMapCore");
@@ -104,8 +108,10 @@ export function PropertyMapLoader({
         onMarkerClick={onMarkerClick}
         onMarkerHover={onMarkerHover}
         onMarkerDeselect={onMarkerDeselect}
+        onBackgroundClick={onBackgroundClick}
         flush={flush}
         clusterMarkers={clusterMarkers}
+        scrollZoomMode={scrollZoomMode}
       />
     );
   }
