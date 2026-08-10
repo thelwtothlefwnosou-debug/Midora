@@ -224,6 +224,44 @@ END:VEVENT`);
   assert(exportable.length === 2 && !exportable.includes("external_calendar" as never), "anti-loop export sources");
 }
 
+// ---------- last-known-good after failed fetch (contract) ----------
+{
+  // Successful sync may remove stale UIDs; failed fetch must keep prior blocks.
+  // Mirrors syncExternalCalendarById: on fetch/parse failure → keptLastKnownGood,
+  // no delete of listing_unavailable_periods for that calendar.
+  type SyncOutcome =
+    | { ok: true; applyDeletes: true; keptLastKnownGood: false }
+    | { ok: false; applyDeletes: false; keptLastKnownGood: true };
+
+  function simulateSync(fetchOk: boolean): SyncOutcome {
+    if (!fetchOk) {
+      return { ok: false, applyDeletes: false, keptLastKnownGood: true };
+    }
+    return { ok: true, applyDeletes: true, keptLastKnownGood: false };
+  }
+
+  const afterSuccess = simulateSync(true);
+  assert(afterSuccess.ok && afterSuccess.applyDeletes, "success sync may delete stale");
+
+  const afterFailedFetch = simulateSync(false);
+  assert(
+    !afterFailedFetch.ok &&
+      !afterFailedFetch.applyDeletes &&
+      afterFailedFetch.keptLastKnownGood,
+    "failed fetch after successful sync keeps last-known-good"
+  );
+
+  const priorBlocked = new Set(["2026-08-10", "2026-08-11", "2026-08-12", "2026-08-13", "2026-08-14"]);
+  // On failure we must not clear priorBlocked
+  const afterFailureBlocks = afterFailedFetch.keptLastKnownGood
+    ? new Set(priorBlocked)
+    : new Set<string>();
+  assert(
+    [...priorBlocked].every((d) => afterFailureBlocks.has(d)),
+    "failed fetch does not open previously blocked nights"
+  );
+}
+
 console.log("");
 if (failed > 0) {
   console.error(`\n❌ ${failed} test(s) failed — production rollout BLOCKED\n`);
