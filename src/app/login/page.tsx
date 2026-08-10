@@ -8,7 +8,7 @@ export default async function LoginPage({
 }) {
   const params = await searchParams;
   const mode = params.mode === "register" ? "register" : "login";
-  const redirectTo = params.redirect ?? params.next ?? "/dashboard/profile";
+  const redirectTo = params.redirect ?? params.next ?? "/";
 
   return (
     <AuthLayout variant="marketing">

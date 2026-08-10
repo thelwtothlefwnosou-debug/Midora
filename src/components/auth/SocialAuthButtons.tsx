@@ -8,7 +8,7 @@ import { mapOAuthErrorCode, resolveAuthError } from "@/components/auth/auth-erro
 
 type Provider = "google" | "facebook";
 
-function authRedirectUrl(next = "/dashboard/profile") {
+function authRedirectUrl(next = "/") {
   const safeNext = safePostAuthPath(next);
   const base =
     typeof window !== "undefined"
@@ -20,7 +20,7 @@ function authRedirectUrl(next = "/dashboard/profile") {
 const facebookEnabled = process.env.NEXT_PUBLIC_OAUTH_FACEBOOK === "true";
 
 export function SocialAuthButtons({
-  redirectTo = "/dashboard/profile",
+  redirectTo = "/",
   disabled,
 }: {
   redirectTo?: string;

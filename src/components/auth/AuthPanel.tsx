@@ -30,7 +30,7 @@ type AuthPanelProps = {
 
 export function AuthPanel({
   initialMode = "login",
-  redirectTo = "/dashboard/profile",
+  redirectTo = "/",
   errorCode,
   referralCode,
   layout = "classic",

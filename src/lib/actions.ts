@@ -82,7 +82,7 @@ export async function signUp(formData: FormData) {
   const redirectTo = safePostAuthPath(
     (formData.get("redirect") as string) ||
       (formData.get("next") as string) ||
-      "/dashboard/profile"
+      "/"
   );
 
   const service = createServiceClient();
@@ -258,7 +258,7 @@ export async function signIn(formData: FormData) {
     await promoteAdminFromEmail(user.id, user.email);
   }
 
-  const redirectTo = safePostAuthPath((formData.get("redirect") as string) || "/dashboard/profile");
+  const redirectTo = safePostAuthPath((formData.get("redirect") as string) || "/");
   redirect(redirectTo);
 }
 
