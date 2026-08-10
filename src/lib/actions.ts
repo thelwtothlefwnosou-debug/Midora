@@ -1758,7 +1758,14 @@ export async function saveUnavailablePeriod(formData: FormData) {
   );
 
   const existing = await getOwnerUnavailablePeriods(listingId, auth.user.id);
-  const overlap = findOverlappingPeriod(existing, startDate, endDate, periodId ?? undefined);
+  // Never merge/delete imported iCal blocks into manual owner ranges.
+  const manualExisting = existing.filter((p) => (p.source ?? "manual") !== "external_calendar");
+  const overlap = findOverlappingPeriod(
+    manualExisting,
+    startDate,
+    endDate,
+    periodId ?? undefined
+  );
 
   if (overlap && !forceOverlap) {
     return {
@@ -1770,7 +1777,7 @@ export async function saveUnavailablePeriod(formData: FormData) {
   let mergeIds: string[] = [];
   if (overlap && forceOverlap) {
     const merged = mergeUnavailableRange(
-      existing,
+      manualExisting,
       startDate,
       endDate,
       periodId ?? undefined
@@ -1787,6 +1794,9 @@ export async function saveUnavailablePeriod(formData: FormData) {
     end_date: endDate,
     reason,
     note,
+    source: "manual" as const,
+    external_calendar_id: null,
+    external_event_uid: null,
     updated_at: new Date().toISOString(),
   };
 
@@ -1911,11 +1921,24 @@ export async function deleteUnavailablePeriod(periodId: string, listingId: strin
   const auth = await requireListingOwner(listingId, "manage_availability");
   if ("error" in auth) return { error: auth.error };
 
+  const { data: existing } = await auth.supabase
+    .from("listing_unavailable_periods")
+    .select("id, source")
+    .eq("id", periodId)
+    .eq("listing_id", listingId)
+    .eq("owner_id", auth.user.id)
+    .maybeSingle();
+
+  if (existing?.source === "external_calendar") {
+    return { error: await actionError("periodExternalManaged") };
+  }
+
   const { error } = await auth.supabase
     .from("listing_unavailable_periods")
     .delete()
     .eq("id", periodId)
-    .eq("owner_id", auth.user.id);
+    .eq("owner_id", auth.user.id)
+    .or("source.is.null,source.eq.manual");
 
   if (error && isMissingUnavailableTable(error)) {
     const { deleteUnavailablePeriodFromStorage } = await import(
@@ -2226,6 +2249,24 @@ export async function submitPropertyLead(formData: FormData) {
   const listing = await getListingById(listingId);
   if (!listing || !isListingActive(listing)) {
     return { error: await actionError("listingUnavailable") };
+  }
+
+  // Short-term: reject inquiries that overlap unavailable nights (manual + external iCal).
+  if (
+    listing.rental_type === "short_term" &&
+    interestStartDate &&
+    interestEndDate
+  ) {
+    const { getPublicUnavailablePeriods } = await import(
+      "@/lib/unavailable-periods-db"
+    );
+    const { stayRangeHasBlockedNight } = await import(
+      "@/lib/listing-short-term-price"
+    );
+    const periods = await getPublicUnavailablePeriods(listing.id);
+    if (stayRangeHasBlockedNight(interestStartDate, interestEndDate, periods)) {
+      return { error: await actionError("datesUnavailable") };
+    }
   }
 
   const {

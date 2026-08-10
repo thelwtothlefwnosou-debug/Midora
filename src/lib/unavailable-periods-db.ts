@@ -43,9 +43,10 @@ export async function getPublicUnavailablePeriods(
 
   const today = new Date().toISOString().slice(0, 10);
 
+  // Public consumers only need date ranges — never expose external UIDs / calendar ids.
   const { data, error } = await supabase
     .from("listing_unavailable_periods")
-    .select("*")
+    .select("id, listing_id, owner_id, start_date, end_date, reason, created_at, updated_at")
     .eq("listing_id", listingId)
     .gte("end_date", today)
     .order("start_date", { ascending: true });

@@ -16,6 +16,11 @@ export type ListingUnavailablePeriod = {
   note: string | null;
   created_at: string;
   updated_at: string;
+  /** manual | external_calendar — optional until migration applied */
+  source?: "manual" | "external_calendar" | null;
+  external_calendar_id?: string | null;
+  external_event_uid?: string | null;
+  synced_at?: string | null;
 };
 
 export const UNAVAILABLE_PERIOD_REASONS: {

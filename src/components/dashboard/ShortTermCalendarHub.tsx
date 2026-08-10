@@ -9,6 +9,7 @@ import { ShortTermPricingSettings } from "@/components/dashboard/ShortTermPricin
 import { ShortTermSpecialPeriodForm } from "@/components/dashboard/ShortTermSpecialPeriodForm";
 import { OwnerPricePreview } from "@/components/dashboard/OwnerPricePreview";
 import { ShortTermDailyPriceTable } from "@/components/dashboard/ShortTermDailyPriceTable";
+import { ExternalCalendarsSection } from "@/components/dashboard/ExternalCalendarsSection";
 import { usePriceRulesManager } from "@/hooks/usePriceRulesManager";
 import { useUnavailablePeriodsManager } from "@/hooks/useUnavailablePeriodsManager";
 import {
@@ -144,7 +145,8 @@ export function ShortTermCalendarHub({ listing, periods, priceRules }: Props) {
   }
 
   return (
-    <GlassCard id="availability-calendar" className="mb-6 p-4 sm:p-5 ring-1 ring-gold/10">
+    <div className="space-y-6">
+    <GlassCard id="availability-calendar" className="mb-0 p-4 sm:p-5 ring-1 ring-gold/10">
       {pending && (
         <p className="mb-4 rounded-lg border border-gold/25 bg-gold/5 px-3 py-2 text-xs font-medium text-charcoal">
           {t("saving")}
@@ -492,5 +494,23 @@ export function ShortTermCalendarHub({ listing, periods, priceRules }: Props) {
         </div>
       )}
     </GlassCard>
+
+      <ExternalCalendarsSection listingId={listing.id} />
+
+      <div className="flex flex-wrap gap-3 text-xs text-muted">
+        <span className="inline-flex items-center gap-1.5">
+          <span className="h-2.5 w-2.5 rounded-sm bg-teal/40 ring-1 ring-teal/50" />
+          {t("legendAvailable")}
+        </span>
+        <span className="inline-flex items-center gap-1.5">
+          <span className="h-2.5 w-2.5 rounded-sm bg-charcoal/25 ring-1 ring-charcoal/30" />
+          {t("legendManual")}
+        </span>
+        <span className="inline-flex items-center gap-1.5">
+          <span className="h-2.5 w-2.5 rounded-sm bg-amber-200 ring-1 ring-amber-400/60" />
+          {t("legendExternal")}
+        </span>
+      </div>
+    </div>
   );
 }
