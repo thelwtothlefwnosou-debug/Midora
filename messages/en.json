@@ -635,7 +635,108 @@
     "cityKavalaBlurb": "Stays in northern Greece",
     "cityKozaniBlurb": "Homes for monthly or short stays",
     "faqOwn5q": "How much does it cost to list on Midora?",
-    "faqOwn5a": "Listing and publishing on Midora is free. Midora does not take a commission from the agreement between owner and guest. Midora does not handle payments or bookings; the final agreement is made directly between the parties."
+    "faqOwn5a": "Listing and publishing on Midora is free. Midora does not take a commission from the agreement between owner and guest. Midora does not handle payments or bookings; the final agreement is made directly between the parties.",
+    "freeHostingHookTitle": "Have open dates?",
+    "freeHostingHookBody": "You can offer them without a lodging charge through Midora’s Free Hosting program.",
+    "freeHostingHookCta": "Offer a free stay",
+    "freeHosting": {
+      "eyebrow": "A Midora initiative",
+      "title": "Free Hosting",
+      "subtitle": "Discover homes whose hosts open selected dates without a lodging charge.",
+      "primaryCta": "Discover free stays",
+      "secondaryCta": "I want to offer my home",
+      "clarity": "Free Hosting applies to the lodging charge for specific dates. Midora does not handle payments or bookings."
+    }
+  },
+  "FreeStays": {
+    "meta": {
+      "title": "Free Hosting | Midora",
+      "description": "Find selected dates Midora hosts offer without a lodging charge. Send a request — the agreement is made directly.",
+      "ogTitle": "Free Hosting — a Midora initiative",
+      "ogDescription": "Selected dates without a lodging charge. A request, not a booking."
+    },
+    "hero": {
+      "eyebrow": "Free Hosting — a Midora initiative",
+      "title": "A few days can make a difference.",
+      "subtitle": "Hosts open selected dates on their homes without a lodging charge.",
+      "note": "You send a request to the host. Midora does not handle payments or bookings."
+    },
+    "search": {
+      "aria": "Search free hosting",
+      "where": "Where",
+      "wherePlaceholder": "City or area",
+      "from": "Check-in",
+      "to": "Check-out",
+      "guests": "Guests",
+      "submit": "Search"
+    },
+    "results": {
+      "title": "Available free stays",
+      "emptyCount": "No active offers yet.",
+      "count": "{count} active offers",
+      "emptyTitle": "No free stays found",
+      "emptyBody": "When hosts publish available dates, they will appear here with a map and real listings.",
+      "tipDates": "Try different dates",
+      "tipArea": "Widen the search area",
+      "tipGuests": "Reduce guest count when it makes sense"
+    },
+    "map": {
+      "placeholderAria": "Free stays map — coming soon",
+      "placeholderTitle": "The map activates with the first offers",
+      "placeholderBody": "It will reuse Midora’s existing map infrastructure with the same privacy rules."
+    },
+    "how": {
+      "title": "How it works",
+      "subtitle": "Search, request, and talk directly — without booking through Midora."
+    },
+    "guestStep1Title": "Search",
+    "guestStep1Text": "Area, dates, and guests.",
+    "guestStep2Title": "Find an open window",
+    "guestStep2Text": "Only real free-lodging offers that are available.",
+    "guestStep3Title": "Send a request",
+    "guestStep3Text": "A short message to the host — not a booking.",
+    "guestStep4Title": "Talk directly",
+    "guestStep4Text": "The final agreement is between the parties.",
+    "forGuests": {
+      "title": "For people looking for hosting",
+      "body": "You see real dates a host has opened without a lodging charge. You send a request and continue the conversation directly."
+    },
+    "forOwners": {
+      "title": "For owners",
+      "body": "Inside your existing short-term listing, you can open selected dates without changing your normal nightly price.",
+      "cta": "Offer a free stay"
+    },
+    "ownerStep1Title": "Choose your listing",
+    "ownerStep1Text": "Short-term listings only.",
+    "ownerStep2Title": "Pick dates",
+    "ownerStep2Text": "Set the window you want to offer.",
+    "ownerStep3Title": "Set limits",
+    "ownerStep3Text": "Max nights and guest count.",
+    "ownerStep4Title": "Receive requests",
+    "ownerStep4Text": "You decide who to continue talking with.",
+    "safety": {
+      "title": "Clear role",
+      "line1": "Free Hosting refers to the lodging charge the host offers for that specific window.",
+      "line2": "Midora does not handle payments or bookings.",
+      "line3": "Communication and the final agreement are made directly between the parties."
+    },
+    "faq": {
+      "title": "Frequently asked questions"
+    },
+    "faq1Q": "Is this a booking?",
+    "faq1A": "No. You send a free-hosting request. The stay is only confirmed if you and the host agree directly.",
+    "faq2Q": "Do I pay Midora anything?",
+    "faq2A": "No. Midora does not collect payments, deposits, or commission for this offer.",
+    "faq3Q": "Can I offer Free Hosting on a monthly listing?",
+    "faq3A": "Not in this phase. Free Hosting is available only inside short-term listings, for selected dates.",
+    "faq4Q": "What if availability changes?",
+    "faq4A": "Real availability follows the listing calendar, including manual blocks and connected calendars.",
+    "final": {
+      "title": "Start here",
+      "body": "Search available dates or offer open dates from your short-term listing.",
+      "searchCta": "Discover free stays",
+      "ownerCta": "Create a listing"
+    }
   },
   "Meta": {
     "titleDefault": "Midora — Property listings in Greece",

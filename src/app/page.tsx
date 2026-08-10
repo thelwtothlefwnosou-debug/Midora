@@ -11,6 +11,7 @@ import { HowItWorks } from "@/components/sections/HowItWorks";
 import { PopularAreas } from "@/components/sections/PopularAreas";
 import { HostCTA } from "@/components/sections/HostCTA";
 import { FinalHomeCta } from "@/components/sections/FinalHomeCta";
+import { FreeHostingHomeModule } from "@/components/sections/FreeHostingHomeModule";
 import { PreviewSkipLink } from "@/components/preview/PreviewSkipLink";
 import { isPreviewV80 } from "@/lib/preview-v80";
 const HomeFAQ = dynamic(
@@ -30,6 +31,7 @@ export default function Home() {
         <Suspense fallback={<RecentlyAddedSkeleton />}>
           <RecentlyAddedListings />
         </Suspense>
+        <FreeHostingHomeModule />
         <StayByNeed />
         <HostCTA />
         <PopularAreas />

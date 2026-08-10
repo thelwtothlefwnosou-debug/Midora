@@ -53,6 +53,18 @@ export async function HostCTA() {
                 <ArrowRight className="h-4 w-4" />
               </Link>
             </div>
+
+            <div className="mt-8 max-w-xl rounded-2xl border border-charcoal/8 bg-sand/50 px-4 py-4 sm:px-5">
+              <p className="text-sm font-semibold text-charcoal">{t("freeHostingHookTitle")}</p>
+              <p className="mt-1.5 text-sm leading-relaxed text-muted">{t("freeHostingHookBody")}</p>
+              <Link
+                href="/dashboard/listings?intent=free-hosting"
+                className="mt-3 inline-flex items-center gap-1.5 text-sm font-medium text-gold-dark hover:text-charcoal"
+              >
+                {t("freeHostingHookCta")}
+                <ArrowRight className="h-3.5 w-3.5" aria-hidden />
+              </Link>
+            </div>
           </div>
 
           <div className="order-1 lg:order-2">
