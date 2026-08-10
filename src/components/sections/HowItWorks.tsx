@@ -23,8 +23,10 @@ export async function HowItWorks() {
               src={HOME_HOW_EDITORIAL_IMAGE}
               alt=""
               fill
-              sizes="(max-width: 1024px) 100vw, 48vw"
-              className="object-cover object-[50%_40%]"
+              sizes="(max-width: 1024px) 100vw, (max-width: 1440px) 50vw, 720px"
+              quality={90}
+              priority={false}
+              className="object-cover object-[50%_38%]"
             />
             <div
               className="pointer-events-none absolute inset-0 bg-gradient-to-t from-charcoal/25 via-transparent to-transparent"
