@@ -3698,6 +3698,53 @@
         "noAccess": "You do not have access."
       }
     },
+    "freeHosting": {
+      "title": "Free Hosting",
+      "subtitle": "Open selected dates without a lodging charge — without changing your normal listing price.",
+      "addCta": "Add free dates",
+      "publishCta": "Publish free availability",
+      "cancel": "Cancel",
+      "empty": "You have not published a free-hosting window yet.",
+      "migrationPending": "The Free Hosting schema is not in the database yet. The form is ready; saving unlocks after the approved migration.",
+      "exclusiveLabel": "end exclusive",
+      "offerMeta": "Up to {nights} nights · up to {guests} guests",
+      "activate": "Activate",
+      "pause": "Pause",
+      "delete": "Delete",
+      "deleteConfirm": "Delete this free-hosting offer?",
+      "fields": {
+        "start": "Start",
+        "endExclusive": "End (exclusive)",
+        "endExclusiveHint": "Checkout day — not counted as a night.",
+        "maxNights": "Max nights per request",
+        "maxGuests": "Max guests",
+        "message": "Optional message",
+        "messagePlaceholder": "e.g. Quiet neighborhood, suitable for a work trip"
+      },
+      "status": {
+        "draft": "Draft",
+        "active": "Active",
+        "paused": "Paused",
+        "ended": "Ended"
+      },
+      "feedback": {
+        "saved": "Offer saved.",
+        "deleted": "Offer deleted."
+      },
+      "errors": {
+        "freeHostingShortTermOnly": "Available only for short-term listings.",
+        "freeHostingLoadFailed": "Could not load.",
+        "freeHostingInvalidDates": "Invalid dates.",
+        "freeHostingInvalidRange": "End must be after start.",
+        "freeHostingInvalidMaxNights": "Invalid night count.",
+        "freeHostingInvalidMaxGuests": "Invalid guest count.",
+        "freeHostingInvalidStatus": "Invalid status.",
+        "freeHostingMigrationRequired": "A database update is required for Free Hosting.",
+        "freeHostingSaveFailed": "Could not save.",
+        "freeHostingDeleteFailed": "Could not delete.",
+        "noAccess": "You do not have access."
+      }
+    },
     "amenities": {
       "title": "Amenities",
       "subtitle": "Select what the property actually offers. Visitors only see selected amenities.",

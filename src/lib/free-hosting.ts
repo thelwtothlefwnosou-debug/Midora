@@ -7,13 +7,13 @@
 
 import type { ListingWithImages } from "@/lib/types";
 
+export type FreeHostingOfferStatus = "draft" | "active" | "paused" | "ended";
+
 /** Canonical stay window: [startDate, endExclusive) — same as iCal / short-term. */
 export type FreeHostingDateRange = {
   startDate: string;
   endExclusive: string;
 };
-
-export type FreeHostingOfferStatus = "draft" | "active" | "paused" | "ended";
 
 /** Public card/preview shape once offers exist in DB. */
 export type FreeHostingPublicOffer = {

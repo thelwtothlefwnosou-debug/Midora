@@ -10,6 +10,7 @@ import { ShortTermSpecialPeriodForm } from "@/components/dashboard/ShortTermSpec
 import { OwnerPricePreview } from "@/components/dashboard/OwnerPricePreview";
 import { ShortTermDailyPriceTable } from "@/components/dashboard/ShortTermDailyPriceTable";
 import { ExternalCalendarsSection } from "@/components/dashboard/ExternalCalendarsSection";
+import { FreeHostingOwnerSection } from "@/components/dashboard/FreeHostingOwnerSection";
 import { usePriceRulesManager } from "@/hooks/usePriceRulesManager";
 import { useUnavailablePeriodsManager } from "@/hooks/useUnavailablePeriodsManager";
 import {
@@ -496,6 +497,11 @@ export function ShortTermCalendarHub({ listing, periods, priceRules }: Props) {
     </GlassCard>
 
       <ExternalCalendarsSection listingId={listing.id} />
+
+      <FreeHostingOwnerSection
+        listingId={listing.id}
+        maxGuestsFallback={listing.max_guests}
+      />
 
       <div className="flex flex-wrap gap-3 text-xs text-muted">
         <span className="inline-flex items-center gap-1.5">
