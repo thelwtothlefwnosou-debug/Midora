@@ -17,16 +17,16 @@ export async function HowItWorks() {
       className="home-section home-section--editorial home-bg-white scroll-mt-24"
     >
       <div className="mx-auto max-w-7xl px-4 sm:px-6">
-        <div className="grid items-center gap-10 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)] lg:gap-14 xl:gap-16">
-          <div className="relative aspect-[4/5] overflow-hidden rounded-[1.75rem] sm:aspect-[5/4] lg:aspect-[4/5] lg:min-h-[34rem]">
+        <div className="grid items-center gap-10 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] lg:gap-12 xl:gap-14">
+          <div className="relative mx-auto aspect-[4/5] w-full max-w-md overflow-hidden rounded-[1.5rem] sm:max-w-xl sm:aspect-[5/4] lg:mx-0 lg:max-w-none lg:aspect-[3/4] lg:min-h-[26rem] lg:max-h-[32rem]">
             <Image
               src={HOME_HOW_EDITORIAL_IMAGE}
               alt=""
               fill
-              sizes="(max-width: 1024px) 100vw, (max-width: 1440px) 50vw, 720px"
+              sizes="(max-width: 640px) 90vw, (max-width: 1024px) 70vw, 420px"
               quality={90}
               priority={false}
-              className="object-cover object-[50%_38%]"
+              className="object-cover object-[50%_45%]"
             />
             <div
               className="pointer-events-none absolute inset-0 bg-gradient-to-t from-charcoal/25 via-transparent to-transparent"

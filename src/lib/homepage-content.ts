@@ -123,7 +123,7 @@ export const RENTAL_TYPE_SEARCH_TABS: RentalTypeSearchTab[] = [
 ];
 
 /** Editorial panel for “How Midora works”. */
-export const HOME_HOW_EDITORIAL_IMAGE = "/images/home/sections/how-editorial-3200.webp";
+export const HOME_HOW_EDITORIAL_IMAGE = "/images/home/sections/how-editorial-premium.webp";
 
 /** Owner acquisition split visual. */
 export const HOME_OWNER_SPLIT_IMAGE = "/images/home/sections/owner-split.webp";
