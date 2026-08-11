@@ -50,6 +50,7 @@ async function goToMonthIfNeeded(
   const name = dayAria(year, month, day);
   for (let i = 0; i < 14; i++) {
     const popover = await datePopover(page);
+    await expect(popover.getByRole("button", { name: "Προηγούμενος μήνας" })).toBeVisible();
     const dayBtn = popover.getByRole("button", { name, exact: true });
     if ((await dayBtn.count()) > 0) return;
 
@@ -61,6 +62,7 @@ async function goToMonthIfNeeded(
     const prev = popover.getByRole("button", { name: "Προηγούμενος μήνας" });
     await prev.click();
   }
+  throw new Error(`Calendar day not found: ${name}`);
 }
 
 async function clickCalendarDay(
@@ -123,6 +125,7 @@ test.describe("Search date picker close behavior", () => {
 
   test("reopen calendar to edit dates", async ({ page }) => {
     await openSearchCheckIn(page);
+    await calendarOpen(page);
 
     const firstIn = futureDayParts(3);
     const firstOut = futureDayParts(6);
@@ -146,6 +149,7 @@ test.describe("Search date picker close behavior", () => {
 
   test("search works without opening guests", async ({ page }) => {
     await openSearchCheckIn(page);
+    await calendarOpen(page);
 
     const checkIn = futureDayParts(3);
     const checkOut = futureDayParts(6);
